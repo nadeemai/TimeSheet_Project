@@ -1,0 +1,4 @@
+ID;roleID;roleName;description;createdAt;createdBy;modifiedAt;modifiedBy
+1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d;ROLE001;Employee;Employee Role;2025-01-01T00:00:00Z;admin;2025-01-01T00:00:00Z;admin
+2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e;ROLE002;Manager;Manager Role;2025-01-01T00:00:00Z;admin;2025-01-01T00:00:00Z;admin
+3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f;ROLE003;Admin;Admin Role;2025-01-01T00:00:00Z;admin;2025-01-01T00:00:00Z;admin

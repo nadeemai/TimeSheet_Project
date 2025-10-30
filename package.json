@@ -1,0 +1,119 @@
+{
+  "name": "timesheet-application",
+  "version": "1.0.0",
+  "description": "SAP CAPM Timesheet Application with Role-Based Access",
+  "repository": "<Add your repository here>",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@sap/cds": "^9",
+    "@sap/xssec": "^4",
+    "express": "^4",
+    "passport": "^0.7"
+  },
+  "devDependencies": {
+    "@cap-js/sqlite": "^2",
+    "@sap/cds-dk": "^9",
+    "@sap/eslint-plugin-cds": "^4",
+    "eslint": "^9",
+    "cds-plugin-ui5": "^0.13.0",
+    "rimraf": "^5.0.5",
+    "mbt": "^1.2.29"
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "watch": "cds watch",
+    "build": "rimraf resources mta_archives && mbt build --mtar archive",
+    "deploy": "cf deploy mta_archives/archive.mtar --retries 1",
+    "watch-admin": "cds watch --open admin.com.admin/index.html?sap-ui-xx-viewCache=false",
+    "watch-employee": "cds watch --open employee.com.employee/index.html?sap-ui-xx-viewCache=false",
+    "watch-manager": "cds watch --open manager.com.manager/index.html?sap-ui-xx-viewCache=false",
+    "undeploy": "cf undeploy admincomadmin --delete-services --delete-service-keys --delete-service-brokers"
+  },
+  "cds": {
+    "requires": {
+      "db": {
+        "kind": "sqlite",
+        "credentials": {
+          "database": "db.sqlite"
+        }
+      },
+      "auth": {
+        "[production]": {
+          "kind": "xsuaa"
+        },
+        "[development]": {
+          "kind": "mocked",
+          "users": {
+            "john.smith": {
+              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d490",
+              "password": "initial",
+              "roles": ["Employee"]
+            },
+            "alice.brown": {
+              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
+              "password": "initial",
+              "roles": ["Employee"]
+            },
+            "robert.davis": {
+              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d492",
+              "password": "initial",
+              "roles": ["Employee"]
+            },
+            "emma.wilson": {
+              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d493",
+              "password": "initial",
+              "roles": ["Employee"]
+            },
+            "james.miller": {
+              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d494",
+              "password": "initial",
+              "roles": ["Employee"]
+            },
+            "sophia.garcia": {
+              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d495",
+              "password": "initial",
+              "roles": ["Employee"]
+            },
+            "william.martinez": {
+              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d496",
+              "password": "initial",
+              "roles": ["Employee"]
+            },
+            "olivia.lee": {
+              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d497",
+              "password": "initial",
+              "roles": ["Employee"]
+            },
+            "sarah.johnson": {
+              "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+              "password": "initial",
+              "roles": ["Manager"]
+            },
+            "michael.chen": {
+              "id": "f47ac10b-58cc-4372-a567-0e02b2c3d480",
+              "password": "initial",
+              "roles": ["Manager"]
+            },
+            "admin": {
+              "id": "admin-user-id-0001",
+              "password": "initial",
+              "roles": ["Admin"]
+            }
+          }
+        }
+      }
+    },
+    "hana": {
+      "deploy-format": "hdbtable"
+    }
+  },
+  "sapux": [
+    "app/employee",
+    "app/manager",
+    "app/admin"
+  ],
+  "workspaces": [
+    "app/*"
+  ]
+}

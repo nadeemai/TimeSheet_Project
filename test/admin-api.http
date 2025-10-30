@@ -1,0 +1,257 @@
+###############################################
+# ADMIN SERVICE - COMPLETE TEST SUITE (EMPLOYEE ID ONLY)
+###############################################
+
+GET http://localhost:4004/odata/v4/admin/UserRoles
+Authorization: Basic admin:initial
+
+
+
+
+### 1. CREATE EMPLOYEE ROLE
+POST http://localhost:4004/odata/v4/admin/createRole
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+{
+  "roleID": "ROLE004",
+  "roleName": "Contractor",
+  "description": "Contractor Role"
+}
+
+### 2. CREATE NON-PROJECT TYPE - SICK LEAVE
+POST http://localhost:4004/odata/v4/admin/createNonProjectType
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+{
+  "nonProjectTypeID": "NPT004",
+  "typeName": "Sick Leave",
+  "description": "Medical and sick leave",
+  "isBillable": false
+}
+
+### 3. CREATE NON-PROJECT TYPE - PROJECT TRAINING
+POST http://localhost:4004/odata/v4/admin/createNonProjectType
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+{
+  "nonProjectTypeID": "NPT005",
+  "typeName": "Project Training",
+  "description": "Project-specific training and onboarding",
+  "isBillable": false
+}
+
+### 4. GET ALL ROLES
+GET http://localhost:4004/odata/v4/admin/UserRoles
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 5. GET ALL NON-PROJECT TYPES
+GET http://localhost:4004/odata/v4/admin/NonProjectTypes
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 6. GET ACTIVE NON-PROJECT TYPES
+GET http://localhost:4004/odata/v4/admin/NonProjectTypes?$filter=isActive eq true
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 7. UPDATE NON-PROJECT TYPE
+POST http://localhost:4004/odata/v4/admin/updateNonProjectType
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+{
+  "nonProjectTypeID": "NPT001",
+  "typeName": "Training",
+  "description": "Professional training, certifications, and skill development",
+  "isBillable": false,
+  "isActive": true
+}
+
+### 8. CREATE MANAGER EMPLOYEE (EMP019)
+POST http://localhost:4004/odata/v4/admin/createEmployee
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+{
+  "employeeID": "EMP019",
+  "firstName": "Jennifer",
+  "lastName": "Lopez",
+  "email": "jennifer.lopez@company.com",
+  "managerEmployeeID": null,
+  "roleID": "2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e"
+}
+
+### 9. CREATE EMPLOYEE UNDER MANAGER (EMP020)
+POST http://localhost:4004/odata/v4/admin/createEmployee
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+{
+  "employeeID": "EMP020",
+  "firstName": "Daniel",
+  "lastName": "Jackson",
+  "email": "daniel.jackson@company.com",
+  "managerEmployeeID": "EMP011",
+  "roleID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+}
+
+### 10. GET ALL EMPLOYEES
+GET http://localhost:4004/odata/v4/admin/Employees
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 11. GET ALL ACTIVE EMPLOYEES
+GET http://localhost:4004/odata/v4/admin/Employees?$filter=isActive eq true
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 12. GET EMPLOYEES WITH MANAGER INFO
+GET http://localhost:4004/odata/v4/admin/Employees?$expand=managerID
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 13. GET SPECIFIC EMPLOYEE
+GET http://localhost:4004/odata/v4/admin/Employees?$filter=employeeID eq 'EMP001'
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 14. GET ALL MANAGERS (Role = Manager)
+GET http://localhost:4004/odata/v4/admin/Employees?$filter=userRole_ID eq '2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e'
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 15. UPDATE EMPLOYEE DETAILS
+POST http://localhost:4004/odata/v4/admin/updateEmployeeDetails
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+{
+  "employeeID": "EMP001",
+  "firstName": "John",
+  "lastName": "Smith Jr",
+  "email": "john.smith@company.com"
+}
+
+### 16. ASSIGN EMPLOYEE TO MANAGER (EMP020 to EMP012)
+POST http://localhost:4004/odata/v4/admin/assignEmployeeToManager
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+{
+  "employeeID": "EMP020",
+  "managerEmployeeID": "EMP012"
+}
+
+### 17. UPDATE ROLE DETAILS
+POST http://localhost:4004/odata/v4/admin/updateRoleDetails
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+{
+  "roleID": "ROLE001",
+  "roleName": "Employee",
+  "description": "Full-time Employee Role with benefits"
+}
+
+### 18. VIEW ALL PROJECTS
+GET http://localhost:4004/odata/v4/admin/Projects
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 19. VIEW ACTIVE PROJECTS
+GET http://localhost:4004/odata/v4/admin/Projects?$filter=status eq 'Active'
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 20. VIEW ALL ACTIVITIES
+GET http://localhost:4004/odata/v4/admin/Activities
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 21. VIEW ACTIVITIES WITH EMPLOYEE AND PROJECT ----Review
+GET http://localhost:4004/odata/v4/admin/Activities?$expand=employee,project
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 22. VIEW ALL TIMESHEETS
+GET http://localhost:4004/odata/v4/admin/Timesheets
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 23. VIEW SUBMITTED TIMESHEETS
+GET http://localhost:4004/odata/v4/admin/Timesheets?$filter=status eq 'Submitted'
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 24. VIEW ALL NON-PROJECT REQUESTS
+GET http://localhost:4004/odata/v4/admin/NonProjectRequests
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+
+### 27. VIEW OVERALL PROGRESS REPORT
+GET http://localhost:4004/odata/v4/admin/OverallProgressReport
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 28. VIEW ROLE SUMMARY
+GET http://localhost:4004/odata/v4/admin/RoleSummary
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 29. VIEW ALL NOTIFICATIONS
+GET http://localhost:4004/odata/v4/admin/Notifications
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 30. VIEW UNREAD NOTIFICATIONS
+GET http://localhost:4004/odata/v4/admin/Notifications?$filter=isRead eq false
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 31. DEACTIVATE EMPLOYEE (EMP020)
+POST http://localhost:4004/odata/v4/admin/deactivateEmployee
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+{
+  "employeeID": "EMP020"
+}
+
+### 32. GET TIMESHEETS WITH EMPLOYEE AND PROJECT DETAILS
+GET http://localhost:4004/odata/v4/admin/Timesheets?$expand=employee,project,activity
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 33. GET APPROVED TIMESHEETS
+GET http://localhost:4004/odata/v4/admin/Timesheets?$filter=status eq 'Approved'
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 35. GET EMPLOYEES BY MANAGER (Team under EMP011)
+GET http://localhost:4004/odata/v4/admin/Employees?$filter=managerID_ID eq 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 36. DEACTIVATE MANAGER (EMP019)
+POST http://localhost:4004/odata/v4/admin/deactivateManager
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+{
+  "employeeID": "EMP019"
+}
+
+### 37. GET EMPLOYEES WITH ROLE NAME
+GET http://localhost:4004/odata/v4/admin/Employees?$expand=userRole
+Content-Type: application/json
+Authorization: Basic admin:initial
+
+### 38. GET ADMIN USERS
+GET http://localhost:4004/odata/v4/admin/Employees?$filter=userRole_ID eq '3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f'
+Content-Type: application/json
+Authorization: Basic admin:initial

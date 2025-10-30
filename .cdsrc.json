@@ -1,0 +1,70 @@
+{
+  "build": {
+    "target": "gen",
+    "tasks": [
+      {
+        "for": "hana",
+        "src": "db",
+        "options": {
+          "model": [
+            "db",
+            "srv"
+          ]
+        }
+      },
+      {
+        "for": "node-cf",
+        "src": "srv",
+        "options": {
+          "model": [
+            "db",
+            "srv"
+          ]
+        }
+      }
+    ]
+  },
+  "hana": {
+    "deploy-format": "hdbtable"
+  },
+  "requires": {
+    "db": {
+      "kind": "sql"
+    },
+    "[production]": {
+      "db": {
+        "kind": "hana-cloud"
+      },
+      "auth": {
+        "kind": "xsuaa"
+      }
+    },
+    "[development]": {
+      "auth": {
+        "kind": "mocked",
+        "users": {
+          "employee1": {
+            "password": "initial",
+            "roles": ["Employee"]
+          },
+          "manager1": {
+            "password": "initial",
+            "roles": ["Manager"]
+          },
+          "admin1": {
+            "password": "initial",
+            "roles": ["Admin"]
+          }
+        }
+      }
+    }
+  },
+  "odata": {
+    "version": "v4"
+  },
+  "log": {
+    "levels": {
+      "cds": "info"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <Dialog id="addCommentsDialog" title="Add Comments" class="sapUiContentPadding" contentWidth="30rem">
+        <content>
+            <VBox id="_IDGenVBox9">
+                <Label id="_IDGenLabel6" text="Daily Comment" class="sapUiTinyMarginTop"/>
+                <TextArea id="dailyCommentInput" value="{/newComment/daily}" placeholder="Enter daily comment" width="100%" class="sapUiTinyMarginBottom"/>
+
+                <Label id="_IDGenLabel7" text="Weekly Comment" class="sapUiTinyMarginTop"/>
+                <TextArea id="weeklyCommentInput" value="{/newComment/weekly}" placeholder="Enter weekly comment" width="100%" class="sapUiTinyMarginBottom"/>
+
+                <Label id="_IDGenLabel8" text="Monthly Comment" class="sapUiTinyMarginTop"/>
+                <TextArea id="monthlyCommentInput" value="{/newComment/monthly}" placeholder="Enter monthly comment" width="100%" class="sapUiTinyMarginBottom"/>
+            </VBox>
+        </content>
+        <beginButton>
+            <Button id="_IDGenButton9" text="Save" press="onSaveComments" type="Emphasized"/>
+        </beginButton>
+        <endButton>
+            <Button id="_IDGenButton10" text="Cancel" press="onCancelComments"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timesheet Application - Login Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .info-box {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .info-box h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .user-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .user-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .user-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .user-card.employee {
+            border-left: 5px solid #10b981;
+        }
+
+        .user-card.manager {
+            border-left: 5px solid #3b82f6;
+        }
+
+        .user-card.admin {
+            border-left: 5px solid #ef4444;
+        }
+
+        .user-card h3 {
+            margin-bottom: 10px;
+            color: #1f2937;
+        }
+
+        .user-card .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .badge.employee {
+            background: #10b981;
+            color: white;
+        }
+
+        .badge.manager {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .badge.admin {
+            background: #ef4444;
+            color: white;
+        }
+
+        .credentials {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .credentials div {
+            margin: 5px 0;
+        }
+
+        .credentials strong {
+            color: #667eea;
+        }
+
+        .credentials .value {
+            color: #1f2937;
+            user-select: all;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            width: 100%;
+            margin-top: 10px;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button.test-btn {
+            background: #10b981;
+        }
+
+        button.test-btn:hover {
+            background: #059669;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .alert.success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+
+        .alert.error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+
+        .alert.warning {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+        }
+
+        .quick-links {
+            background: #1f2937;
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .quick-links a {
+            color: #60a5fa;
+            text-decoration: none;
+            display: block;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+            transition: background 0.3s ease;
+        }
+
+        .quick-links a:hover {
+            background: #374151;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-indicator.online {
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.offline {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        #serverStatus {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        .copy-btn {
+            background: #6366f1;
+            padding: 5px 10px;
+            font-size: 0.85em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Timesheet Application - Login Tester</h1>
+
+        <div id="serverStatus" class="info-box">
+            <span class="status-indicator offline"></span>
+            Checking server status...
+        </div>
+
+        <div class="info-box">
+            <h2>📌 Important Information</h2>
+            <div class="alert warning">
+                <strong>⚠️ Authentication Notes:</strong>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>All passwords are: <code>initial</code></li>
+                    <li>If authentication fails, open a <strong>new Private/Incognito window</strong></li>
+                    <li>Usernames are case-sensitive</li>
+                    <li>Browser may cache credentials - use Ctrl+Shift+Delete to clear</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Employee Users -->
+        <div class="info-box">
+            <h2>👥 Employee Users (8 Users)</h2>
+            <div class="user-grid" id="employeeGrid"></div>
+        </div>
+
+        <!-- Manager Users -->
+        <div class="info-box">
+            <h2>👔 Manager Users (2 Users)</h2>
+            <div class="user-grid" id="managerGrid"></div>
+        </div>
+
+        <!-- Admin User -->
+        <div class="info-box">
+            <h2>🔑 Administrator (1 User)</h2>
+            <div class="user-grid" id="adminGrid"></div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="quick-links">
+            <h2 style="margin-bottom: 15px;">🔗 Service Endpoints</h2>
+            <a href="http://localhost:4004" target="_blank">📊 Main Application</a>
+            <a href="http://localhost:4004/odata/v4/employee" target="_blank">👤 Employee Service</a>
+            <a href="http://localhost:4004/odata/v4/manager" target="_blank">👔 Manager Service</a>
+            <a href="http://localhost:4004/odata/v4/admin" target="_blank">🔑 Admin Service</a>
+        </div>
+    </div>
+
+    <script>
+        const baseUrl = 'http://localhost:4004';
+
+        const employees = [
+            { name: 'John Smith', username: 'john.smith', id: 'EMP001', manager: 'Sarah Johnson', projects: 'E-Commerce Platform' },
+            { name: 'Alice Brown', username: 'alice.brown', id: 'EMP002', manager: 'Sarah Johnson', projects: 'E-Commerce Platform' },
+            { name: 'Robert Davis', username: 'robert.davis', id: 'EMP003', manager: 'Michael Chen', projects: 'CRM System Upgrade' },
+            { name: 'Emma Wilson', username: 'emma.wilson', id: 'EMP004', manager: 'Emily Rodriguez', projects: 'Data Analytics Dashboard' },
+            { name: 'James Miller', username: 'james.miller', id: 'EMP005', manager: 'Sarah Johnson', projects: 'Mobile Banking App' },
+            { name: 'Sophia Garcia', username: 'sophia.garcia', id: 'EMP006', manager: 'David Williams', projects: 'Cloud Migration' },
+            { name: 'William Martinez', username: 'william.martinez', id: 'EMP007', manager: 'Emily Rodriguez', projects: 'Data Analytics Dashboard' },
+            { name: 'Olivia Lee', username: 'olivia.lee', id: 'EMP008', manager: 'Michael Chen', projects: 'CRM System Upgrade' }
+        ];
+
+        const managers = [
+            { name: 'Sarah Johnson', username: 'sarah.johnson', id: 'MGR001', department: 'IT Development', team: '3 employees' },
+            { name: 'Michael Chen', username: 'michael.chen', id: 'MGR002', department: 'Quality Assurance', team: '2 employees' }
+        ];
+
+        const admins = [
+            { name: 'System Administrator', username: 'admin', id: 'ADMIN', access: 'Full System', capabilities: 'All' }
+        ];
+
+        function createUserCard(user, type) {
+            const card = document.createElement('div');
+            card.className = `user-card ${type}`;
+            
+            let extraInfo = '';
+            if (type === 'employee') {
+                extraInfo = `
+                    <div><strong>Manager:</strong> ${user.manager}</div>
+                    <div><strong>Projects:</strong> ${user.projects}</div>
+                `;
+            } else if (type === 'manager') {
+                extraInfo = `
+                    <div><strong>Department:</strong> ${user.department}</div>
+                    <div><strong>Team Size:</strong> ${user.team}</div>
+                `;
+            } else {
+                extraInfo = `
+                    <div><strong>Access Level:</strong> ${user.access}</div>
+                `;
+            }
+            
+            card.innerHTML = `
+                <span class="badge ${type}">${type.toUpperCase()}</span>
+                <h3>${user.name}</h3>
+                <div style="font-size: 0.9em; color: #6b7280; margin-bottom: 10px;">
+                    ID: ${user.id}
+                </div>
+                ${extraInfo}
+                <div class="credentials">
+                    <div><strong>Username:</strong> <span class="value">${user.username}</span></div>
+                    <div><strong>Password:</strong> <span class="value">initial</span></div>
+                    <button class="copy-btn" onclick="copyCredentials('${user.username}', 'initial')">📋 Copy Credentials</button>
+                </div>
+                <button class="test-btn" onclick="testAuth('${user.username}', 'initial', '${type}')">🧪 Test Login</button>
+                <button onclick="openService('${user.username}', 'initial', '${type}')">🚀 Open Dashboard</button>
+            `;
+            
+            return card;
+        }
+
+        function renderUsers() {
+            const employeeGrid = document.getElementById('employeeGrid');
+            const managerGrid = document.getElementById('managerGrid');
+            const adminGrid = document.getElementById('adminGrid');
+
+            employees.forEach(emp => {
+                employeeGrid.appendChild(createUserCard(emp, 'employee'));
+            });
+
+            managers.forEach(mgr => {
+                managerGrid.appendChild(createUserCard(mgr, 'manager'));
+            });
+
+            admins.forEach(adm => {
+                adminGrid.appendChild(createUserCard(adm, 'admin'));
+            });
+        }
+
+        function copyCredentials(username, password) {
+            const text = `Username: ${username}\nPassword: ${password}`;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✓ Credentials copied to clipboard!\n\n' + text);
+            });
+        }
+
+        async function testAuth(username, password, type) {
+            const endpoints = {
+                employee: '/odata/v4/employee/MyProfile',
+                manager: '/odata/v4/manager/MyManagerProfile',
+                admin: '/odata/v4/admin/Employees'
+            };
+
+            const endpoint = endpoints[type];
+            const url = baseUrl + endpoint;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Basic ' + btoa(username + ':' + password)
+                    }
+                });
+
+                if (response.ok) {
+                    alert(`✅ SUCCESS!\n\nUser: ${username}\nRole: ${type.toUpperCase()}\nStatus: Authenticated\n\nYou can now access the service.`);
+                } else if (response.status === 401) {
+                    alert(`❌ AUTHENTICATION FAILED!\n\nUser: ${username}\nPassword: ${password}\nError: 401 Unauthorized\n\nPlease check credentials and try again.`);
+                } else if (response.status === 403) {
+                    alert(`⚠️ ACCESS DENIED!\n\nUser: ${username}\nError: 403 Forbidden\n\nYou don't have permission to access this resource.`);
+                } else {
+                    alert(`❌ ERROR!\n\nHTTP Status: ${response.status}\n${response.statusText}`);
+                }
+            } catch (error) {
+                alert(`❌ CONNECTION ERROR!\n\nCannot connect to server.\n\nPlease ensure:\n1. Server is running (cds watch)\n2. URL is correct: ${baseUrl}`);
+            }
+        }
+
+        function openService(username, password, type) {
+            const endpoints = {
+                employee: '/odata/v4/employee',
+                manager: '/odata/v4/manager',
+                admin: '/odata/v4/admin'
+            };
+
+            const endpoint = endpoints[type];
+            const url = baseUrl + endpoint;
+
+            // Open in new window and prompt for credentials
+            const newWindow = window.open('', '_blank');
+            newWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Login - ${type.toUpperCase()}</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            max-width: 500px;
+                            margin: 50px auto;
+                            padding: 20px;
+                            background: #f5f5f5;
+                        }
+                        .card {
+                            background: white;
+                            padding: 30px;
+                            border-radius: 10px;
+                            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        }
+                        h2 {
+                            color: #667eea;
+                            margin-bottom: 20px;
+                        }
+                        .info {
+                            background: #f0f9ff;
+                            border-left: 4px solid #3b82f6;
+                            padding: 15px;
+                            margin: 20px 0;
+                        }
+                        .credentials {
+                            background: #f9fafb;
+                            padding: 15px;
+                            border-radius: 5px;
+                            font-family: monospace;
+                        }
+                        button {
+                            background: #667eea;
+                            color: white;
+                            border: none;
+                            padding: 12px 24px;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            width: 100%;
+                            font-size: 16px;
+                            margin-top: 15px;
+                        }
+                        button:hover {
+                            background: #5568d3;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="card">
+                        <h2>🔐 ${type.toUpperCase()} Login</h2>
+                        <div class="info">
+                            <strong>⚠️ Important:</strong><br>
+                            You will be prompted to enter credentials.<br>
+                            Use the information below:
+                        </div>
+                        <div class="credentials">
+                            <div><strong>Username:</strong> ${username}</div>
+                            <div><strong>Password:</strong> initial</div>
+                        </div>
+                        <button onclick="window.location.href='${url}'">
+                            Proceed to Service →
+                        </button>
+                        <div style="margin-top: 20px; text-align: center; color: #6b7280; font-size: 14px;">
+                            If prompted, enter the credentials shown above
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `);
+        }
+
+        async function checkServerStatus() {
+            const statusDiv = document.getElementById('serverStatus');
+            const indicator = statusDiv.querySelector('.status-indicator');
+
+            try {
+                const response = await fetch(baseUrl);
+                if (response.ok || response.status === 401) {
+                    statusDiv.className = 'info-box';
+                    statusDiv.style.background = '#d1fae5';
+                    statusDiv.style.border = '2px solid #10b981';
+                    statusDiv.innerHTML = '<span class="status-indicator online"></span>Server is running at ' + baseUrl;
+                } else {
+                    throw new Error('Server not responding correctly');
+                }
+            } catch (error) {
+                statusDiv.className = 'info-box';
+                statusDiv.style.background = '#fee2e2';
+                statusDiv.style.border = '2px solid #ef4444';
+                statusDiv.innerHTML = `
+                    <span class="status-indicator offline"></span>
+                    Server is NOT running!
+                    <div style="margin-top: 10px; font-size: 0.9em;">
+                        Please start the server with: <code style="background: #fff; padding: 5px 10px; border-radius: 3px;">cds watch</code>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderUsers();
+            checkServerStatus();
+            // Check server status every 30 seconds
+            setInterval(checkServerStatus, 30000);
+        });
+    </script>
+</body>
+</html>

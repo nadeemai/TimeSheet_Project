@@ -1,0 +1,125 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:l="sap.ui.layout">
+    <Dialog id="_IDGenDialog1"
+        title="Edit Time Entry"
+        contentWidth="500px">
+        <content>
+            <VBox id="_IDGenVBox46" class="sapUiMediumMargin">
+                <f:SimpleForm id="_IDGenSimpleForm">
+                    <Label id="_IDGenLabel24" text="Project" />
+                    <ComboBox
+                        id="editProjectCombo"
+                        items="{
+                            path: '/assignedProjects',
+                            templateShareable: false
+                        }"
+                        selectedKey="{/editEntry/projectId}">
+                        <items>
+                            <core:Item id="_IDGenItem4" key="{projectId}" text="{projectName}" />
+                        </items>
+                    </ComboBox>
+                    
+                    <Label id="_IDGenLabel40" text="Work Task" />
+                    <ComboBox
+                        id="editWorkTypeCombo"
+                        items="{
+                            path: '/workTypes',
+                            templateShareable: false
+                        }"
+                        selectedKey="{/editEntry/workType}">
+                        <items>
+                            <core:Item id="_IDGenItem5" key="{type}" text="{name}" />
+                        </items>
+                    </ComboBox>
+                    
+                    <Label id="_IDGenLabel41" text="Hours" />
+                    <VBox id="_IDGeneVBox47">
+                        <!-- Day Labels -->
+                        <HBox id="_IDGenHBox15" justifyContent="SpaceAround">
+                            <Label id="_IDGeneLabel43" text="Mon" width="60px" textAlign="Center" />
+                            <Label id="_IDGenLabel44" text="Tue" width="60px" textAlign="Center" />
+                            <Label id="_IDGenLabel45" text="Wed" width="60px" textAlign="Center" />
+                            <Label id="_IDGenLabel46" text="Thu" width="60px" textAlign="Center" />
+                            <Label id="_IDGenLabel47" text="Fri" width="60px" textAlign="Center" />
+                            <Label id="_IDGenLabel48" text="Sat" width="60px" textAlign="Center" />
+                            <Label id="_IDGenLabel49" text="Sun" width="60px" textAlign="Center" />
+                        </HBox>
+                        <!-- Hour Inputs -->
+                        <HBox id="_IDGenHBox14" justifyContent="SpaceAround">
+                            <Input
+                                id="editMonday"
+                                value="{/editEntry/monday}"
+                                placeholder="0"
+                                type="Number"
+                                width="60px"
+                                liveChange=".onFragmentHoursChange" />
+                            <Input
+                                id="editTuesday"
+                                value="{/editEntry/tuesday}"
+                                placeholder="0"
+                                type="Number"
+                                width="60px"
+                                liveChange=".onFragmentHoursChange" />
+                            <Input
+                                id="editWednesday"
+                                value="{/editEntry/wednesday}"
+                                placeholder="0"
+                                type="Number"
+                                width="60px"
+                                liveChange=".onFragmentHoursChange" />
+                            <Input
+                                id="editThursday"
+                                value="{/editEntry/thursday}"
+                                placeholder="0"
+                                type="Number"
+                                width="60px"
+                                liveChange=".onFragmentHoursChange" />
+                            <Input
+                                id="editFriday"
+                                value="{/editEntry/friday}"
+                                placeholder="0"
+                                type="Number"
+                                width="60px"
+                                liveChange=".onFragmentHoursChange" />
+                            <Input
+                                id="editSaturday"
+                                value="{/editEntry/saturday}"
+                                placeholder="0"
+                                type="Number"
+                                width="60px"
+                                liveChange=".onFragmentHoursChange" />
+                            <Input
+                                id="editSunday"
+                                value="{/editEntry/sunday}"
+                                placeholder="0"
+                                type="Number"
+                                width="60px"
+                                liveChange=".onFragmentHoursChange" />
+                        </HBox>
+                    </VBox>
+                    
+                    <Label id="_IDGenLabel42" text="Comment" />
+                    <TextArea
+                        id="editComment"
+                        value="{/editEntry/comment}"
+                        placeholder="Enter comment"
+                        rows="3" />
+                </f:SimpleForm>
+            </VBox>
+        </content>
+        <beginButton>
+            <Button id="_IDGenButton5"
+                text="Save"
+                type="Emphasized"
+                press=".onSaveEditedEntry" />
+        </beginButton>
+        <endButton>
+            <Button id="_IDGenButton6"
+                text="Cancel"
+                press=".onCancelEditEntry" />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>
