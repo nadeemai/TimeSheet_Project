@@ -24,7 +24,28 @@ sap.ui.define([
     "use strict";
     return Controller.extend("admin.com.admin.controller.Employee", {
         onInit: function() {
-            
+            this._oV2Model = this.getOwnerComponent().getModel("timesheetservicev2");
+            this._oLocalModel = new JSONModel({
+                totalWeekHours: "0.00",
+                selectedDate: null,
+                isCurrentWeek: true,
+                weekDates: {},
+                workTypes: [
+                    { type: "DESIGN", name: "Designing" },
+                    { type: "DEVELOP", name: "Developing" },
+                    { type: "TEST", name: "Testing" },
+                    { type: "DEPLOY", name: "Deployment" },
+                    { type: "MEETING", name: "Meetings" },
+                    { type: "DOCUMENTATION", name: "Documentation" },
+                    { type: "LEAVE", name: "Leave" },
+                    { type: "TRAINING", name: "Training" }
+                ]
+            });
+            this.getView().setModel(this._oLocalModel, "oLocalModel");
+
+            this._initializeCurrentWeek();
+            this._loadTimesheetData();
+        }
             this._initializeModel();
             this._initializeCurrentWeek();
             this._calculateAllTotals();
