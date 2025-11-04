@@ -3,9 +3,60 @@ const cds = require('@sap/cds');
 module.exports = cds.service.impl(async function() {
     const { Employees, UserRoles, Activities, NonProjectTypes, Projects, Timesheets, Notifications } = this.entities;
 
+    //  Helper to get and validate admin
+    const getAuthenticatedAdmin = async (req) => {
+        const userId = req.user.id;
+        
+        if (!userId) {
+            req.error(401, 'User not authenticated');
+            return null;
+        }
+
+        const admin = await SELECT.one.from(Employees)
+            .where({ ID: userId, isActive: true });
+
+        if (!admin) {
+            req.error(404, 'Admin profile not found or inactive. Please contact administrator.');
+            return null;
+        }
+
+        // Verify user has admin role
+        if (admin.userRole_ID) {
+            const role = await SELECT.one.from(UserRoles)
+                .where({ ID: admin.userRole_ID });
+            
+            if (role && role.roleName !== 'Admin') {
+                req.error(403, 'Access denied. Admin role required.');
+                return null;
+            }
+        }
+
+        return admin;
+    };
+
+    //  Validate admin access before sensitive operations
+    this.before(['CREATE', 'UPDATE', 'DELETE'], ['Employees', 'UserRoles', 'Activities', 'NonProjectTypes'], async (req) => {
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) {
+            req.reject(403, 'Admin access required');
+        }
+    });
+
+    // Validate admin access for read operations on sensitive entities
+    this.before('READ', ['Employees', 'Timesheets', 'Notifications'], async (req) => {
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) {
+            req.reject(403, 'Admin access required');
+        }
+    });
+
     // Action: Create Employee
     this.on('createEmployee', async (req) => {
         const { employeeID, firstName, lastName, email, managerEmployeeID, roleID } = req.data;
+
+        // Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
 
         const existing = await SELECT.one.from(Employees).where({ employeeID });
         if (existing) {
@@ -47,6 +98,10 @@ module.exports = cds.service.impl(async function() {
     this.on('createRole', async (req) => {
         const { roleID, roleName, description } = req.data;
 
+        // Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
         const existing = await SELECT.one.from(UserRoles).where({ roleID });
         if (existing) {
             return req.error(400, 'Role ID already exists');
@@ -64,6 +119,10 @@ module.exports = cds.service.impl(async function() {
     // Action: Create Activity
     this.on('createActivity', async (req) => {
         const { activityID, activity, activityType, projectID, isBillable, plannedHours, startDate, endDate } = req.data;
+
+        //Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
 
         const existing = await SELECT.one.from(Activities).where({ activityID });
         if (existing) {
@@ -103,6 +162,10 @@ module.exports = cds.service.impl(async function() {
     // Action: Update Activity
     this.on('updateActivity', async (req) => {
         const { activityID, activity, activityType, projectID, isBillable, plannedHours, startDate, endDate, status } = req.data;
+
+        // Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
 
         const activityRecord = await SELECT.one.from(Activities).where({ activityID });
         if (!activityRecord) {
@@ -149,6 +212,10 @@ module.exports = cds.service.impl(async function() {
     this.on('createNonProjectType', async (req) => {
         const { nonProjectTypeID, typeName, description, isBillable } = req.data;
 
+        //Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
         const existing = await SELECT.one.from(NonProjectTypes).where({ nonProjectTypeID });
         if (existing) {
             return req.error(400, 'Non-Project Type ID already exists');
@@ -169,6 +236,10 @@ module.exports = cds.service.impl(async function() {
     this.on('updateNonProjectType', async (req) => {
         const { nonProjectTypeID, typeName, description, isBillable, isActive } = req.data;
 
+        // Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
         const nonProjectType = await SELECT.one.from(NonProjectTypes).where({ nonProjectTypeID });
         if (!nonProjectType) {
             return req.error(404, 'Non-Project Type not found');
@@ -184,6 +255,10 @@ module.exports = cds.service.impl(async function() {
     // Action: Create Project
     this.on('createProject', async (req) => {
         const { projectID, projectName, description, startDate, endDate, projectRole, budget, allocatedHours, projectOwnerID, isBillable } = req.data;
+
+        //Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
 
         const existing = await SELECT.one.from(Projects).where({ projectID });
         if (existing) {
@@ -226,6 +301,10 @@ module.exports = cds.service.impl(async function() {
     this.on('updateProject', async (req) => {
         const { projectID, projectName, description, projectRole, budget, allocatedHours, status } = req.data;
 
+        // Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
         const project = await SELECT.one.from(Projects).where({ projectID });
         if (!project) {
             return req.error(404, 'Project not found');
@@ -252,6 +331,10 @@ module.exports = cds.service.impl(async function() {
     this.on('assignEmployeeToManager', async (req) => {
         const { employeeID, managerEmployeeID } = req.data;
 
+        //Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
         const employee = await SELECT.one.from(Employees).where({ employeeID });
         if (!employee) {
             return req.error(404, 'Employee not found');
@@ -271,9 +354,60 @@ module.exports = cds.service.impl(async function() {
         return `Employee ${employee.firstName} ${employee.lastName} assigned to Manager ${manager.firstName} ${manager.lastName}`;
     });
 
+    // ✅ CHANGE 1: Admin can assign projects to employees
+    this.on('assignProjectToEmployee', async (req) => {
+        const { employeeID, projectID } = req.data;
+        
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
+        // Verify employee exists
+        const employee = await SELECT.one.from(Employees).where({ employeeID });
+        if (!employee) {
+            return req.error(404, 'Employee not found');
+        }
+
+        // Verify project exists
+        const project = await SELECT.one.from(Projects).where({ projectID });
+        if (!project) {
+            return req.error(404, 'Project not found');
+        }
+
+        // Create notification for employee
+        const notificationCount = await SELECT.from(Notifications);
+        await INSERT.into(Notifications).entries({
+            notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
+            recipient_ID: employee.ID,
+            message: `Admin assigned you to project: ${project.projectName}`,
+            notificationType: 'Project Assignment',
+            isRead: false,
+            relatedEntity: 'Project',
+            relatedEntityID: project.ID
+        });
+
+        // Also notify manager if exists
+        if (employee.managerID_ID) {
+            await INSERT.into(Notifications).entries({
+                notificationID: `NOT${String(notificationCount.length + 2).padStart(4, '0')}`,
+                recipient_ID: employee.managerID_ID,
+                message: `${employee.firstName} ${employee.lastName} has been assigned to project: ${project.projectName}`,
+                notificationType: 'Project Assignment',
+                isRead: false,
+                relatedEntity: 'Project',
+                relatedEntityID: project.ID
+            });
+        }
+
+        return `Project ${project.projectName} assigned to ${employee.firstName} ${employee.lastName} successfully`;
+    });
+
     // Action: Deactivate Employee
     this.on('deactivateEmployee', async (req) => {
         const { employeeID } = req.data;
+
+        //Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
 
         const employee = await SELECT.one.from(Employees).where({ employeeID });
         if (!employee) {
@@ -292,6 +426,10 @@ module.exports = cds.service.impl(async function() {
     // Action: Deactivate Manager
     this.on('deactivateManager', async (req) => {
         const { employeeID } = req.data;
+
+        // Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
 
         const employee = await SELECT.one.from(Employees).where({ employeeID });
         if (!employee) {
@@ -325,6 +463,10 @@ module.exports = cds.service.impl(async function() {
     this.on('updateEmployeeDetails', async (req) => {
         const { employeeID, firstName, lastName, email } = req.data;
 
+        // Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
         const employee = await SELECT.one.from(Employees).where({ employeeID });
         if (!employee) {
             return req.error(404, 'Employee not found');
@@ -349,6 +491,10 @@ module.exports = cds.service.impl(async function() {
     this.on('updateRoleDetails', async (req) => {
         const { roleID, roleName, description } = req.data;
 
+        //  Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
         const role = await SELECT.one.from(UserRoles).where({ roleID });
         if (!role) {
             return req.error(404, 'Role not found');
@@ -363,6 +509,10 @@ module.exports = cds.service.impl(async function() {
 
     // Before DELETE - Cascade delete validation
     this.before('DELETE', 'Employees', async (req) => {
+        //Validate admin
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return req.reject(403, 'Admin access required');
+
         const employeeID = req.data.ID;
        
         const timesheets = await SELECT.from(Timesheets).where({ employee_ID: employeeID });
@@ -406,4 +556,50 @@ module.exports = cds.service.impl(async function() {
             req.data.projectID = `PRJ${String(count.length + 1).padStart(4, '0')}`;
         }
     });
+    /**
+   * 🟩 Approve Timesheet Handler
+   */
+  this.on("approveTimesheet", async (req) => {
+    const { timesheetID } = req.data;
+    if (!timesheetID) return req.reject(400, "❌ Missing timesheetID");
+
+    // Check if timesheet exists
+    const timesheet = await SELECT.one.from(Timesheets).where({ timesheetID });
+    if (!timesheet) return req.reject(404, `❌ Timesheet ${timesheetID} not found`);
+
+    // Update status to Approved
+    await UPDATE(Timesheets)
+      .set({
+        status: "Approved",
+        approvalDate: new Date().toISOString(),
+        approvedBy_ID: req.user.id || "admin",
+      })
+      .where({ timesheetID });
+
+    return `✅ Timesheet ${timesheetID} approved successfully by ${req.user.id || "admin"}`;
+  });
+
+  /**
+   * 🟥 Reject Timesheet Handler
+   */
+  this.on("rejectTimesheet", async (req) => {
+    const { timesheetID, reason } = req.data;
+    if (!timesheetID) return req.reject(400, "❌ Missing timesheetID");
+
+    // Check if timesheet exists
+    const timesheet = await SELECT.one.from(Timesheets).where({ timesheetID });
+    if (!timesheet) return req.reject(404, `❌ Timesheet ${timesheetID} not found`);
+
+    // Update status to Rejected with reason
+    await UPDATE(Timesheets)
+      .set({
+        status: "Rejected",
+        comments: reason || "Rejected by Admin",
+        approvalDate: new Date().toISOString(),
+        approvedBy_ID: req.user.id || "admin",
+      })
+      .where({ timesheetID });
+
+    return `🚫 Timesheet ${timesheetID} rejected. Reason: ${reason || "No reason provided"}`;
+  });
 });

@@ -1,0 +1,69 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form">
+    <Dialog id="_IDGenDialog1"
+        title="Employee Profile"
+        class="sapUiPopupWithPadding"
+        contentWidth="500px"
+        afterClose="onCloseProfileDialog">
+        
+        <f:SimpleForm id="_IDGenSimpleForm"
+            editable="false"
+            layout="ResponsiveGridLayout"
+            labelSpanXL="4"
+            labelSpanL="4"
+            labelSpanM="4"
+            columnsXL="2"
+            columnsL="2"
+            columnsM="2">
+            
+            <f:content>
+                <!-- Employee ID -->
+                <Label id="_IDGenLabel13" text=" ID"/>
+                <Text id="_IDGenText" text="{/profile/Id}"/>
+                
+                <!-- First Name -->
+                <Label id="_IDGenLabel14" text="First Name"/>
+                <Text id="_IDGenText1" text="{/profile/firstName}"/>
+                
+                <!-- Last Name -->
+                <Label id="_IDGenLabel15" text="Last Name"/>
+                <Text id="_IDGenText11" text="{/profile/lastName}"/>
+                
+                <!-- Email -->
+                <Label id="_IDGenLabel16" text="Email"/>
+                <Text id="_IDGenText12" text="{/profile/email}"/>
+                
+                <!-- Manager Name -->
+                <Label id="_IDGenLabel17" text="Manager Name"/>
+                <Text id="_IDGenText13" text="{/profile/managerName}"/>
+                
+                <!-- Manager Email -->
+                <Label id="_IDGenLabel18" text="Manager Email"/>
+                <Text id="_IDGenText14" text="{/profile/managerEmail}"/>
+                
+                <!-- Active Status -->
+                <Label id="_IDGenLabel19" text="Active Status"/>
+                <ObjectStatus id="_IDGenObjectStatus12"
+                    text="{/profile/activeStatus}"
+                    state="{= ${/profile/activeStatus} === 'Yes' ? 'Success' : 'Error' }"/>
+                
+                <!-- Changed By -->
+                <Label id="_IDGenLabel20" text="Changed By"/>
+                <Text id="_IDGenText15" text="{/profile/changedBy}"/>
+                
+                <!-- User Role -->
+                <Label id="_IDGenLabel21" text="User Role"/>
+                <Text id="_IDGenText27" text="{/profile/userRole}"/>
+            </f:content>
+        </f:SimpleForm>
+        
+        <buttons>
+            <Button id="_IDGenButton14"
+                text="Close"
+                press="onCloseProfileDialog"
+                type="Emphasized"/>
+        </buttons>
+    </Dialog>
+</core:FragmentDefinition>

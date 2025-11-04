@@ -1,10 +1,16 @@
-ID;activityID;activity;activityType;isBillable;plannedHours;startDate;endDate;status;createdAt;createdBy;modifiedAt;modifiedBy
-c47ac10b-58cc-4372-a567-0e02b2c3d510;ACT001;Developing;Project;true;400;2024-02-01;2024-08-31;Assigned;2024-01-25T08:00:00Z;anonymous;2024-01-25T08:00:00Z;anonymous
-c47ac10b-58cc-4372-a567-0e02b2c3d511;ACT002;Designing;Project;true;320;2024-02-01;2024-08-31;Assigned;2024-01-25T08:00:00Z;anonymous;2024-01-25T08:00:00Z;anonymous
-c47ac10b-58cc-4372-a567-0e02b2c3d512;ACT003;Developing;Project;true;500;2024-03-01;2024-09-30;Assigned;2024-02-10T08:00:00Z;anonymous;2024-02-10T08:00:00Z;anonymous
-c47ac10b-58cc-4372-a567-0e02b2c3d513;ACT004;Testing;Project;true;300;2024-01-15;2024-06-30;Assigned;2024-01-10T08:00:00Z;anonymous;2024-01-10T08:00:00Z;anonymous
-c47ac10b-58cc-4372-a567-0e02b2c3d514;ACT005;Designing;Project;true;400;2024-02-15;2024-07-31;Assigned;2024-02-05T08:00:00Z;anonymous;2024-02-05T08:00:00Z;anonymous
-c47ac10b-58cc-4372-a567-0e02b2c3d515;ACT006;Deploying;Project;true;600;2024-03-01;2024-10-31;Assigned;2024-02-20T08:00:00Z;anonymous;2024-02-20T08:00:00Z;anonymous
-c47ac10b-58cc-4372-a567-0e02b2c3d516;ACT007;Developing;Project;true;280;2024-01-01;2024-05-31;Assigned;2023-12-15T08:00:00Z;anonymous;2023-12-15T08:00:00Z;anonymous
-c47ac10b-58cc-4372-a567-0e02b2c3d517;ACT008;Developing;Project;true;350;2024-02-15;2024-07-31;Assigned;2024-02-05T08:00:00Z;anonymous;2024-02-05T08:00:00Z;anonymous
-c47ac10b-58cc-4372-a567-0e02b2c3d518;ACT009;Designing;Project;true;320;2024-01-01;2024-05-31;Assigned;2023-12-15T08:00:00Z;anonymous;2023-12-15T08:00:00Z;anonymous
+ID;activityID;activity;activityType;project_ID;isBillable;plannedHours;startDate;endDate;status;createdAt;createdBy;modifiedAt;modifiedBy
+c47ac10b-58cc-4372-a567-0e02b2c3d510;ACT001;New UI Development;Project;b47ac10b-58cc-4372-a567-0e02b2c3d500;true;800;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d511;ACT002;New CAPI Development;Project;b47ac10b-58cc-4372-a567-0e02b2c3d500;true;1000;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d512;ACT003;Production Bug Fix;Project;b47ac10b-58cc-4372-a567-0e02b2c3d500;true;600;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d513;ACT004;UAT Bug Fix;Project;b47ac10b-58cc-4372-a567-0e02b2c3d500;true;400;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d514;ACT005;XDP Creation;Project;b47ac10b-58cc-4372-a567-0e02b2c3d500;true;500;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d515;ACT006;Production Support;Project;b47ac10b-58cc-4372-a567-0e02b2c3d500;true;600;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d516;ACT007;Client Call;Project;b47ac10b-58cc-4372-a567-0e02b2c3d500;true;300;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d517;ACT008;Documentation;Project;b47ac10b-58cc-4372-a567-0e02b2c3d500;true;600;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d520;ACT009;UI Development;Project;b47ac10b-58cc-4372-a567-0e02b2c3d501;true;900;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d521;ACT010;CAP Development;Project;b47ac10b-58cc-4372-a567-0e02b2c3d501;true;1200;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d522;ACT011;QA Testing;Project;b47ac10b-58cc-4372-a567-0e02b2c3d501;true;800;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d523;ACT012;Client Call;Project;b47ac10b-58cc-4372-a567-0e02b2c3d501;true;300;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d524;ACT013;Bug Fixes;Project;b47ac10b-58cc-4372-a567-0e02b2c3d501;true;700;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d525;ACT014;Test Scripts;Project;b47ac10b-58cc-4372-a567-0e02b2c3d501;true;600;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin
+c47ac10b-58cc-4372-a567-0e02b2c3d526;ACT015;Wireframing;Project;b47ac10b-58cc-4372-a567-0e02b2c3d501;true;700;2024-01-01;2024-12-31;Active;2024-01-01T08:00:00Z;admin;2024-01-01T08:00:00Z;admin

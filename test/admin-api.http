@@ -1,257 +1,399 @@
-###############################################
-# ADMIN SERVICE - COMPLETE TEST SUITE (EMPLOYEE ID ONLY)
-###############################################
+### Admin Service Test File
+### Base URL: http://localhost:4004
 
+### 1. GET - Read All Employees
+GET http://localhost:4004/odata/v4/admin/Employees
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 2. GET - Read All User Roles
 GET http://localhost:4004/odata/v4/admin/UserRoles
-Authorization: Basic admin:initial
+Authorization: Basic pushpak.jha:initial
 
+###
 
+### 3. GET - Read All Activities
+GET http://localhost:4004/odata/v4/admin/Activities
+Authorization: Basic pushpak.jha:initial
 
+###
 
-### 1. CREATE EMPLOYEE ROLE
-POST http://localhost:4004/odata/v4/admin/createRole
+### 4. GET - Read All Non-Project Types
+GET http://localhost:4004/odata/v4/admin/NonProjectTypes
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 5. GET - Read All Projects
+GET http://localhost:4004/odata/v4/admin/Projects
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 6. GET - Read All Timesheets
+GET http://localhost:4004/odata/v4/admin/Timesheets
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 7. GET - Read All Notifications
+GET http://localhost:4004/odata/v4/admin/Notifications
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 8. GET - Read Overall Progress Report
+GET http://localhost:4004/odata/v4/admin/OverallProgressReport
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 9. GET - Read Role Summary
+GET http://localhost:4004/odata/v4/admin/RoleSummary
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 10. POST - Create New Employee ----------
+POST http://localhost:4004/odata/v4/admin/createEmployee
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
+
+{
+  "employeeID": "EMP008",
+  "firstName": "Rohit",
+  "lastName": "Sharma",
+  "email": "rohit.sharma@company.com",
+  "managerEmployeeID": "EMP005",
+  "roleID": "ROLE001"
+}
+
+###
+
+### 11. POST - Create New Role
+POST http://localhost:4004/odata/v4/admin/createRole
+Authorization: Basic pushpak.jha:initial
+Content-Type: application/json
 
 {
   "roleID": "ROLE004",
-  "roleName": "Contractor",
-  "description": "Contractor Role"
+  "roleName": "TeamLead",
+  "description": "Team Lead Role - manages small teams"
 }
 
-### 2. CREATE NON-PROJECT TYPE - SICK LEAVE
-POST http://localhost:4004/odata/v4/admin/createNonProjectType
+###
+
+### 12. POST - Create New Activity for Cordys
+POST http://localhost:4004/odata/v4/admin/createActivity
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
+
+{
+  "activityID": "ACT016",
+  "activity": "Code Review",
+  "activityType": "Project",
+  "projectID": "PRJ001",
+  "isBillable": true,
+  "plannedHours": 400,
+  "startDate": "2024-01-01",
+  "endDate": "2024-12-31"
+}
+
+###
+
+### 13. POST - Create New Activity for Sony COFA
+POST http://localhost:4004/odata/v4/admin/createActivity
+Authorization: Basic pushpak.jha:initial
+Content-Type: application/json
+
+{
+  "activityID": "ACT017",
+  "activity": "Performance Optimization",
+  "activityType": "Project",
+  "projectID": "PRJ002",
+  "isBillable": true,
+  "plannedHours": 500,
+  "startDate": "2024-01-01",
+  "endDate": "2024-12-31"
+}
+
+###
+
+### 14. POST - Create Non-Project Type
+POST http://localhost:4004/odata/v4/admin/createNonProjectType
+Authorization: Basic pushpak.jha:initial
+Content-Type: application/json
 
 {
   "nonProjectTypeID": "NPT004",
-  "typeName": "Sick Leave",
-  "description": "Medical and sick leave",
+  "typeName": "Team Building",
+  "description": "Team building activities and events",
   "isBillable": false
 }
 
-### 3. CREATE NON-PROJECT TYPE - PROJECT TRAINING
-POST http://localhost:4004/odata/v4/admin/createNonProjectType
+###
+
+### 15. POST - Create New Project
+POST http://localhost:4004/odata/v4/admin/createProject
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
 
 {
-  "nonProjectTypeID": "NPT005",
-  "typeName": "Project Training",
-  "description": "Project-specific training and onboarding",
-  "isBillable": false
+  "projectID": "PRJ003",
+  "projectName": "AI Chatbot Development",
+  "description": "Develop AI-powered customer support chatbot",
+  "startDate": "2024-12-01",
+  "endDate": "2025-05-31",
+  "projectRole": "Developing",
+  "budget": 600000.00,
+  "allocatedHours": 3500,
+  "projectOwnerID": "EMP005",
+  "isBillable": true
 }
 
-### 4. GET ALL ROLES
-GET http://localhost:4004/odata/v4/admin/UserRoles
-Content-Type: application/json
-Authorization: Basic admin:initial
+###
 
-### 5. GET ALL NON-PROJECT TYPES
-GET http://localhost:4004/odata/v4/admin/NonProjectTypes
+### 16. POST - Assign Employee to Manager
+POST http://localhost:4004/odata/v4/admin/assignEmployeeToManager
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
 
-### 6. GET ACTIVE NON-PROJECT TYPES
-GET http://localhost:4004/odata/v4/admin/NonProjectTypes?$filter=isActive eq true
+{
+  "employeeID": "EMP008",
+  "managerEmployeeID": "EMP006"
+}
+
+###
+
+### 17. POST - Admin Assign Project to Employee
+POST http://localhost:4004/odata/v4/admin/assignProjectToEmployee
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
 
-### 7. UPDATE NON-PROJECT TYPE
+{
+  "employeeID": "EMP003",
+  "projectID": "PRJ002"
+}
+
+###
+
+### 18. POST - Update Employee Details
+POST http://localhost:4004/odata/v4/admin/updateEmployeeDetails
+Authorization: Basic pushpak.jha:initial
+Content-Type: application/json
+
+{
+  "employeeID": "EMP001",
+  "firstName": "Aditya",
+  "lastName": "Mishra",
+  "email": "aditya.mishra.updated@company.com"
+}
+
+###
+
+### 19. POST - Update Role Details
+POST http://localhost:4004/odata/v4/admin/updateRoleDetails
+Authorization: Basic pushpak.jha:initial
+Content-Type: application/json
+
+{
+  "roleID": "ROLE001",
+  "roleName": "Employee",
+  "description": "Standard employee role with timesheet access"
+}
+
+###
+
+### 20. POST - Update Activity
+POST http://localhost:4004/odata/v4/admin/updateActivity
+Authorization: Basic pushpak.jha:initial
+Content-Type: application/json
+
+{
+  "activityID": "ACT001",
+  "activity": "New UI Development",
+  "activityType": "Project",
+  "projectID": "PRJ001",
+  "isBillable": true,
+  "plannedHours": 900,
+  "startDate": "2024-01-01",
+  "endDate": "2024-12-31",
+  "status": "Active"
+}
+
+###
+
+### 21. POST - Update Non-Project Type
 POST http://localhost:4004/odata/v4/admin/updateNonProjectType
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
 
 {
   "nonProjectTypeID": "NPT001",
-  "typeName": "Training",
+  "typeName": "Training & Certification",
   "description": "Professional training, certifications, and skill development",
   "isBillable": false,
   "isActive": true
 }
 
-### 8. CREATE MANAGER EMPLOYEE (EMP019)
-POST http://localhost:4004/odata/v4/admin/createEmployee
+###
+
+### 22. POST - Update Project
+POST http://localhost:4004/odata/v4/admin/updateProject
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
 
 {
-  "employeeID": "EMP019",
-  "firstName": "Jennifer",
-  "lastName": "Lopez",
-  "email": "jennifer.lopez@company.com",
-  "managerEmployeeID": null,
-  "roleID": "2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e"
+  "projectID": "PRJ001",
+  "projectName": "Cordys Enterprise Platform",
+  "description": "Enhanced enterprise integration and BPM platform",
+  "projectRole": "Developing",
+  "budget": 900000.00,
+  "allocatedHours": 5500,
+  "status": "Active"
 }
 
-### 9. CREATE EMPLOYEE UNDER MANAGER (EMP020)
-POST http://localhost:4004/odata/v4/admin/createEmployee
+###
+
+### 23. POST - Admin Approve Timesheet 
+POST http://localhost:4004/odata/v4/admin/approveTimesheet
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
 
 {
-  "employeeID": "EMP020",
-  "firstName": "Daniel",
-  "lastName": "Jackson",
-  "email": "daniel.jackson@company.com",
-  "managerEmployeeID": "EMP011",
-  "roleID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+  "timesheetID": "TS021"
 }
 
-### 10. GET ALL EMPLOYEES
-GET http://localhost:4004/odata/v4/admin/Employees
-Content-Type: application/json
-Authorization: Basic admin:initial
+###
 
-### 11. GET ALL ACTIVE EMPLOYEES
-GET http://localhost:4004/odata/v4/admin/Employees?$filter=isActive eq true
+### 24. POST - Admin Reject Timesheet 
+POST http://localhost:4004/odata/v4/admin/rejectTimesheet
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 12. GET EMPLOYEES WITH MANAGER INFO
-GET http://localhost:4004/odata/v4/admin/Employees?$expand=managerID
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 13. GET SPECIFIC EMPLOYEE
-GET http://localhost:4004/odata/v4/admin/Employees?$filter=employeeID eq 'EMP001'
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 14. GET ALL MANAGERS (Role = Manager)
-GET http://localhost:4004/odata/v4/admin/Employees?$filter=userRole_ID eq '2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e'
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 15. UPDATE EMPLOYEE DETAILS
-POST http://localhost:4004/odata/v4/admin/updateEmployeeDetails
-Content-Type: application/json
-Authorization: Basic admin:initial
 
 {
-  "employeeID": "EMP001",
-  "firstName": "John",
-  "lastName": "Smith Jr",
-  "email": "john.smith@company.com"
+  "timesheetID": "TS023",
+  "reason": "Training not approved for this period. Please reschedule."
 }
 
-### 16. ASSIGN EMPLOYEE TO MANAGER (EMP020 to EMP012)
-POST http://localhost:4004/odata/v4/admin/assignEmployeeToManager
-Content-Type: application/json
-Authorization: Basic admin:initial
+###
 
-{
-  "employeeID": "EMP020",
-  "managerEmployeeID": "EMP012"
-}
-
-### 17. UPDATE ROLE DETAILS
-POST http://localhost:4004/odata/v4/admin/updateRoleDetails
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-{
-  "roleID": "ROLE001",
-  "roleName": "Employee",
-  "description": "Full-time Employee Role with benefits"
-}
-
-### 18. VIEW ALL PROJECTS
-GET http://localhost:4004/odata/v4/admin/Projects
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 19. VIEW ACTIVE PROJECTS
-GET http://localhost:4004/odata/v4/admin/Projects?$filter=status eq 'Active'
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 20. VIEW ALL ACTIVITIES
-GET http://localhost:4004/odata/v4/admin/Activities
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 21. VIEW ACTIVITIES WITH EMPLOYEE AND PROJECT ----Review
-GET http://localhost:4004/odata/v4/admin/Activities?$expand=employee,project
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 22. VIEW ALL TIMESHEETS
-GET http://localhost:4004/odata/v4/admin/Timesheets
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 23. VIEW SUBMITTED TIMESHEETS
-GET http://localhost:4004/odata/v4/admin/Timesheets?$filter=status eq 'Submitted'
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 24. VIEW ALL NON-PROJECT REQUESTS
-GET http://localhost:4004/odata/v4/admin/NonProjectRequests
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-
-### 27. VIEW OVERALL PROGRESS REPORT
-GET http://localhost:4004/odata/v4/admin/OverallProgressReport
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 28. VIEW ROLE SUMMARY
-GET http://localhost:4004/odata/v4/admin/RoleSummary
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 29. VIEW ALL NOTIFICATIONS
-GET http://localhost:4004/odata/v4/admin/Notifications
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 30. VIEW UNREAD NOTIFICATIONS
-GET http://localhost:4004/odata/v4/admin/Notifications?$filter=isRead eq false
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 31. DEACTIVATE EMPLOYEE (EMP020)
+### 25. POST - Deactivate Employee
 POST http://localhost:4004/odata/v4/admin/deactivateEmployee
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
 
 {
-  "employeeID": "EMP020"
+  "employeeID": "EMP008"
 }
 
-### 32. GET TIMESHEETS WITH EMPLOYEE AND PROJECT DETAILS
-GET http://localhost:4004/odata/v4/admin/Timesheets?$expand=employee,project,activity
-Content-Type: application/json
-Authorization: Basic admin:initial
+###
 
-### 33. GET APPROVED TIMESHEETS
-GET http://localhost:4004/odata/v4/admin/Timesheets?$filter=status eq 'Approved'
+### 26. PATCH - Update Employee (Direct)
+PATCH http://localhost:4004/odata/v4/admin/Employees(a47ac10b-58cc-4372-a567-0e02b2c3d490)
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 35. GET EMPLOYEES BY MANAGER (Team under EMP011)
-GET http://localhost:4004/odata/v4/admin/Employees?$filter=managerID_ID eq 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
-Content-Type: application/json
-Authorization: Basic admin:initial
-
-### 36. DEACTIVATE MANAGER (EMP019)
-POST http://localhost:4004/odata/v4/admin/deactivateManager
-Content-Type: application/json
-Authorization: Basic admin:initial
 
 {
-  "employeeID": "EMP019"
+  "firstName": "Aditya Kumar",
+  "lastName": "Mishra"
 }
 
-### 37. GET EMPLOYEES WITH ROLE NAME
-GET http://localhost:4004/odata/v4/admin/Employees?$expand=userRole
-Content-Type: application/json
-Authorization: Basic admin:initial
+###
 
-### 38. GET ADMIN USERS
-GET http://localhost:4004/odata/v4/admin/Employees?$filter=userRole_ID eq '3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f'
+### 27. PATCH - Update Project (Direct)
+PATCH http://localhost:4004/odata/v4/admin/Projects(b47ac10b-58cc-4372-a567-0e02b2c3d500)
+Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
-Authorization: Basic admin:initial
+
+{
+  "description": "Admin updated: Cordys enterprise platform with enhanced features",
+  "status": "Active"
+}
+
+###
+
+### 28. PATCH - Update Activity (Direct)
+PATCH http://localhost:4004/odata/v4/admin/Activities(c47ac10b-58cc-4372-a567-0e02b2c3d510)
+Authorization: Basic pushpak.jha:initial
+Content-Type: application/json
+
+{
+  "activity": "Advanced UI Development",
+  "plannedHours": 1000
+}
+
+###
+
+### 29. DELETE - Delete Non-Project Type
+DELETE http://localhost:4004/odata/v4/admin/NonProjectTypes(n47ac10b-58cc-4372-a567-0e02b2c3d561)
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 30. GET - Read Timesheets with Filter (By Employee)
+GET http://localhost:4004/odata/v4/admin/Timesheets?$filter=employee/employeeID eq 'EMP001'
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 31. GET - Read Timesheets with Filter (By Status)
+GET http://localhost:4004/odata/v4/admin/Timesheets?$filter=status eq 'Submitted'
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 32. GET - Read Overall Progress Report (Filter by Manager)
+GET http://localhost:4004/odata/v4/admin/OverallProgressReport?$filter=managerEmpID eq 'EMP005'
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 33. GET - Read Overall Progress Report (Filter by Project)
+GET http://localhost:4004/odata/v4/admin/OverallProgressReport?$filter=projectName eq 'Sony COFA'
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 34. GET - Read Employees with Expand
+GET http://localhost:4004/odata/v4/admin/Employees?$expand=userRole,managerID
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 35. GET - Read Projects with Filter (Active Only)
+GET http://localhost:4004/odata/v4/admin/Projects?$filter=status eq 'Active'
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 36. GET - Read Activities with Filter (By Project)
+GET http://localhost:4004/odata/v4/admin/Activities?$filter=project/projectID eq 'PRJ001'
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 37. GET - Read Notifications (Unread Only)
+GET http://localhost:4004/odata/v4/admin/Notifications?$filter=isRead eq false
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 38. GET - Count Total Employees
+GET http://localhost:4004/odata/v4/admin/Employees/$count
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 39. GET - Count Total Timesheets
+GET http://localhost:4004/odata/v4/admin/Timesheets/$count
+Authorization: Basic pushpak.jha:initial
+
+###
+
+### 40. GET - Read Single Employee by ID
+GET http://localhost:4004/odata/v4/admin/Employees(a47ac10b-58cc-4372-a567-0e02b2c3d490)
+Authorization: Basic pushpak.jha:initial
+
+###

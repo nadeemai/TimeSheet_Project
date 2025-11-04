@@ -10,7 +10,6 @@ modules:
   - name: timesheet-application-auth
   - name: timesheet-application-destination
   provides:
-  
   - name: srv-api
     properties:
       srv-url: ${default-url}
@@ -41,6 +40,10 @@ modules:
       - admincomadmin.zip
       name: admincomadmin
       target-path: app/
+    - artifacts:
+      - employeecomemployee.zip
+      name: employeecomemployee
+      target-path: app/
 - name: timesheetapplicationadmin
   type: html5
   path: app/admin
@@ -48,12 +51,22 @@ modules:
     build-result: dist
     builder: custom
     commands:
-    - npm ci
-    - npm run build
+    - npm install
+    - npm run build:cf
     supported-platforms: []
 - name: admincomadmin
   type: html5
   path: app/admin
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: employeecomemployee
+  type: html5
+  path: app/employee
   build-parameters:
     build-result: dist
     builder: custom

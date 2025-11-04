@@ -52,14 +52,7 @@
                     
                     <!-- Task Details Section -->
                     <Label id="taskDetailsLabel" text="Task Details"/>
-                    <TextArea
-                        id="taskDetails"
-                        value="{/newEntry/taskDetails}"
-                        placeholder="Enter task details (max 50 characters)"
-                        growing="true"
-                        growingMaxLines="3"
-                        maxLength="50"
-                        liveChange="onTaskDetailsLiveChange" />
+                    <!-- -->
                     
                     <!-- Hours Selection Section -->
                     <Label id="hoursLabel" text="Hours"/>

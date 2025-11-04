@@ -1,125 +1,96 @@
+<!-- admin.com.admin.Fragments.EditTimeEntry.xml -->
 <core:FragmentDefinition
     xmlns="sap.m"
     xmlns:core="sap.ui.core"
-    xmlns:f="sap.ui.layout.form"
-    xmlns:l="sap.ui.layout">
-    <Dialog id="_IDGenDialog1"
-        title="Edit Time Entry"
-        contentWidth="500px">
+    xmlns:f="sap.ui.layout.form">
+    <Dialog id="editTimeEntryDialog" title="Edit Time Entry" class="sapUiPopupWithPadding">
         <content>
-            <VBox id="_IDGenVBox46" class="sapUiMediumMargin">
-                <f:SimpleForm id="_IDGenSimpleForm">
-                    <Label id="_IDGenLabel24" text="Project" />
-                    <ComboBox
-                        id="editProjectCombo"
-                        items="{
-                            path: '/assignedProjects',
-                            templateShareable: false
-                        }"
-                        selectedKey="{/editEntry/projectId}">
-                        <items>
-                            <core:Item id="_IDGenItem4" key="{projectId}" text="{projectName}" />
-                        </items>
+            <f:SimpleForm id="editTimeEntryForm" editable="true" layout="ResponsiveGridLayout" columnsL="1" columnsM="1">
+                <f:content>
+                    <Label id="editProjectLabel" text="Project"/>
+                    <ComboBox id="editProjectComboBox"
+                        selectedKey="{/editEntry/projectId}"
+                        items="{/assignedProjects}"
+                        editable="false">
+                        <core:Item id="editProjectItem" key="{projectId}" text="{projectName}"/>
                     </ComboBox>
                     
-                    <Label id="_IDGenLabel40" text="Work Task" />
-                    <ComboBox
-                        id="editWorkTypeCombo"
-                        items="{
-                            path: '/workTypes',
-                            templateShareable: false
-                        }"
-                        selectedKey="{/editEntry/workType}">
-                        <items>
-                            <core:Item id="_IDGenItem5" key="{type}" text="{name}" />
-                        </items>
+                    <Label id="editTaskLabel" text="Task"/>
+                    <ComboBox id="editTaskComboBox"
+                        selectedKey="{/editEntry/workType}"
+                        items="{/workTypes}"
+                        editable="false">
+                        <core:Item id="editTaskItem" key="{type}" text="{name}"/>
                     </ComboBox>
                     
-                    <Label id="_IDGenLabel41" text="Hours" />
-                    <VBox id="_IDGeneVBox47">
-                        <!-- Day Labels -->
-                        <HBox id="_IDGenHBox15" justifyContent="SpaceAround">
-                            <Label id="_IDGeneLabel43" text="Mon" width="60px" textAlign="Center" />
-                            <Label id="_IDGenLabel44" text="Tue" width="60px" textAlign="Center" />
-                            <Label id="_IDGenLabel45" text="Wed" width="60px" textAlign="Center" />
-                            <Label id="_IDGenLabel46" text="Thu" width="60px" textAlign="Center" />
-                            <Label id="_IDGenLabel47" text="Fri" width="60px" textAlign="Center" />
-                            <Label id="_IDGenLabel48" text="Sat" width="60px" textAlign="Center" />
-                            <Label id="_IDGenLabel49" text="Sun" width="60px" textAlign="Center" />
-                        </HBox>
-                        <!-- Hour Inputs -->
-                        <HBox id="_IDGenHBox14" justifyContent="SpaceAround">
-                            <Input
-                                id="editMonday"
-                                value="{/editEntry/monday}"
-                                placeholder="0"
-                                type="Number"
-                                width="60px"
-                                liveChange=".onFragmentHoursChange" />
-                            <Input
-                                id="editTuesday"
-                                value="{/editEntry/tuesday}"
-                                placeholder="0"
-                                type="Number"
-                                width="60px"
-                                liveChange=".onFragmentHoursChange" />
-                            <Input
-                                id="editWednesday"
-                                value="{/editEntry/wednesday}"
-                                placeholder="0"
-                                type="Number"
-                                width="60px"
-                                liveChange=".onFragmentHoursChange" />
-                            <Input
-                                id="editThursday"
-                                value="{/editEntry/thursday}"
-                                placeholder="0"
-                                type="Number"
-                                width="60px"
-                                liveChange=".onFragmentHoursChange" />
-                            <Input
-                                id="editFriday"
-                                value="{/editEntry/friday}"
-                                placeholder="0"
-                                type="Number"
-                                width="60px"
-                                liveChange=".onFragmentHoursChange" />
-                            <Input
-                                id="editSaturday"
-                                value="{/editEntry/saturday}"
-                                placeholder="0"
-                                type="Number"
-                                width="60px"
-                                liveChange=".onFragmentHoursChange" />
-                            <Input
-                                id="editSunday"
-                                value="{/editEntry/sunday}"
-                                placeholder="0"
-                                type="Number"
-                                width="60px"
-                                liveChange=".onFragmentHoursChange" />
-                        </HBox>
-                    </VBox>
-                    
-                    <Label id="_IDGenLabel42" text="Comment" />
-                    <TextArea
-                        id="editComment"
+                    <Label id="editCommentLabel" text="Task Details"/>
+                    <TextArea id="editCommentTexetArea"
                         value="{/editEntry/comment}"
-                        placeholder="Enter comment"
-                        rows="3" />
-                </f:SimpleForm>
-            </VBox>
+                        growing="true"
+                        growingMaxLines="5"
+                        liveChange="onTaskDetailsLiveChange"
+                        placeholder="Enter task details"/>
+                    
+                    <Label id="editHoursLabel" text="Hours"/>
+                    <HBox id="editHoursHBox">
+                        <VBox id="editMondayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editMondayLabel" text="Monday"/>
+                            <Input id="editMondayInput"
+                                value="{path: '/editEntry/monday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editTuesdayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editTuesdayLabel" text="Tuesday"/>
+                            <Input id="editTuesdayInput"
+                                value="{path: '/editEntry/tuesday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editWednesdayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editWednesdayLabel" text="Wednesday"/>
+                            <Input id="editWednesdayInput"
+                                value="{path: '/editEntry/wednesday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editThursdayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editThursdayLabel" text="Thursday"/>
+                            <Input id="editThursdayInput"
+                                value="{path: '/editEntry/thursday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editFridayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editFridayLabel" text="Friday"/>
+                            <Input id="editFridayInput"
+                                value="{path: '/editEntry/friday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editSaturdayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editSaturdayLabel" text="Saturday"/>
+                            <Input id="editSaturdayInput"
+                                value="{path: '/editEntry/saturday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editSundayVBox">
+                            <Label id="editSundayLabel" text="Sunday"/>
+                            <Input id="editSundayInput"
+                                value="{path: '/editEntry/sunday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                    </HBox>
+                </f:content>
+            </f:SimpleForm>
         </content>
         <beginButton>
-            <Button id="_IDGenButton5"
-                text="Save"
-                type="Emphasized"
-                press=".onSaveEditedEntry" />
+            <Button id="editCancelButton" text="Cancel" press="onCancelEditEntry"/>
         </beginButton>
         <endButton>
-            <Button id="_IDGenButton6"
-                text="Cancel"
-                press=".onCancelEditEntry" />
+            <Button id="editSaveButton" text="Save" type="Emphasized" press="onSaveEditedEntry"/>
         </endButton>
     </Dialog>
 </core:FragmentDefinition>

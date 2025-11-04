@@ -15,12 +15,18 @@ service EmployeeService {
     managerID.email as managerEmail : String
   } where ID = $user.id;
 
-  // Available Activities (Master Data)
+  // ✅ My Projects - Primary redirection target for Projects
+  @readonly
+  @cds.redirection.target
+  entity MyProjects as projection on timesheet.Projects;
+
+  // Available Activities - can be filtered by project
   @readonly
   entity AvailableActivities as select from timesheet.Activities {
     *,
     project.projectName,
-    project.projectRole
+    project.projectRole,
+    project.ID as projectID : UUID
   } where status = 'Active';
 
   // Available Non-Project Types
@@ -29,7 +35,7 @@ service EmployeeService {
     *
   } where isActive = true;
 
-  // My Timesheets
+  // My Timesheets - employees can work on any project
   @cds.redirection.target
   entity MyTimesheets as select from timesheet.Timesheets {
     *,
@@ -41,7 +47,7 @@ service EmployeeService {
     approvedBy.firstName || ' ' || approvedBy.lastName as approvedByName : String
   } where employee.ID = $user.id;
 
-  // Progress summary
+  // Progress summary for Reports view
   @readonly
   entity MyProgressSummary as select from timesheet.Timesheets {
     key ID,
@@ -49,16 +55,27 @@ service EmployeeService {
     employee.employeeID as empID : String,
     project.ID as projectID : UUID,
     project.projectID as projectCode : String,
-    project.projectName,
+    project.projectName as Project : String,
+    project.allocatedHours as AllocatedHours : Integer,
+    project.startDate as StartDate : Date,
+    project.endDate as EndDate : Date,
+    hoursWorked as BookedHours : Decimal(10,2),
     project.projectRole,
     activity.activity as activityName,
     activity.activityType as activityType : String,
     workDate,
-    hoursWorked as totalBookedHours : Decimal(10,2),
     task,
     status,
     isBillable
   } where employee.ID = $user.id;
+
+  // ✅ Booked Hours Overview - No redirection target (aggregation only)
+  @readonly
+  entity BookedHoursOverview as projection on timesheet.Projects;
+
+  // ✅ Project Engagement Duration - No redirection target (aggregation only)
+  @readonly
+  entity ProjectEngagementDuration as projection on timesheet.Projects;
 
   // Daily summary
   @readonly
@@ -152,9 +169,21 @@ service ManagerService {
     status
   } where projectOwner.ID = $user.id;
 
+  @readonly
+  entity AllEmployees as select from timesheet.Employees {
+    *,
+    userRole.roleName as roleName : String
+  } where isActive = true;
+
+  @readonly
+  entity AllProjects as select from timesheet.Projects {
+    *
+  } where status = 'Active';
+
   // Manager Actions
   action approveTimesheet(timesheetID: String) returns String;
   action rejectTimesheet(timesheetID: String, reason: String) returns String;
+  action assignProjectToEmployee(employeeID: String, projectID: String) returns String;
 }
 
 /**
@@ -188,7 +217,7 @@ service AdminService {
     *
   };
 
-  @readonly
+  @cds.redirection.target
   entity Projects as select from timesheet.Projects {
     *,
     projectOwner.firstName || ' ' || projectOwner.lastName as projectOwnerName : String
@@ -256,6 +285,7 @@ service AdminService {
     startDate: Date, endDate: Date, projectRole: String, budget: Decimal, allocatedHours: Integer, 
     projectOwnerID: String, isBillable: Boolean) returns String;
   action assignEmployeeToManager(employeeID: String, managerEmployeeID: String) returns String;
+  action assignProjectToEmployee(employeeID: String, projectID: String) returns String;
   action deactivateEmployee(employeeID: String) returns String;
   action deactivateManager(employeeID: String) returns String;
   action updateEmployeeDetails(employeeID: String, firstName: String, lastName: String, email: String) returns String;
@@ -265,4 +295,6 @@ service AdminService {
   action updateNonProjectType(nonProjectTypeID: String, typeName: String, description: String, isBillable: Boolean, isActive: Boolean) returns String;
   action updateProject(projectID: String, projectName: String, description: String, 
     projectRole: String, budget: Decimal, allocatedHours: Integer, status: String) returns String;
+  action approveTimesheet(timesheetID: String) returns String;
+  action rejectTimesheet(timesheetID: String, reason: String) returns String;
 }

@@ -1,426 +1,281 @@
-###############################################
-# EMPLOYEE SERVICE - COMPLETE API TEST SUITE
-###############################################
+### Employee Service Test File
+### Base URL: http://localhost:4004
 
-### ========================================
-### EMPLOYEE PROFILE
-### ========================================
+# Test MyProjects
+GET http://localhost:4004/odata/v4/employee/MyProjects
+Authorization: Basic aditya.mishra:initial
 
-### 1. Get My Profile
+
+# Test BookedHoursOverview
+GET http://localhost:4004/odata/v4/employee/BookedHoursOverview
+Authorization: Basic aditya.mishra:initial
+
+
+# Test ProjectEngagementDuration
+GET http://localhost:4004/odata/v4/employee/ProjectEngagementDuration
+Authorization: Basic EMP001:password
+
+
+### 1. GET - Read Employee Profile
 GET http://localhost:4004/odata/v4/employee/MyProfile
-Authorization: Basic alice.brown:initial
+Authorization: Basic aditya.mishra:initial
 
-### 2. Get My Profile with Manager Details
-GET http://localhost:4004/odata/v4/employee/MyProfile?$expand=managerID
-Authorization: Basic alice.brown:initial
+###
 
-
-### ========================================
-### ACTIVITIES - VIEW ASSIGNED PROJECTS
-### ========================================
-
-### 3. Get Available Activities (All Active)
-GET http://localhost:4004/odata/v4/employee/AvailableActivities
-Authorization: Basic alice.brown:initial
-
-### 4. Get Project Activities Only
-GET http://localhost:4004/odata/v4/employee/AvailableActivities?$filter=activityType eq 'Project'
-Authorization: Basic alice.brown:initial
-
-### 5. Get Non-Project Activities Only
-GET http://localhost:4004/odata/v4/employee/AvailableActivities?$filter=activityType eq 'NonProject'
-Authorization: Basic alice.brown:initial
-
-### 6. Get Activities with Project Details
-GET http://localhost:4004/odata/v4/employee/AvailableActivities?$expand=project
-Authorization: Basic alice.brown:initial
-
-### 7. Get Billable Activities
-GET http://localhost:4004/odata/v4/employee/AvailableActivities?$filter=isBillable eq true
-Authorization: Basic alice.brown:initial
-
-
-### ========================================
-### NON-PROJECT TYPES
-### ========================================
-
-### 8. Get Available Non-Project Types
-GET http://localhost:4004/odata/v4/employee/AvailableNonProjectTypes
-Authorization: Basic alice.brown:initial
-
-
-### ========================================
-### TIMESHEET - LOG DAILY HOURS
-### ========================================
-
-### 9. Get All My Timesheets
+### 2. GET - Read My Timesheets
 GET http://localhost:4004/odata/v4/employee/MyTimesheets
-Authorization: Basic alice.brown:initial
+Authorization: Basic aditya.mishra:initial
 
-### 10. Get Draft Timesheets
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=status eq 'Draft'
-Authorization: Basic alice.brown:initial
+###
 
-### 11. Get Submitted Timesheets
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=status eq 'Submitted'
-Authorization: Basic alice.brown:initial
+### 3. GET - Read Available Activities (All)
+GET http://localhost:4004/odata/v4/employee/AvailableActivities
+Authorization: Basic aditya.mishra:initial
 
-### 12. Get Approved Timesheets
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=status eq 'Approved'
-Authorization: Basic alice.brown:initial
+###
 
-### 13. Get Rejected Timesheets
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=status eq 'Rejected'
-Authorization: Basic alice.brown:initial
+### 4. GET - Read Available Activities (Filter by Project - Cordys)
+GET http://localhost:4004/odata/v4/employee/AvailableActivities?$filter=project_ID eq b47ac10b-58cc-4372-a567-0e02b2c3d500
+Authorization: Basic aditya.mishra:initial
 
-### 14. Get Timesheets with Full Details
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$expand=activity,project,nonProjectType,approvedBy
-Authorization: Basic alice.brown:initial
+###
 
-### 15. Create Timesheet - Project Activity (Designing)
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
+### 5. GET - Read Available Activities (Filter by Project - Sony COFA)
+GET http://localhost:4004/odata/v4/employee/AvailableActivities?$filter=project_ID eq b47ac10b-58cc-4372-a567-0e02b2c3d501
+Authorization: Basic aditya.mishra:initial
 
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "workDate": "2024-10-21",
-  "hoursWorked": 8.0,
-  "task": "Designing",
-  "taskDetails": "Created wireframes and mockups for user dashboard module",
-  "isBillable": true
-}
+###
 
-### 16. Create Timesheet - Project Activity (Developing)
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
+### 6. GET - Read Available Non-Project Types
+GET http://localhost:4004/odata/v4/employee/AvailableNonProjectTypes
+Authorization: Basic aditya.mishra:initial
 
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "workDate": "2024-10-22",
-  "hoursWorked": 8.0,
-  "task": "Developing",
-  "taskDetails": "Implemented REST API endpoints for user authentication with JWT",
-  "isBillable": true
-}
+###
 
-### 17. Create Timesheet - Project Activity (Testing)
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "workDate": "2024-10-23",
-  "hoursWorked": 7.5,
-  "task": "Testing",
-  "taskDetails": "Unit testing for authentication module. Code coverage: 85%",
-  "isBillable": true
-}
-
-### 18. Create Timesheet - Project Activity (Deployment)
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "workDate": "2024-10-24",
-  "hoursWorked": 8.0,
-  "task": "Deployment",
-  "taskDetails": "Deployed authentication service to staging. Configured CI/CD pipeline",
-  "isBillable": true
-}
-
-### 19. Create Timesheet - Non-Project Activity (Training)
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "nonProjectType_ID": "n47ac10b-58cc-4372-a567-0e02b2c3d560",
-  "workDate": "2024-10-25",
-  "hoursWorked": 8.0,
-  "task": "Training",
-  "taskDetails": "React Advanced Patterns workshop - Day 1",
-  "isBillable": false
-}
-
-###19.1 REQUEST NON-PROJECT VIA ACTION - SOFT SKILLS
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "nonProjectType_ID": "n47ac10b-58cc-4372-a567-0e02b2c3d561",
-  "workDate": "2024-10-26",
-  "hoursWorked": 8.0,
-  "task": "Soft skills",
-  "taskDetails": "React Advanced Patterns workshop - Day 1",
-  "isBillable": false
-}
-
-### 20. Create Timesheet - Non-Project Activity (Leave)
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "nonProjectType_ID": "n47ac10b-58cc-4372-a567-0e02b2c3d562",
-  "workDate": "2024-10-28",
-  "hoursWorked": 8.0,
-  "task": "Leave",
-  "taskDetails": "Annual leave",
-  "isBillable": false
-}
-
-### 21. Create Timesheet - Multiple Entries Same Day (Morning)
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "workDate": "2024-10-29",
-  "hoursWorked": 5.0,
-  "task": "Developing",
-  "taskDetails": "Morning: Payment integration module development",
-  "isBillable": true
-}
-
-### 22. Create Timesheet - Multiple Entries Same Day (Afternoon)
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "workDate": "2024-10-29",
-  "hoursWorked": 3.0,
-  "task": "Testing",
-  "taskDetails": "Afternoon: Bug fixing and regression testing",
-  "isBillable": true
-}
-
-### 23. Update Timesheet (PATCH)
-PATCH http://localhost:4004/odata/v4/employee/MyTimesheets(d47ac10b-58cc-4372-a567-0e02b2c3d522)
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "hoursWorked": 7.5,
-  "taskDetails": "Updated: Completed authentication module with additional security features"
-}
-
-### 24. Delete Draft Timesheet
-DELETE http://localhost:4004/odata/v4/employee/MyTimesheets(d47ac10b-58cc-4372-a567-0e02b2c3d522)
-Authorization: Basic alice.brown:initial
-
-
-### ========================================
-### TIMESHEET ACTIONS
-### ========================================
-
-### 25. Submit Timesheet
-POST http://localhost:4004/odata/v4/employee/EmployeeService.submitTimesheet
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "timesheetID": "TS003"
-}
-
-### 26. Update Timesheet (Action)
-POST http://localhost:4004/odata/v4/employee/EmployeeService.updateTimesheet
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "timesheetID": "TS003",
-  "hours": 8.0,
-  "taskDetails": "Completed authentication with OAuth2 integration"
-}
-
-
-### ========================================
-### TIMESHEET VALIDATION
-### ========================================
-
-### 27. Validate Daily Hours for Specific Date
-GET http://localhost:4004/odata/v4/employee/EmployeeService.validateDailyHours(date='2024-10-21')
-Authorization: Basic alice.brown:initial
-
-### 28. Validate Daily Hours for Today
-GET http://localhost:4004/odata/v4/employee/EmployeeService.validateDailyHours(date='2024-10-27')
-Authorization: Basic alice.brown:initial
-
-
-### ========================================
-### VALIDATION SCENARIOS (SHOULD FAIL)
-### ========================================
-
-### 29. ❌ Try to Book More Than 8 Hours in One Entry
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "workDate": "2024-10-30",
-  "hoursWorked": 10.0,
-  "task": "Developing",
-  "taskDetails": "This should fail - exceeds 8 hours",
-  "isBillable": true
-}
-
-### 30. ❌ Try to Book Billable Hours for Future Week
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "workDate": "2024-11-15",
-  "hoursWorked": 8.0,
-  "task": "Developing",
-  "taskDetails": "This should fail - billable hours for future week",
-  "isBillable": true
-}
-
-### 31. ❌ Try to Book Less Than 8 Hours for Past Date
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "workDate": "2024-10-15",
-  "hoursWorked": 5.0,
-  "task": "Developing",
-  "taskDetails": "This should fail - less than 8 hours for past date",
-  "isBillable": true
-}
-
-### 32. ✅ Book Training for Future Week (SHOULD SUCCEED)
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Content-Type: application/json
-Authorization: Basic alice.brown:initial
-
-{
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
-  "nonProjectType_ID": "n47ac10b-58cc-4372-a567-0e02b2c3d560",
-  "workDate": "2024-11-15",
-  "hoursWorked": 8.0,
-  "task": "Training",
-  "taskDetails": "AWS certification training - Future booking allowed",
-  "isBillable": false
-}
-
-
-### ========================================
-### PROGRESS REPORTS
-### ========================================
-
-### 33. Get My Progress Summary
+### 7. GET - Read My Progress Summary
 GET http://localhost:4004/odata/v4/employee/MyProgressSummary
-Authorization: Basic alice.brown:initial
+Authorization: Basic aditya.mishra:initial
 
-### 34. Get Progress Summary by Project
-GET http://localhost:4004/odata/v4/employee/MyProgressSummary?$filter=projectName eq 'E-Commerce Platform'
-Authorization: Basic alice.brown:initial
+###
 
-### 35. Get Progress Summary for Specific Date Range
-GET http://localhost:4004/odata/v4/employee/MyProgressSummary?$filter=workDate ge 2024-10-01 and workDate le 2024-10-31
-Authorization: Basic alice.brown:initial
-
-### 36. Get Billable Hours Summary
-GET http://localhost:4004/odata/v4/employee/MyProgressSummary?$filter=isBillable eq true
-Authorization: Basic alice.brown:initial
-
-
-### ========================================
-### DAILY SUMMARY
-### ========================================
-
-### 37. Get My Daily Summary
+### 8. GET - Read My Daily Summary
 GET http://localhost:4004/odata/v4/employee/MyDailySummary
-Authorization: Basic alice.brown:initial
+Authorization: Basic aditya.mishra:initial
 
-### 38. Get Daily Summary for Specific Date
-GET http://localhost:4004/odata/v4/employee/MyDailySummary?$filter=workDate eq 2024-10-21
-Authorization: Basic alice.brown:initial
+###
 
-### 39. Get Daily Summary for Current Week
-GET http://localhost:4004/odata/v4/employee/MyDailySummary?$filter=workDate ge 2024-10-21 and workDate le 2024-10-27
-Authorization: Basic alice.brown:initial
+### 9. POST - Create New Timesheet (Draft)
+POST http://localhost:4004/odata/v4/employee/MyTimesheets
+Authorization: Basic aditya.mishra:initial
+Content-Type: application/json
 
-### 40. Get Days with Less Than 8 Hours
-GET http://localhost:4004/odata/v4/employee/MyDailySummary?$filter=totalHours lt 8
-Authorization: Basic alice.brown:initial
+{
+  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d490",
+  "workDate": "2024-11-04",
+  "hoursWorked": 8.0,
+  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d510",
+  "project_ID": "b47ac10b-58cc-4372-a567-0e02b2c3d500",
+  "task": "Developing",
+  "taskDetails": "Implemented new authentication features for Cordys",
+  "isBillable": true,
+  "status": "Draft"
+}
 
+###
 
-### ========================================
-### TIMESHEETS - REVIEW & FILTER
-### ========================================
+### 10. POST - Create Timesheet for Different Project
+POST http://localhost:4004/odata/v4/employee/MyTimesheets
+Authorization: Basic nadeem.abbas:initial
+Content-Type: application/json
 
-### 41. Get Timesheets by Date Range (Current Month)
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=workDate ge 2024-10-01 and workDate le 2024-10-31&$orderby=workDate asc
-Authorization: Basic alice.brown:initial
+{
+  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
+  "workDate": "2024-11-04",
+  "hoursWorked": 8.0,
+  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d520",
+  "project_ID": "b47ac10b-58cc-4372-a567-0e02b2c3d501",
+  "task": "Designing",
+  "taskDetails": "Created UI mockups for Sony COFA new module",
+  "isBillable": true,
+  "status": "Draft"
+}
 
-### 42. Get Timesheets by Work Type
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=workType eq 'Developing'
-Authorization: Basic alice.brown:initial
+###
 
-### 43. Get Billable Timesheets
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=isBillable eq true
-Authorization: Basic alice.brown:initial
+### 11. POST - Create Non-Project Timesheet (Leave)
+POST http://localhost:4004/odata/v4/employee/MyTimesheets
+Authorization: Basic yugal.kishore:initial
+Content-Type: application/json
 
-### 44. Get Non-Billable Timesheets
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=isBillable eq false
-Authorization: Basic alice.brown:initial
+{
+  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d492",
+  "workDate": "2024-11-05",
+  "hoursWorked": 8.0,
+  "nonProjectType_ID": "n47ac10b-58cc-4372-a567-0e02b2c3d562",
+  "task": "Leave",
+  "taskDetails": "Sick leave",
+  "isBillable": false,
+  "status": "Draft"
+}
 
-### 45. Get Timesheets Ordered by Date (Descending)
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$orderby=workDate desc
-Authorization: Basic alice.brown:initial
+###
 
-### 46. Get Recent Timesheets (Last 7 Days)
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=workDate ge 2024-10-20&$orderby=workDate desc
-Authorization: Basic alice.brown:initial
+### 12. PATCH - Update Draft Timesheet
+PATCH http://localhost:4004/odata/v4/employee/MyTimesheets(d47ac10b-58cc-4372-a567-0e02b2c3d524)
+Authorization: Basic aditya.mishra:initial
+Content-Type: application/json
 
+{
+  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d490",
+  "hoursWorked": 7.5,
+  "taskDetails": "Updated: Created data visualization components with React charts"
+}
 
-### ========================================
-### ODATA OPERATIONS
-### ========================================
+###
 
-### 47. Count My Timesheets
-GET http://localhost:4004/odata/v4/employee/MyTimesheets/$count
-Authorization: Basic alice.brown:initial
+### 13. PATCH - Update Approved Timesheet (New Feature)
+PATCH http://localhost:4004/odata/v4/employee/MyTimesheets(d47ac10b-58cc-4372-a567-0e02b2c3d520)
+Authorization: Basic aditya.mishra:initial
+Content-Type: application/json
 
-### 48. Count Approved Timesheets
-GET http://localhost:4004/odata/v4/employee/MyTimesheets/$count?$filter=status eq 'Approved'
-Authorization: Basic alice.brown:initial
+{
+  "hoursWorked": 8.5,
+  "taskDetails": "Updated after approval: Added additional UI enhancements"
+}
 
-### 49. Select Specific Fields
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$select=workDate,hoursWorked,workType,status
-Authorization: Basic alice.brown:initial
+###
 
-### 50. Pagination - First 10 Timesheets
-GET http://localhost:4004/odata/v4/employee/MyTimesheets?$top=10&$skip=0&$orderby=workDate desc
-Authorization: Basic alice.brown:initial
+### 14. POST - Submit Timesheet Action  -------
+POST http://localhost:4004/odata/v4/employee/submitTimesheet
+Authorization: Basic aditya.mishra:initial
+Content-Type: application/json
+
+{
+  "timesheetID": "TS009"
+}
+
+###
+
+### 15. POST - Update Timesheet Action
+POST http://localhost:4004/odata/v4/employee/updateTimesheet
+Authorization: Basic aditya.mishra:initial
+Content-Type: application/json
+
+{
+  "timesheetID": "TS009",
+  "hours": 7.0,
+  "taskDetails": "Refined data visualization components"
+}
+
+###
+
+### 16. POST - Validate Daily Hours Function
+POST http://localhost:4004/odata/v4/employee/validateDailyHours
+Authorization: Basic aditya.mishra:initial
+Content-Type: application/json
+
+{
+  "date": "2024-10-28"
+}
+
+###
+
+### 17. DELETE - Delete Draft Timesheet
+DELETE http://localhost:4004/odata/v4/employee/MyTimesheets(d47ac10b-58cc-4372-a567-0e02b2c3d529)
+Authorization: Basic aditya.mishra:initial
+
+###
+
+### 18. GET - Read Single Timesheet by ID
+GET http://localhost:4004/odata/v4/employee/MyTimesheets(d47ac10b-58cc-4372-a567-0e02b2c3d520)
+Authorization: Basic aditya.mishra:initial
+
+###
+
+### 19. GET - Read Timesheets with Filter (By Date)
+GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=workDate eq 2024-10-28
+Authorization: Basic aditya.mishra:initial
+
+###
+
+### 20. GET - Read Timesheets with Filter (By Status)
+GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=status eq 'Approved'
+Authorization: Basic aditya.mishra:initial
+
+###
+
+### 21. POST - Create Multiple Timesheets for Same Day (Testing 15-hour limit)
+POST http://localhost:4004/odata/v4/employee/MyTimesheets
+Authorization: Basic aditya.mishra:initial
+Content-Type: application/json
+
+{
+  "workDate": "2024-11-04",
+  "hoursWorked": 4.0,
+  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
+  "project_ID": "b47ac10b-58cc-4372-a567-0e02b2c3d500",
+  "task": "Developing",
+  "taskDetails": "CAPI development for Cordys",
+  "isBillable": true,
+  "status": "Draft"
+}
+
+###
+
+### 22. GET - Expand Timesheet with Related Entities
+GET http://localhost:4004/odata/v4/employee/MyTimesheets?$expand=activity,project,employee
+Authorization: Basic aditya.mishra:initial
+
+###
+
+### 23. POST - Test Validation: Exceeding 15 hours
+POST http://localhost:4004/odata/v4/employee/MyTimesheets
+Authorization: Basic aditya.mishra:initial
+Content-Type: application/json
+
+{
+  "workDate": "2024-11-04",
+  "hoursWorked": 16.0,
+  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d510",
+  "task": "Developing",
+  "taskDetails": "This should fail - exceeds 15 hours",
+  "isBillable": true
+}
+
+###
+
+### 24. POST - Create Timesheet with Bug Fix Task
+POST http://localhost:4004/odata/v4/employee/MyTimesheets
+Authorization: Basic aditya.mishra:initial
+Content-Type: application/json
+
+{
+  "workDate": "2024-11-05",
+  "hoursWorked": 6.0,
+  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d512",
+  "project_ID": "b47ac10b-58cc-4372-a567-0e02b2c3d500",
+  "task": "Bug Fix",
+  "taskDetails": "Fixed critical production bug in Cordys authentication",
+  "isBillable": true,
+  "status": "Draft"
+}
+
+###
+
+### 25. POST - Create Timesheet with Client Call Task
+POST http://localhost:4004/odata/v4/employee/MyTimesheets
+Authorization: Basic EMP002:password
+Content-Type: application/json
+
+{
+  "workDate": "2024-11-05",
+  "hoursWorked": 2.0,
+  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d523",
+  "project_ID": "b47ac10b-58cc-4372-a567-0e02b2c3d501",
+  "task": "Client Call",
+  "taskDetails": "Weekly sync meeting with Sony COFA stakeholders",
+  "isBillable": true,
+  "status": "Draft"
+}
+
+###
