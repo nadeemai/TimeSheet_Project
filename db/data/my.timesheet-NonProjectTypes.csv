@@ -1,4 +1,4 @@
 ID;nonProjectTypeID;typeName;description;isBillable;isActive;createdAt;createdBy;modifiedAt;modifiedBy
-n47ac10b-58cc-4372-a567-0e02b2c3d560;NPT001;Training;Professional training and certification courses;false;true;2024-01-01T00:00:00Z;admin;2024-01-01T00:00:00Z;admin
-n47ac10b-58cc-4372-a567-0e02b2c3d561;NPT002;Soft Skills;Soft skills development and workshops;false;true;2024-01-01T00:00:00Z;admin;2024-01-01T00:00:00Z;admin
-n47ac10b-58cc-4372-a567-0e02b2c3d562;NPT003;Leave;Personal leave and vacation days;false;true;2024-01-01T00:00:00Z;admin;2024-01-01T00:00:00Z;admin
+n47ac10b-58cc-4372-a567-0e02b2c3d560;NPT001;Training;Professional training and certification courses;false;true;2025-01-01T00:00:00Z;admin;2025-01-01T00:00:00Z;admin
+n47ac10b-58cc-4372-a567-0e02b2c3d561;NPT002;Soft Skills;Soft skills development and workshops;false;true;2025-01-01T00:00:00Z;admin;2025-01-01T00:00:00Z;admin
+n47ac10b-58cc-4372-a567-0e02b2c3d562;NPT003;Leave;Personal leave and vacation days;false;true;2025-01-01T00:00:00Z;admin;2025-01-01T00:00:00Z;admin

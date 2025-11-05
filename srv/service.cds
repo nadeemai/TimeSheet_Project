@@ -15,7 +15,7 @@ service EmployeeService {
     managerID.email as managerEmail : String
   } where ID = $user.id;
 
-  // ✅ My Projects - Simple view, aggregation done in handler
+  //My Projects 
   @readonly
   @cds.redirection.target
   entity MyProjects as projection on timesheet.Projects;
@@ -69,11 +69,11 @@ service EmployeeService {
     isBillable
   } where employee.ID = $user.id;
 
-  // ✅ Booked Hours Overview - Simple view, aggregation in handler
+//Booked Hours Overview 
   @readonly
   entity BookedHoursOverview as projection on timesheet.Projects;
 
-  // ✅ Project Engagement Duration - Simple view, calculations in handler
+// Project Engagement Duration 
   @readonly
   entity ProjectEngagementDuration as projection on timesheet.Projects;
 

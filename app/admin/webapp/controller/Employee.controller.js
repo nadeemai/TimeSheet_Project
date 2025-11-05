@@ -1281,26 +1281,45 @@ sap.ui.define([
                 oModel.setProperty("/timeEntries", aEntries);
 
                 // Save to backend
-                this._persistToBackend(oTimeEntry)
-                    .then(function (oResponse) {
-                        // Update the ID with the one from the backend if it's a new entry
-                        if (oResponse && oResponse.ID) {
-                            oTimeEntry.id = oResponse.ID;
-                            oModel.setProperty("/timeEntries", aEntries);
-                        }
+                var oPromise = this._persistToBackend(oTimeEntry);
 
-                        that._calculateAllTotals();
-                        that._updateCounts();
-                        that._updateProjectEngagement();
-                        that._updateReportsData();
+if (oPromise && typeof oPromise.then === 'function') {
+    oPromise.then(function (oResponse) {
+        // Update the ID with the one from the backend if it's a new entry
+        if (oResponse && oResponse.ID) {
+            oTimeEntry.id = oResponse.ID;
+            oModel.setProperty("/timeEntries", aEntries);
+        }
 
-                        var oTable = that.getView().byId("timesheetTable");
-                        if (oTable && oTable.getBinding("items")) {
-                            oTable.getBinding("items").refresh();
-                        }
+        that._calculateAllTotals();
+        that._updateCounts();
+        that._updateProjectEngagement();
+        that._updateReportsData();
 
-                        MessageToast.show("Time entry added successfully");
-                    })
+        var oTable = that.getView().byId("timesheetTable");
+        if (oTable && oTable.getBinding("items")) {
+            oTable.getBinding("items").refresh();
+        }
+
+        MessageToast.show("Time entry added successfully");
+    }).catch(function (oError) {
+        MessageToast.show("Failed to save time entry");
+        console.error("Error saving time entry:", oError);
+    });
+} else {
+    // If _persistToBackend doesn't return a promise, handle synchronously
+    that._calculateAllTotals();
+    that._updateCounts();
+    that._updateProjectEngagement();
+    that._updateReportsData();
+
+    var oTable = that.getView().byId("timesheetTable");
+    if (oTable && oTable.getBinding("items")) {
+        oTable.getBinding("items").refresh();
+    }
+
+    MessageToast.show("Time entry added successfully");
+}
 
             }
 
@@ -2185,22 +2204,32 @@ sap.ui.define([
             oModel.setProperty("/timeEntries", aEntries);
 
             // Save to backend
-            this._persistToBackend(aEntries[iIndex])
-                .then(function () {
-                    that._calculateAllTotals();
+    Promise.resolve(this._persistToBackend(aEntries))
+                       .then(function (oResponse) {
+            // Recalculate totals
+            that._calculateAllTotals();
+            
+            // Refresh table
+            var oTable = that.getView().byId("timesheetTable");
+            if (oTable && oTable.getBinding("items")) {
+                oTable.getBinding("items").refresh();
+            }
+            
+            // Show success message
+            MessageToast.show(
+                that._capitalize(sDay) + " hours updated to " + fNewHours.toFixed(2) +
+                " for " + oEntry.projectName
+            );
+            
+            // Close dialog
+            oDialog.close();
+        })
+        .catch(function (oError) {
+            MessageToast.show("Failed to save hours");
+            console.error("Error saving hours:", oError);
+        });
+},
 
-                    var oTable = that.getView().byId("timesheetTable");
-                    if (oTable && oTable.getBinding("items")) {
-                        oTable.getBinding("items").refresh();
-                    }
-
-                    MessageToast.show(
-                        that._capitalize(sDay) + " hours updated to " + fNewHours.toFixed(2) +
-                        " for " + oEntry.projectName
-                    );
-                })
-
-        },
 
         onDeleteDayHours: function () {
             var oEntry = this._currentEditEntry;
@@ -2275,57 +2304,77 @@ sap.ui.define([
                 });
         },
 
-        _persistToBackend: function () {
-            var oView = this.getView();
-            var oDialog = oView.byId("addEntryDialog") || sap.ui.getCore().byId("addEntryDialog");
-            var oModel = this.getView().getModel("timesheetServiceV2"); // use correct model
+        _persistToBackend: function (sActionType) {
+    var oView = this.getView();
+    var oDialog = oView.byId("addEntryDialog") || sap.ui.getCore().byId("addEntryDialog");
+    var oModel = this.getView().getModel("timesheetServiceV2"); // use correct model
 
-            if (!oDialog) {
-                sap.m.MessageBox.error("Add Entry Dialog not found.");
-                return;
-            }
+    if (!oDialog) {
+        sap.m.MessageBox.error("Add Entry Dialog not found.");
+        return;
+    }
 
-            // ✅ Access fields using sap.ui.getCore().byId() because fragment controls are global
-            var sDate = sap.ui.getCore().byId("entryDatePicker")
-            var sProjectId = sap.ui.getCore().byId("projectComboBox")
-            var sWorkType = sap.ui.getCore().byId("workTypeComboBox")
-            var sTaskDetails = sap.ui.getCore().byId("taskDetailsInput")
-            var sHours = sap.ui.getCore().byId("hoursComboBox")
+    // ✅ Get control references from fragment (using sap.ui.getCore())
+    var oDatePicker = sap.ui.getCore().byId("entryDatePicker");
+    var oProjectCombo = sap.ui.getCore().byId("projectComboBox");
+    var oWorkTypeCombo = sap.ui.getCore().byId("workTypeComboBox");
+    var oTaskInput = sap.ui.getCore().byId("taskDetailsInput");
+    var oHoursCombo = sap.ui.getCore().byId("hoursComboBox");
 
-            // Basic validation
-            // if (!sDate || !sProjectId || !sWorkType || !sHours || !sTaskDetails) {
-            //     sap.m.MessageToast.show("Please fill in all mandatory fields.");
-            //     return;
-            // }
+    // ✅ Check if controls exist
+    if (!oDatePicker || !oProjectCombo || !oWorkTypeCombo || !oTaskInput || !oHoursCombo) {
+        sap.m.MessageToast.show("Some input fields are missing in the dialog.");
+        return;
+    }
 
-            // Build payload (no employee_ID)
-            var oPayload = {
-                workDate: sDate.toISOString().split("T"),
-                project_ID: sProjectId,
-                hoursWorked: parseFloat(sHours),
-                task: sWorkType,
-                taskDetails: sTaskDetails,
-                status: "Draft",
-                isBillable: true
-            };
+    // ✅ Get actual values
+    var sDate = oDatePicker.getDateValue(); // returns JS Date object
+    var sProjectId = oProjectCombo.getSelectedKey();
+    var sWorkType = oWorkTypeCombo.getSelectedKey();
+    var sTaskDetails = oTaskInput.getValue();
+    var sHours = oHoursCombo.getSelectedKey();
 
-            sap.ui.core.BusyIndicator.show(0);
+    // ✅ Basic validation
+    if (!sDate || !sProjectId || !sWorkType || !sHours || !sTaskDetails) {
+        sap.m.MessageToast.show("Please fill in all mandatory fields.");
+        return;
+    }
 
-            // ✅ Create the new entry
-            oModel.create("/Timesheets", oPayload, {
-                success: function (oData) {
-                    sap.ui.core.BusyIndicator.hide();
-                    sap.m.MessageToast.show("Time entry saved successfully!");
-                    oModel.refresh(true);
-                    oDialog.close();
-                },
-                error: function (oError) {
-                    sap.ui.core.BusyIndicator.hide();
-                    sap.m.MessageBox.error("Failed to save entry. Please try again.");
-                    console.error(oError);
-                }
-            });
+    // ✅ Determine status based on action type
+    var sStatus = sActionType === "submit" ? "Submitted" : "Draft";
+
+    // ✅ Build payload (now correctly converting Date to YYYY-MM-DD)
+    var oPayload = {
+        workDate: sDate.toISOString().split("T")[0],
+        project_ID: sProjectId,
+        hoursWorked: parseFloat(sHours),
+        task: sWorkType,
+        taskDetails: sTaskDetails,
+        status: sStatus,
+        isBillable: true
+    };
+
+    sap.ui.core.BusyIndicator.show(0);
+
+    // ✅ Create entry in backend
+    oModel.create("/Timesheets", oPayload, {
+        success: function (oData) {
+            sap.ui.core.BusyIndicator.hide();
+            var sMsg = sStatus === "Submitted"
+                ? "Time entry submitted successfully!"
+                : "Time entry saved as draft successfully!";
+            sap.m.MessageToast.show(sMsg);
+            oModel.refresh(true);
+            oDialog.close();
         },
+        error: function (oError) {
+            sap.ui.core.BusyIndicator.hide();
+            sap.m.MessageBox.error("Failed to save entry. Please try again.");
+            console.error(oError);
+        }
+    });
+},
+
 
 
         _persistToBackendoo: function (oEntry, sStatus) {

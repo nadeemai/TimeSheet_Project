@@ -55,7 +55,7 @@ Authorization: Basic pushpak.jha:initial
 
 ###
 
-### 10. POST - Create New Employee ----------
+### 10. POST - Create New Employee 
 POST http://localhost:4004/odata/v4/admin/createEmployee
 Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
@@ -66,7 +66,7 @@ Content-Type: application/json
   "lastName": "Sharma",
   "email": "rohit.sharma@company.com",
   "managerEmployeeID": "EMP005",
-  "roleID": "ROLE001"
+  "roleID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
 }
 
 ###

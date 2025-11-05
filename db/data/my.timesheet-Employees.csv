@@ -1,8 +1,8 @@
 ID;employeeID;firstName;lastName;email;isActive;userRole_ID;managerID_ID;createdAt;modifiedAt;createdBy;modifiedBy
-a47ac10b-58cc-4372-a567-0e02b2c3d490;EMP001;Aditya;Mishra;aditya.mishra@sumodigitech.com;true;1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d;f47ac10b-58cc-4372-a567-0e02b2c3d479;2024-01-20T08:00:00Z;2024-01-20T08:00:00Z;admin;admin
-a47ac10b-58cc-4372-a567-0e02b2c3d491;EMP002;Nadeem;Abbas;nadeem.abbas@sumodigitech.com;true;1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d;f47ac10b-58cc-4372-a567-0e02b2c3d479;2024-01-20T08:00:00Z;2024-01-20T08:00:00Z;admin;admin
-a47ac10b-58cc-4372-a567-0e02b2c3d492;EMP003;Yugal;Kishore;yugal.kishore@sumodigitech.com;true;1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d;f47ac10b-58cc-4372-a567-0e02b2c3d480;2024-01-20T08:00:00Z;2024-01-20T08:00:00Z;admin;admin
-a47ac10b-58cc-4372-a567-0e02b2c3d493;EMP004;Sumit;Jhaldiyal;sumit.jhaldiyal@sumodigitech.com;true;1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d;f47ac10b-58cc-4372-a567-0e02b2c3d480;2024-01-20T08:00:00Z;2024-01-20T08:00:00Z;admin;admin
-f47ac10b-58cc-4372-a567-0e02b2c3d479;EMP005;Jayant;Kumar;jayant.kumar@sumodigitech.com;true;2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e;;2024-01-15T08:00:00Z;2024-01-15T08:00:00Z;admin;admin
-f47ac10b-58cc-4372-a567-0e02b2c3d480;EMP006;Vikrant;Raj;vikrant.raj@sumodigitech.com;true;2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e;;2024-01-15T08:00:00Z;2024-01-15T08:00:00Z;admin;admin
-a47ac10b-58cc-4372-a567-0e02b2c3d410;EMP007;Pushpak;Jha;pushpak.jha@sumodigitech.com;true;3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f;;2024-01-01T08:00:00Z;2024-01-01T08:00:00Z;admin;admin
+a47ac10b-58cc-4372-a567-0e02b2c3d490;EMP001;Aditya;Mishra;aditya.mishra@sumodigitech.com;true;1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d;f47ac10b-58cc-4372-a567-0e02b2c3d479;2025-01-20T08:00:00Z;2025-01-20T08:00:00Z;admin;admin
+a47ac10b-58cc-4372-a567-0e02b2c3d491;EMP002;Nadeem;Abbas;nadeem.abbas@sumodigitech.com;true;1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d;f47ac10b-58cc-4372-a567-0e02b2c3d479;2025-01-20T08:00:00Z;2025-01-20T08:00:00Z;admin;admin
+a47ac10b-58cc-4372-a567-0e02b2c3d492;EMP003;Yugal;Kishore;yugal.kishore@sumodigitech.com;true;1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d;f47ac10b-58cc-4372-a567-0e02b2c3d480;2025-01-20T08:00:00Z;2025-01-20T08:00:00Z;admin;admin
+a47ac10b-58cc-4372-a567-0e02b2c3d493;EMP004;Sumit;Jhaldiyal;sumit.jhaldiyal@sumodigitech.com;true;1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d;f47ac10b-58cc-4372-a567-0e02b2c3d480;2025-01-20T08:00:00Z;2025-01-20T08:00:00Z;admin;admin
+f47ac10b-58cc-4372-a567-0e02b2c3d479;EMP005;Jayant;Kumar;jayant.kumar@sumodigitech.com;true;2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e;;2025-01-15T08:00:00Z;2025-01-15T08:00:00Z;admin;admin
+f47ac10b-58cc-4372-a567-0e02b2c3d480;EMP006;Vikrant;Raj;vikrant.raj@sumodigitech.com;true;2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e;;2025-01-15T08:00:00Z;2025-01-15T08:00:00Z;admin;admin
+a47ac10b-58cc-4372-a567-0e02b2c3d410;EMP007;Pushpak;Jha;pushpak.jha@sumodigitech.com;true;3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f;;2025-01-01T08:00:00Z;2025-01-01T08:00:00Z;admin;admin

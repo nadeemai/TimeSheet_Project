@@ -9,11 +9,11 @@
 
 ### 1. Get My Manager Profile
 GET http://localhost:4004/odata/v4/manager/MyManagerProfile
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 2. Get Manager Profile with Role Details
 GET http://localhost:4004/odata/v4/manager/MyManagerProfile?$expand=userRole
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 
 ### ========================================
@@ -22,23 +22,23 @@ Authorization: Basic sarah.johnson:initial
 
 ### 3. Get My Team Members
 GET http://localhost:4004/odata/v4/manager/MyTeam
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 4. Get Active Team Members
 GET http://localhost:4004/odata/v4/manager/MyTeam?$filter=isActive eq true
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 5. Get Team Members with Manager Info
 GET http://localhost:4004/odata/v4/manager/MyTeam?$expand=managerID
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 6. Get Team Members Ordered by Name
 GET http://localhost:4004/odata/v4/manager/MyTeam?$orderby=lastName asc
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 7. Count Team Members
 GET http://localhost:4004/odata/v4/manager/MyTeam/$count
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 
 ### ========================================
@@ -47,21 +47,21 @@ Authorization: Basic sarah.johnson:initial
 
 ### 8. Get All My Projects
 GET http://localhost:4004/odata/v4/manager/MyProjects
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 9. Get Active Projects
 GET http://localhost:4004/odata/v4/manager/MyProjects?$filter=status eq 'Active'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 10. Get Projects Ordered by Start Date
 GET http://localhost:4004/odata/v4/manager/MyProjects?$orderby=startDate desc
 
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 11. Create New Project - E-Commerce
 POST http://localhost:4004/odata/v4/manager/MyProjects
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "projectName": "E-Commerce Platform",
@@ -77,7 +77,7 @@ Authorization: Basic sarah.johnson:initial
 ### 12. Create New Project - CRM System
 POST http://localhost:4004/odata/v4/manager/MyProjects
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "projectName": "CRM System Integration",
@@ -93,7 +93,7 @@ Authorization: Basic sarah.johnson:initial
 ### 13. Create New Project - Mobile App
 POST http://localhost:4004/odata/v4/manager/MyProjects
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "projectName": "Mobile Banking App",
@@ -109,7 +109,7 @@ Authorization: Basic sarah.johnson:initial
 ### 14. Update Project
 PATCH http://localhost:4004/odata/v4/manager/MyProjects(<PROJECT_UUID>)
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "projectName": "E-Commerce Platform v2.0",
@@ -121,7 +121,7 @@ Authorization: Basic sarah.johnson:initial
 ### 15. Update Project Status
 PATCH http://localhost:4004/odata/v4/manager/MyProjects(<PROJECT_UUID>)
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "status": "On Hold"
@@ -129,15 +129,15 @@ Authorization: Basic sarah.johnson:initial
 
 ### 16. Get Project Summary
 GET http://localhost:4004/odata/v4/manager/ProjectSummary
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 17. Get Active Project Summary
 GET http://localhost:4004/odata/v4/manager/ProjectSummary?$filter=status eq 'Active'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 18. Get Project Summary Ordered by Budget
 GET http://localhost:4004/odata/v4/manager/ProjectSummary?$orderby=allocatedHours desc
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 
 ### ========================================
@@ -146,55 +146,55 @@ Authorization: Basic sarah.johnson:initial
 
 ### 19. Get All Team Timesheets
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 20. Get Submitted Timesheets (Pending Approval)
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=status eq 'Submitted'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 21. Get Draft Timesheets
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=status eq 'Draft'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 22. Get Approved Timesheets
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=status eq 'Approved'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 23. Get Rejected Timesheets
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=status eq 'Rejected'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 24. Get Team Timesheets with Full Details
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$expand=employee,project,activity,nonProjectType
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 25. Get Timesheets by Specific Employee
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=employeeEmpID eq 'EMP001'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 26. Get Timesheets by Date Range
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=workDate ge 2024-10-01 and workDate le 2024-10-31
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 27. Get Timesheets Ordered by Date
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$orderby=workDate desc
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 28. Get Billable Team Timesheets
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=isBillable eq true
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 29. Get Non-Billable Team Timesheets
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=isBillable eq false
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 30. Get Timesheets by Work Type
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=workType eq 'Developing'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 31. Get Timesheets for Current Week
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=workDate ge 2024-10-21 and workDate le 2024-10-27&$orderby=workDate asc
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 
 ### ========================================
@@ -204,7 +204,7 @@ Authorization: Basic sarah.johnson:initial
 ### 32. Approve Timesheet
 POST http://localhost:4004/odata/v4/manager/ManagerService.approveTimesheet
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "timesheetID": "TS0001"
@@ -213,7 +213,7 @@ Authorization: Basic sarah.johnson:initial
 ### 33. Approve Multiple Timesheets (Bulk Approval)
 POST http://localhost:4004/odata/v4/manager/ManagerService.approveTimesheet
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "timesheetID": "TS0002"
@@ -222,7 +222,7 @@ Authorization: Basic sarah.johnson:initial
 ### 34. Reject Timesheet
 POST http://localhost:4004/odata/v4/manager/ManagerService.rejectTimesheet
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "timesheetID": "TS0003",
@@ -232,7 +232,7 @@ Authorization: Basic sarah.johnson:initial
 ### 35. Reject Timesheet - Incomplete Description
 POST http://localhost:4004/odata/v4/manager/ManagerService.rejectTimesheet
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "timesheetID": "TS0004",
@@ -242,7 +242,7 @@ Authorization: Basic sarah.johnson:initial
 ### 36. Reject Timesheet - Invalid Hours
 POST http://localhost:4004/odata/v4/manager/ManagerService.rejectTimesheet
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "timesheetID": "TS0005",
@@ -256,23 +256,23 @@ Authorization: Basic sarah.johnson:initial
 
 ### 37. Get Team Progress Report
 GET http://localhost:4004/odata/v4/manager/TeamProgressReport
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 38. Get Progress Report by Employee
 GET http://localhost:4004/odata/v4/manager/TeamProgressReport?$filter=empID eq 'EMP001'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 39. Get Progress Report by Project
 GET http://localhost:4004/odata/v4/manager/TeamProgressReport?$filter=projID eq 'PRJ001'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 40. Get Progress Report for Date Range
 GET http://localhost:4004/odata/v4/manager/TeamProgressReport?$filter=workDate ge 2024-10-01 and workDate le 2024-10-31
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 41. Get Approved Hours by Employee
 GET http://localhost:4004/odata/v4/manager/TeamProgressReport?$filter=status eq 'Approved' and empID eq 'EMP001'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 
 ### ========================================
@@ -281,23 +281,23 @@ Authorization: Basic sarah.johnson:initial
 
 ### 42. Get My Notifications
 GET http://localhost:4004/odata/v4/manager/MyNotifications
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 43. Get Unread Notifications
 GET http://localhost:4004/odata/v4/manager/MyNotifications?$filter=isRead eq false
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 44. Get Timesheet Submission Notifications
 GET http://localhost:4004/odata/v4/manager/MyNotifications?$filter=notificationType eq 'Timesheet Submission'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 45. Get Notifications Ordered by Date
 GET http://localhost:4004/odata/v4/manager/MyNotifications?$orderby=createdAt desc
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 46. Get Notifications with Recipient Details
 GET http://localhost:4004/odata/v4/manager/MyNotifications?$expand=recipient
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 
 ### ========================================
@@ -306,19 +306,19 @@ Authorization: Basic sarah.johnson:initial
 
 ### 47. Count Pending Approvals
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets/$count?$filter=status eq 'Submitted'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 48. Count Approved Timesheets This Month
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets/$count?$filter=status eq 'Approved' and workDate ge 2024-10-01
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 49. Count Active Projects
 GET http://localhost:4004/odata/v4/manager/MyProjects/$count?$filter=status eq 'Active'
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 50. Count Active Team Members
 GET http://localhost:4004/odata/v4/manager/MyTeam/$count?$filter=isActive eq true
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 
 ### ========================================
@@ -327,15 +327,15 @@ Authorization: Basic sarah.johnson:initial
 
 ### 51. Select Specific Timesheet Fields
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$select=employeeName,workDate,hoursWorked,status
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 52. Pagination - First 20 Timesheets
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$top=20&$skip=0&$orderby=workDate desc
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 53. Get Projects with Select Fields
 GET http://localhost:4004/odata/v4/manager/MyProjects?$select=projectName,startDate,endDate,status,allocatedHours
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 
 ### ========================================
@@ -345,7 +345,7 @@ Authorization: Basic sarah.johnson:initial
 ### 54. ❌ Try to Approve Already Approved Timesheet
 POST http://localhost:4004/odata/v4/manager/ManagerService.approveTimesheet
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "timesheetID": "TS0001"
@@ -354,7 +354,7 @@ Authorization: Basic sarah.johnson:initial
 ### 55. ❌ Try to Reject Already Approved Timesheet
 POST http://localhost:4004/odata/v4/manager/ManagerService.rejectTimesheet
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "timesheetID": "TS0001",
@@ -364,7 +364,7 @@ Authorization: Basic sarah.johnson:initial
 ### 56. ❌ Try to Approve Draft Timesheet
 POST http://localhost:4004/odata/v4/manager/ManagerService.approveTimesheet
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "timesheetID": "<DRAFT_TIMESHEET_ID>"
@@ -373,7 +373,7 @@ Authorization: Basic sarah.johnson:initial
 ### 57. ❌ Try to Update Another Manager's Project
 PATCH http://localhost:4004/odata/v4/manager/MyProjects(<OTHER_MANAGER_PROJECT_UUID>)
 Content-Type: application/json
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 {
   "projectName": "This should fail - not my project"
@@ -386,27 +386,27 @@ Authorization: Basic sarah.johnson:initial
 
 ### 58. Get Weekly Timesheet Summary
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=workDate ge 2024-10-21 and workDate le 2024-10-27&$select=employeeName,workDate,hoursWorked,status
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 59. Get Monthly Approved Hours by Employee
 GET http://localhost:4004/odata/v4/manager/TeamProgressReport?$filter=status eq 'Approved' and workDate ge 2024-10-01 and workDate le 2024-10-31
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 60. Get Project Utilization Report
 GET http://localhost:4004/odata/v4/manager/TeamProgressReport?$select=projectName,employeeName,totalBookedHours,status
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 61. Get Employee Performance Summary
 GET http://localhost:4004/odata/v4/manager/TeamProgressReport?$filter=empID eq 'EMP001'&$orderby=workDate desc
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 62. Get Billable vs Non-Billable Hours
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=status eq 'Approved' and workDate ge 2024-10-01
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 63. Get Timesheets Requiring Attention (Rejected)
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=status eq 'Rejected'&$orderby=workDate desc
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 
 ### ========================================
@@ -415,16 +415,16 @@ Authorization: Basic sarah.johnson:initial
 
 ### 64. Get Today's Submissions
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=status eq 'Submitted' and modifiedAt ge 2024-10-27T00:00:00Z
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 65. Get This Week's Approved Hours
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=status eq 'Approved' and workDate ge 2024-10-21 and workDate le 2024-10-27
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 66. Get Project Status Overview
 GET http://localhost:4004/odata/v4/manager/ProjectSummary?$select=projectName,status,allocatedHours,startDate,endDate
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
 
 ### 67. Get Team Activity Summary
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=workDate ge 2024-10-01&$select=employeeName,workDate,hoursWorked,workType,status
-Authorization: Basic sarah.johnson:initial
+Authorization: Basic jayant.kumar:initial
