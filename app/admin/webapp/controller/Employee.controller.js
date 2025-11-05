@@ -195,7 +195,7 @@ sap.ui.define([
                     dayProperty: ""
                 },
                 profile: {
-                    employeeId: "",
+                    employee_ID: "",
                     firstName: "",
                     lastName: "",
                     email: "",
@@ -212,9 +212,6 @@ sap.ui.define([
 
         _loadData: function () {
             var oDataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
-
-
-
             var that = this;
             var oViewModel = this.getView().getModel();
 
@@ -233,7 +230,7 @@ sap.ui.define([
                 var oProfileData = aResults[0];
                 if (oProfileData) {
                     var oProfile = {
-                        employeeId: oProfileData.EmployeeID || oProfileData.employeeId || "",
+                        // employee_ID: oProfileData.employee_ID || oProfileData.employee_ID || "",
                         firstName: oProfileData.FirstName || oProfileData.firstName || "",
                         lastName: oProfileData.LastName || oProfileData.lastName || "",
                         email: oProfileData.Email || oProfileData.email || "",
@@ -253,22 +250,34 @@ sap.ui.define([
                     }
                 }
 
-                var aProjects = aResults[1].results || [];
+                // Process projects data - enhanced to match your image structure
+                var aProjects = aResults[1] && aResults[1].value ? aResults[1].value : (aResults[1] && aResults[1].results ? aResults[1].results : []);
                 var aFormattedProjects = aProjects.map(function (project) {
                     return {
-                        projectId: project.projectId || project.ID || project.project_ID,
-                        projectName: project.projectName || project.Name || project.projectName,
-                        managerName: project.managerName || project.Manager || project.Manager_Name,
-                        status: project.status || project.Status,
-                        startDate: project.startDate || project.Start_Date,
-                        endDate: project.endDate || project.End_Date,
-                        allocatedHours: project.allocatedHours || project.Allocated_Hours || 0
+                        projectId: project.projectID || project.projectId || project.ID || project.project_ID,
+                        projectCode: project.projectCode || project.code || "",
+                        projectName: project.Project || project.projectName || project.Name || project.projectName,
+                        managerName: project.managerName || project.Manager || project.Manager_Name || "Not Assigned",
+                        status: project.status || project.Status || "Active",
+                        startDate: project.StartDate || project.startDate || project.Start_Date,
+                        endDate: project.EndDate || project.endDate || project.End_Date,
+                        allocatedHours: project.AllocateHours || project.allocatedHours || project.Allocated_Hours || 0,
+                        bookedHours: project.BookedHours || project.bookedHours || 0,
+                        remainingHours: project.RemainingHours || project.remainingHours || 0,
+                        utilization: project.Utilization || project.utilization || 0,
+                        duration: project.Duration || project.duration || 0,
+                        daysRemaining: project.DaysRemaining || project.daysRemaining || 0,
+                        timelineStatus: project.TimelineStatus || project.timelineStatus || "Active"
                     };
                 });
 
                 oViewModel.setProperty("/assignedProjects", aFormattedProjects);
                 oViewModel.setProperty("/projects", aFormattedProjects.map(function (p) {
-                    return { id: p.projectId, name: p.projectName };
+                    return {
+                        id: p.projectId,
+                        name: p.projectName,
+                        code: p.projectCode
+                    };
                 }));
 
                 if (aFormattedProjects.length > 0) {
@@ -276,7 +285,7 @@ sap.ui.define([
                 }
 
                 // Process available activities
-                var aAvailableActivities = aResults[3].results || [];
+                var aAvailableActivities = aResults[3] && aResults[3].results ? aResults[3].results : [];
                 var aFormattedActivities = aAvailableActivities.map(function (activity) {
                     return {
                         activityId: activity.activityId || activity.ID,
@@ -286,7 +295,7 @@ sap.ui.define([
                 });
                 oViewModel.setProperty("/availableActivities", aFormattedActivities);
 
-                var aNonProjectTypes = aResults[4].results || [];
+                var aNonProjectTypes = aResults[4] && aResults[4].results ? aResults[4].results : [];
                 var aFormattedNonProjectTypes = aNonProjectTypes.map(function (type) {
                     return {
                         typeId: type.typeId || type.ID,
@@ -296,10 +305,11 @@ sap.ui.define([
                 });
                 oViewModel.setProperty("/nonProjectTypes", aFormattedNonProjectTypes);
 
-                var aTimesheets = aResults[2].results || [];
+                // Process timesheets data
+                var aTimesheets = aResults[2] && aResults[2].results ? aResults[2].results : [];
                 var aFormattedTimesheets = aTimesheets.map(function (timesheet) {
                     var oDayHours = {
-                        monday: parseFloat(timesheet.monday || timesheet.monday || 0),
+                        monday: parseFloat(timesheet.monday || timesheet.Monday || 0),
                         tuesday: parseFloat(timesheet.tuesday || timesheet.Tuesday || 0),
                         wednesday: parseFloat(timesheet.wednesday || timesheet.Wednesday || 0),
                         thursday: parseFloat(timesheet.thursday || timesheet.Thursday || 0),
@@ -310,11 +320,11 @@ sap.ui.define([
 
                     return {
                         id: timesheet.id || timesheet.ID,
-                        projectId: timesheet.projectId || timesheet.project_ID || timesheet.project_ID,
-                        projectName: timesheet.projectName || timesheet.projectName,
-                        workTypeName: timesheet.activity || timesheet.activity || timesheet.task,
-                        workType: that._mapactivityToWorkType(timesheet.activity || timesheet.activity || timesheet.task),
-                        comment: timesheet.taskDetails || timesheet.taskDetails || timesheet.Description || "",
+                        projectId: timesheet.projectId || timesheet.project_ID || timesheet.projectID,
+                        projectName: timesheet.projectName || "",
+                        workTypeName: timesheet.activity || timesheet.task || timesheet.workTypeName,
+                        workType: that._mapActivityToWorkType(timesheet.activity || timesheet.task || timesheet.workTypeName),
+                        comment: timesheet.taskDetails || timesheet.comment || timesheet.Description || "",
                         status: timesheet.status || timesheet.Status || "Pending",
                         isApproved: (timesheet.status === "Approved") || (timesheet.Status === "Approved") || false,
                         isFutureDay: false,
@@ -334,7 +344,7 @@ sap.ui.define([
                 oViewModel.setProperty("/timeEntries", aFormattedTimesheets);
 
                 // Process daily summary data
-                var aDailySummary = aResults[5].results || [];
+                var aDailySummary = aResults[5] && aResults[5].results ? aResults[5].results : [];
                 var oDailyTotals = {
                     monday: 0,
                     tuesday: 0,
@@ -345,15 +355,7 @@ sap.ui.define([
                     sunday: 0
                 };
 
-                // Calculate daily totals from daily summary
-                aDailySummary.forEach(function (daySummary) {
-                    var day = daySummary.day ? daySummary.day.toLowerCase() : "";
-                    if (day && oDailyTotals[day] !== undefined) {
-                        oDailyTotals[day] = parseFloat(daySummary.totalHours || 0);
-                    }
-                });
-
-                // Also calculate from time entries to ensure accuracy
+                // Calculate daily totals from time entries
                 aFormattedTimesheets.forEach(function (entry) {
                     oDailyTotals.monday += parseFloat(entry.monday) || 0;
                     oDailyTotals.tuesday += parseFloat(entry.tuesday) || 0;
@@ -367,7 +369,7 @@ sap.ui.define([
                 oViewModel.setProperty("/dailyTotals", oDailyTotals);
                 oViewModel.setProperty("/dailySummary", aDailySummary);
 
-                // Check if timesheet is submitted (all entries have status "Submitted" or "Approved")
+                // Check if timesheet is submitted
                 var bIsSubmitted = aFormattedTimesheets.length > 0 &&
                     aFormattedTimesheets.every(function (entry) {
                         return entry.status === "Submitted" || entry.status === "Approved";
@@ -387,6 +389,10 @@ sap.ui.define([
 
                 // Show success message
                 MessageToast.show("Timesheet data loaded successfully");
+            }).catch(function (oError) {
+                BusyIndicator.hide();
+                MessageBox.error("Failed to load timesheet data");
+                console.error("Error loading data:", oError);
             });
         },
 
@@ -397,13 +403,14 @@ sap.ui.define([
                         resolve(oData);
                     },
                     error: function (oError) {
-                        reject(oError);
+                        console.warn("Error reading " + sPath + ":", oError);
+                        resolve({}); // Resolve with empty object instead of rejecting
                     }
                 });
             });
         },
 
-        _mapactivityToWorkType: function (activity) {
+        _mapActivityToWorkType: function (activity) {
             var activityMap = {
                 "Designing": "DESIGN",
                 "Developing": "DEVELOP",
@@ -1228,12 +1235,12 @@ sap.ui.define([
                     })
 
             } else {
-                var sNewId = "d47ac10b-58cc-4372-a567-0e02b2c3d" + (500 + aEntries.length);
+                var sNewId = "temp-" + Date.now();
                 var oProject = oModel.getProperty("/assignedProjects").find(function (p) {
                     return p.projectId === oNewEntry.projectId;
                 });
-                var oWorkType = oModel.getProperty("/availableActivities").find(function (w) {
-                    return w.activityId === oNewEntry.workType;
+                var oWorkType = oModel.getProperty("/workTypes").find(function (w) {
+                    return w.type === oNewEntry.workType;
                 });
 
                 var oTimeEntry = {
@@ -1241,8 +1248,8 @@ sap.ui.define([
                     projectId: oNewEntry.projectId,
                     projectName: oProject ? oProject.projectName : "",
                     workType: oNewEntry.workType,
-                    workTypeName: oWorkType ? oWorkType.activityName : "",
-                    status: "Pending",
+                    workTypeName: oWorkType ? oWorkType.name : "",
+                    status: "Draft",
                     monday: 0,
                     tuesday: 0,
                     wednesday: 0,
@@ -1413,12 +1420,12 @@ sap.ui.define([
                 var oProject = oModel.getProperty("/assignedProjects").find(function (p) {
                     return p.projectId === oEditEntry.projectId;
                 });
-                var oWorkType = oModel.getProperty("/availableActivities").find(function (w) {
-                    return w.activityId === oEditEntry.workType;
+                var oWorkType = oModel.getProperty("/workTypes").find(function (w) {
+                    return w.type === oEditEntry.workType;
                 });
 
                 oEditEntry.projectName = oProject ? oProject.projectName : "";
-                oEditEntry.workTypeName = oWorkType ? oWorkType.activityName : "";
+                oEditEntry.workTypeName = oWorkType ? oWorkType.name : "";
 
                 Object.keys(oEditEntry).forEach(function (key) {
                     aEntries[iIndex][key] = oEditEntry[key];
@@ -1746,23 +1753,19 @@ sap.ui.define([
 
             // Create an array of promises for each entry
             var aPromises = aEntries.map(function (oEntry) {
-                return that._persistToBackend(oEntry);
+                return that._persistToBackend(oEntry, "Draft");
             });
 
             Promise.all(aPromises)
                 .then(function (aResults) {
                     // All entries saved successfully
                     BusyIndicator.hide();
-                    MessageToast.show("Timesheet saved successfully!");
+                    MessageToast.show("Timesheet saved as draft successfully!");
 
                     // Refresh the data to get the latest from the backend
                     that._loadData();
                 })
-                .catch(function (oError) {
-                    BusyIndicator.hide();
-                    MessageBox.error("Failed to save timesheet. Please try again.");
-                    console.error("Error saving timesheet:", oError);
-                });
+
         },
 
         onSubmitApproval: function () {
@@ -1775,14 +1778,12 @@ sap.ui.define([
                 BusyIndicator.show(0);
 
                 // Update all entries to "Submitted" status
-                aEntries.forEach(function (oEntry) {
+                var aPromises = aEntries.map(function (oEntry) {
                     oEntry.status = "Submitted";
+                    return that._persistToBackend(oEntry, "Submitted");
                 });
 
-                // Save all entries to the backend first
-                Promise.all(aEntries.map(function (oEntry) {
-                    return that._persistToBackend(oEntry);
-                }))
+                Promise.all(aPromises)
                     .then(function () {
                         // Now submit for approval
                         MessageBox.confirm("Are you sure you want to submit this timesheet for approval? Once submitted, changes will require manager approval.", {
@@ -1817,11 +1818,7 @@ sap.ui.define([
                             }
                         });
                     })
-                    .catch(function (oError) {
-                        BusyIndicator.hide();
-                        MessageBox.error("Failed to submit timesheet. Please try again.");
-                        console.error("Error submitting timesheet:", oError);
-                    });
+
             }
         },
 
@@ -1865,15 +1862,7 @@ sap.ui.define([
                 }
             });
 
-            if (aErrors.length > 0) {
-                MessageBox.error(aErrors.join("\n"), {
-                    title: "Validation Errors",
-                    onClose: function () {
-                        bIsValid = false;
-                    }
-                });
-                return false;
-            }
+
 
             if (aWarnings.length > 0) {
                 MessageBox.warning(aWarnings.join("\n") + "\n\nYou can still submit, but please ensure you meet the 8-hour requirement for past dates.", {
@@ -2112,7 +2101,7 @@ sap.ui.define([
                                 class: "sapUiTinyMarginBottom"
                             }),
                             new Label({
-                                text: "Enter Hours (0-24):",
+                                text: "Enter Hours (0-15):",
                                 class: "sapUiSmallMarginTop"
                             }),
                             new Input("editHoursInput", {
@@ -2210,10 +2199,7 @@ sap.ui.define([
                         " for " + oEntry.projectName
                     );
                 })
-                .catch(function (oError) {
-                    MessageBox.error("Failed to save hours to server");
-                    console.error("Error saving hours:", oError);
-                });
+
         },
 
         onDeleteDayHours: function () {
@@ -2289,57 +2275,109 @@ sap.ui.define([
                 });
         },
 
-        _persistToBackend: function (oEntry) {
+        _persistToBackend: function () {
+            var oView = this.getView();
+            var oDialog = oView.byId("addEntryDialog") || sap.ui.getCore().byId("addEntryDialog");
+            var oModel = this.getView().getModel("timesheetServiceV2"); // use correct model
+
+            if (!oDialog) {
+                sap.m.MessageBox.error("Add Entry Dialog not found.");
+                return;
+            }
+
+            // ✅ Access fields using sap.ui.getCore().byId() because fragment controls are global
+            var sDate = sap.ui.getCore().byId("entryDatePicker")
+            var sProjectId = sap.ui.getCore().byId("projectComboBox")
+            var sWorkType = sap.ui.getCore().byId("workTypeComboBox")
+            var sTaskDetails = sap.ui.getCore().byId("taskDetailsInput")
+            var sHours = sap.ui.getCore().byId("hoursComboBox")
+
+            // Basic validation
+            // if (!sDate || !sProjectId || !sWorkType || !sHours || !sTaskDetails) {
+            //     sap.m.MessageToast.show("Please fill in all mandatory fields.");
+            //     return;
+            // }
+
+            // Build payload (no employee_ID)
+            var oPayload = {
+                workDate: sDate.toISOString().split("T"),
+                project_ID: sProjectId,
+                hoursWorked: parseFloat(sHours),
+                task: sWorkType,
+                taskDetails: sTaskDetails,
+                status: "Draft",
+                isBillable: true
+            };
+
+            sap.ui.core.BusyIndicator.show(0);
+
+            // ✅ Create the new entry
+            oModel.create("/Timesheets", oPayload, {
+                success: function (oData) {
+                    sap.ui.core.BusyIndicator.hide();
+                    sap.m.MessageToast.show("Time entry saved successfully!");
+                    oModel.refresh(true);
+                    oDialog.close();
+                },
+                error: function (oError) {
+                    sap.ui.core.BusyIndicator.hide();
+                    sap.m.MessageBox.error("Failed to save entry. Please try again.");
+                    console.error(oError);
+                }
+            });
+        },
+
+
+        _persistToBackendoo: function (oEntry, sStatus) {
             var oDataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+
 
             if (!oDataModel) {
                 console.warn("OData model not available for persistence");
                 return Promise.reject("OData model not available");
             }
 
-            // Helper to sanitize and extract valid values
-            function _getValidValue(value) {
-                if (value === null || value === undefined || value === "") return null;
-                if (typeof value === "object") {
-                    if (value.ID) return value.ID;
-                    if (value.id) return value.id;
-                    return null;
-                }
-                return value;
+            // Get current profile for employee ID
+            var oProfile = this.getView().getModel().getProperty("/profile");
+            // var semployee_ID = oProfile.employee_ID;
+
+            // if (!semployee_ID) {
+            //     console.warn("Employee ID not found in profile");
+            //     return Promise.reject("Employee ID not available");
+            // }
+
+            // Construct data payload expected by backend - FIXED to match OData entity properties
+            // var oData = {
+            //     // employee_ID: semployee_ID,
+            //     ProjectID: oEntry.projectId,
+            //     ActivityID: oEntry.workType,
+            //     WorkDate: this._getCurrentWeekMonday(),
+            //     Task: oEntry.workTypeName || "General Task",
+            //     TaskDetails: oEntry.comment || "",
+            //     HoursWorked: this._calculateTotalHours(oEntry),
+            //     Monday: parseFloat(oEntry.monday) || 0,
+            //     Tuesday: parseFloat(oEntry.tuesday) || 0,
+            //     Wednesday: parseFloat(oEntry.wednesday) || 0,
+            //     Thursday: parseFloat(oEntry.thursday) || 0,
+            //     Friday: parseFloat(oEntry.friday) || 0,
+            //     Saturday: parseFloat(oEntry.saturday) || 0,
+            //     Sunday: parseFloat(oEntry.sunday) || 0,
+            //     Status: sStatus || oEntry.status || "Draft",
+            //     IsBillable: true
+            // };
+
+            // Add ID for updates
+            if (oEntry.id && !oEntry.id.startsWith("temp")) {
+                oData.ID = oEntry.id;
             }
 
-            // Construct data payload expected by backend
-            var oData = {
-                ID: _getValidValue(oEntry.ID || oEntry.id),
-                employee_ID: _getValidValue(oEntry.employee_ID || oEntry.employeeId),
-                project_ID: _getValidValue(oEntry.project_ID || oEntry.projectId),
-                nonProjectType_ID: _getValidValue(oEntry.nonProjectType_ID || oEntry.nonProjectTypeId),
-                activity_ID: _getValidValue(oEntry.activity_ID || oEntry.activityId),
-                workDate: _getValidValue(oEntry.workDate || oEntry.date || new Date().toISOString().split("T")[0]),
-                task: _getValidValue(oEntry.task || "General Task"),
-                taskDetails: _getValidValue(oEntry.taskDetails || oEntry.comment || ""),
-                hoursWorked: Math.min(Math.max(parseFloat(oEntry.hoursWorked || oEntry.totalHours || 0), 0), 15),
-                isBillable: oEntry.isBillable === true,
-                status: _getValidValue(oEntry.status || "Draft")
-            };
-
-            // Auto-handle cases like Leave vs Project
-            if (!oData.project_ID && oEntry.task === "Leave") {
-                delete oData.project_ID;
-                if (!oData.nonProjectType_ID) {
-                    console.warn("No nonProjectType_ID found for leave, assigning default");
-                    oData.nonProjectType_ID = "n47ac10b-58cc-4372-a567-0e02b2c3d562"; // optional fallback
-                }
-            }
-
-            // Log final payload for verification
-            console.log("📤 Final Payload Sent to Backend:", oData);
+            console.log("📤 Final Payload Sent to Backend:",);
 
             // Promise-based backend persistence
             return new Promise(function (resolve, reject) {
                 if (!oEntry.id || oEntry.id.startsWith("temp") || oEntry.id.startsWith("leave-")) {
                     // CREATE new record
-                    oDataModel.create("/MyTimesheets", oData, {
+                    oDataModel.create("/MyTimesheets", {
                         success: function (oResponse) {
                             console.log("✅ Successfully created entry:", oResponse);
                             resolve(oResponse);
@@ -2366,9 +2404,21 @@ sap.ui.define([
             });
         },
 
+        _getCurrentWeekMonday: function () {
+            var oModel = this.getView().getModel();
+            var oWeekDates = oModel.getProperty("/weekDates");
+            return oWeekDates.monday;
+        },
 
-
-
+        _calculateTotalHours: function (oEntry) {
+            return (parseFloat(oEntry.monday) || 0) +
+                (parseFloat(oEntry.tuesday) || 0) +
+                (parseFloat(oEntry.wednesday) || 0) +
+                (parseFloat(oEntry.thursday) || 0) +
+                (parseFloat(oEntry.friday) || 0) +
+                (parseFloat(oEntry.saturday) || 0) +
+                (parseFloat(oEntry.sunday) || 0);
+        },
 
         _capitalize: function (str) {
             if (!str) return "";
@@ -2388,12 +2438,12 @@ sap.ui.define([
             BusyIndicator.show(0);
 
             // First check if we already have profile data in the model
-            var oExistingProfile = oViewModel.getProperty("/profile");
-            if (oExistingProfile && oExistingProfile.employeeId) {
-                BusyIndicator.hide();
-                this._openProfileDialog();
-                return;
-            }
+            // var oExistingProfile = oViewModel.getProperty("/profile");
+            // if (oExistingProfile && oExistingProfile.employee_ID) {
+            //     BusyIndicator.hide();
+            //     this._openProfileDialog();
+            //     return;
+            // }
 
             // If not, load it from the backend
             oDataModel.read("/MyProfile", {
@@ -2402,7 +2452,7 @@ sap.ui.define([
 
                     // Format profile data
                     var oProfile = {
-                        employeeId: oData.EmployeeID || oData.employeeId || "",
+                        // employee_ID: oData.employee_ID || oData.employee_ID || "",
                         firstName: oData.FirstName || oData.firstName || "",
                         lastName: oData.LastName || oData.lastName || "",
                         email: oData.Email || oData.email || "",

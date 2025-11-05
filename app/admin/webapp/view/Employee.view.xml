@@ -154,11 +154,13 @@
                                                         width="60px"
                                                         editable="false"
                                                         class="sapUiTinyMarginEnd"/>
-                                                    <Button id="mondayOverflow" 
-                                                        icon="sap-icon://overflow" 
-                                                        press="onDayOverflowPress" 
-                                                        type="Transparent"
-                                                        tooltip="More options">
+                                                    <Button 
+                                                    id="mondayOverflow"
+    text="⋮"
+    press="onDayOverflowPress"
+    type="Transparent"
+    tooltip="More options"
+    class="verticalOverflowBtn">
                                                         <customData>
                                                             <core:CustomData key="day" value="monday" writeToDom="true"/>
                                                         </customData>
@@ -173,11 +175,13 @@
                                                         width="60px"
                                                         editable="false"
                                                         class="sapUiTinyMarginEnd"/>
-                                                    <Button id="tuesdayOverflow" 
-                                                        icon="sap-icon://overflow" 
-                                                        press="onDayOverflowPress" 
-                                                        type="Transparent"
-                                                        tooltip="More options">
+                                                    <Button
+                                                     id="tuesdayOverflow" 
+                                                        text="⋮"
+    press="onDayOverflowPress"
+    type="Transparent"
+    tooltip="More options"
+    class="verticalOverflowBtn">
                                                         <customData>
                                                             <core:CustomData key="day" value="tuesday" writeToDom="true"/>
                                                         </customData>
@@ -193,10 +197,11 @@
                                                         editable="false"
                                                         class="sapUiTinyMarginEnd"/>
                                                     <Button id="wednesdayOverflow" 
-                                                        icon="sap-icon://overflow" 
-                                                        press="onDayOverflowPress" 
-                                                        type="Transparent"
-                                                        tooltip="More options">
+                                                        text="⋮"
+    press="onDayOverflowPress"
+    type="Transparent"
+    tooltip="More options"
+    class="verticalOverflowBtn">
                                                         <customData>
                                                             <core:CustomData key="day" value="wednesday" writeToDom="true"/>
                                                         </customData>
@@ -212,10 +217,11 @@
                                                         editable="false"
                                                         class="sapUiTinyMarginEnd"/>
                                                     <Button id="thursdayOverflow" 
-                                                        icon="sap-icon://overflow" 
-                                                        press="onDayOverflowPress" 
-                                                        type="Transparent"
-                                                        tooltip="More options">
+                                                        text="⋮"
+    press="onDayOverflowPress"
+    type="Transparent"
+    tooltip="More options"
+    class="verticalOverflowBtn">
                                                         <customData>
                                                             <core:CustomData key="day" value="thursday" writeToDom="true"/>
                                                         </customData>
@@ -231,10 +237,11 @@
                                                         editable="false"
                                                         class="sapUiTinyMarginEnd"/>
                                                     <Button id="fridayOverflow" 
-                                                        icon="sap-icon://overflow" 
-                                                        press="onDayOverflowPress" 
-                                                        type="Transparent"
-                                                        tooltip="More options">
+                                                        text="⋮"
+    press="onDayOverflowPress"
+    type="Transparent"
+    tooltip="More options"
+    class="verticalOverflowBtn">
                                                         <customData>
                                                             <core:CustomData key="day" value="friday" writeToDom="true"/>
                                                         </customData>
@@ -250,10 +257,11 @@
                                                         editable="false"
                                                         class="sapUiTinyMarginEnd"/>
                                                     <Button id="saturdayOverflow" 
-                                                        icon="sap-icon://overflow" 
-                                                        press="onDayOverflowPress" 
-                                                        type="Transparent"
-                                                        tooltip="More options">
+                                                        text="⋮"
+    press="onDayOverflowPress"
+    type="Transparent"
+    tooltip="More options"
+    class="verticalOverflowBtn">
                                                         <customData>
                                                             <core:CustomData key="day" value="saturday" writeToDom="true"/>
                                                         </customData>
@@ -269,10 +277,11 @@
                                                         editable="false"
                                                         class="sapUiTinyMarginEnd"/>
                                                     <Button id="sundayOverflow" 
-                                                        icon="sap-icon://overflow" 
-                                                        press="onDayOverflowPress" 
-                                                        type="Transparent"
-                                                        tooltip="More options">
+                                                        text="⋮"
+    press="onDayOverflowPress"
+    type="Transparent"
+    tooltip="More options"
+    class="verticalOverflowBtn">
                                                         <customData>
                                                             <core:CustomData key="day" value="sunday" writeToDom="true"/>
                                                         </customData>
@@ -284,59 +293,7 @@
                                 </Table>
 
                                 <!-- Daily Summary Panel -->
-                                <Panel id="_IDGenPanel5" headerText="Daily Summary" expandable="true" expanded="true">
-                                    <HBox id="_IDGenHBox5" justifyContent="SpaceBetween" class="sapUiSmallMargin">
-                                        <VBox id="_IDGenVeBox2" alignItems="Center">
-                                            <Label id="_IDeGenLabel33" text="Monday" class="sapUiTinyMarginEnd"/>
-                                            <Text id="_IDGenText57" text="{/weekDates/mondayFormatted}" class="sapUiTinyMarginBottom"/>
-                                            <ObjectStatus id="_IDGenObjectStatus"
-                                                text="{/dailyTotals/monday}"
-                                                state="{= ${/dailyTotals/monday} >= 8 ? 'Success' : 'Error' }"/>
-                                        </VBox>
-                                        <VBox id="_IDGenVBox3" alignItems="Center">
-                                            <Label id="_IDGenLabel34" text="Tuesday" class="sapUiTinyMarginEnd"/>
-                                            <Text id="_IDGenText58" text="{/weekDates/tuesdayFormatted}" class="sapUiTinyMarginBottom"/>
-                                            <ObjectStatus id="_IDGenObjectStatus5"
-                                                text="{/dailyTotals/tuesday}"
-                                                state="{= ${/dailyTotals/tuesday} >= 8 ? 'Success' : 'Error' }"/>
-                                        </VBox>
-                                        <VBox id="_IDGenVBox4" alignItems="Center">
-                                            <Label id="_IDGenLabel35" text="Wednesday" class="sapUiTinyMarginEnd"/>
-                                            <Text id="_IDGenText59" text="{/weekDates/wednesdayFormatted}" class="sapUiTinyMarginBottom"/>
-                                            <ObjectStatus id="_IDGenObjectStatus6"
-                                                text="{/dailyTotals/wednesday}"
-                                                state="{= ${/dailyTotals/wednesday} >= 8 ? 'Success' : 'Error' }"/>
-                                        </VBox>
-                                        <VBox id="_IDGenVBox5" alignItems="Center">
-                                            <Label id="_IDGenLabel36" text="Thursday" class="sapUiTinyMarginEnd"/>
-                                            <Text id="_IDGenText60" text="{/weekDates/thursdayFormatted}" class="sapUiTinyMarginBottom"/>
-                                            <ObjectStatus id="_IDGenObjectStatus7"
-                                                text="{/dailyTotals/thursday}"
-                                                state="{= ${/dailyTotals/thursday} >= 8 ? 'Success' : 'Error' }"/>
-                                        </VBox>
-                                        <VBox id="_IDGenVBox6" alignItems="Center">
-                                            <Label id="_IDGenLabel37" text="Friday" class="sapUiTinyMarginEnd"/>
-                                            <Text id="_IDGenText61" text="{/weekDates/fridayFormatted}" class="sapUiTinyMarginBottom"/>
-                                            <ObjectStatus id="_IDGenObjectStatus8"
-                                                text="{/dailyTotals/friday}"
-                                                state="{= ${/dailyTotals/friday} >= 8 ? 'Success' : 'Error' }"/>
-                                        </VBox>
-                                        <VBox id="_IDGenVBox7" alignItems="Center">
-                                            <Label id="_IDGenLabel38" text="Saturday" class="sapUiTinyMarginEnd"/>
-                                            <Text id="_IDGenText62" text="{/weekDates/saturdayFormatted}" class="sapUiTinyMarginBottom"/>
-                                            <ObjectStatus id="_IDGenObjectStatus9"
-                                                text="{/dailyTotals/saturday}"
-                                                state="{= ${/dailyTotals/saturday} >= 8 ? 'Success' : 'Error' }"/>
-                                        </VBox>
-                                        <VBox id="_IDGenVBox8" alignItems="Center">
-                                            <Label id="_IDGenLabel39" text="Sunday" class="sapUiTinyMarginEnd"/>
-                                            <Text id="_IDGenText63" text="{/weekDates/sundayFormatted}" class="sapUiTinyMarginBottom"/>
-                                            <ObjectStatus id="_IDGenObjectStatus10"
-                                                text="{/dailyTotals/sunday}"
-                                                state="{= ${/dailyTotals/sunday} >= 8 ? 'Success' : 'Error' }"/>
-                                        </VBox>
-                                    </HBox>
-                                </Panel>
+                              
                             </VBox>
                         </Panel>
                     </IconTabFilter>
@@ -399,8 +356,8 @@
                                     <ColumnListItem id="_IDGenColumnListItem2">
                                         <cells>
                                             <Text id="_IDGenText78" text="{projectName}"/>
-                                            <Text id="_IDGenText79" text="{startDate}"/>
-                                            <Text id="_IDGenText80" text="{endDate}"/>
+                                            <Text id="_IDGenText79" text="{path: 'startDate', formatter: '.formatDateDisplay'}"/>
+                                            <Text id="_IDGenText80" text="{path: 'endDate', formatter: '.formatDateDisplay'}"/>
                                             <Text id="_IDGenText81" text="{durationDays}"/>
                                             <Text id="_IDGenText82" text="{daysRemaining}"/>
                                             <ObjectStatus id="_IDGenObjectStatus11" text="{timelineStatus}"

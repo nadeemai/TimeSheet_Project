@@ -24,6 +24,10 @@ sap.ui.define([
   return Controller.extend("employee.com.employee.controller.Employee", {
     
     onInit: function() {
+      // Set the main OData model to the view
+      var oModel = this.getOwnerComponent().getModel();
+      this.getView().setModel(oModel);
+      
       // Initialize analytics model
       var oAnalyticsModel = new JSONModel({
         projectHours: [],
@@ -32,12 +36,41 @@ sap.ui.define([
       });
       this.getView().setModel(oAnalyticsModel, "analytics");
       
-      // Load data and compute analytics
+      // Load initial data
+      this._loadInitialData();
+    },
+
+    _loadInitialData: function() {
+      var oModel = this.getView().getModel();
+      
+      // Trigger data loading by binding the tables
+      var oUsersTable = this.byId("usersTable");
+      var oProjectsTable = this.byId("projectsTable");
+      
+      if (oUsersTable) {
+        oUsersTable.bindRows({
+          path: "/Employees",
+          parameters: {
+            expand: "manager"
+          }
+        });
+      }
+      
+      if (oProjectsTable) {
+        oProjectsTable.bindRows({
+          path: "/Projects",
+          parameters: {
+            expand: "manager"
+          }
+        });
+      }
+      
+      // Load data for analytics
       this._loadDataAndComputeAnalytics();
     },
 
     _loadDataAndComputeAnalytics: function() {
-      var oDataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+      var oDataModel = this.getView().getModel();
       
       // Read Employees data
       oDataModel.read("/Employees", {
@@ -46,6 +79,7 @@ sap.ui.define([
         },
         success: function(oData) {
           this._employeesData = oData.results;
+          console.log("Loaded employees:", this._employeesData);
           this._computeAnalyticsIfReady();
         }.bind(this),
         error: function(oError) {
@@ -61,6 +95,7 @@ sap.ui.define([
         },
         success: function(oData) {
           this._projectsData = oData.results;
+          console.log("Loaded projects:", this._projectsData);
           this._computeAnalyticsIfReady();
         }.bind(this),
         error: function(oError) {
@@ -82,30 +117,40 @@ sap.ui.define([
     },
 
     onEditUser: function(oEvent) {
-      var oSelectedUser = oEvent.getSource().getBindingContext().getObject();
-      this._loadUserDialog("edit", oSelectedUser);
+      var oBindingContext = oEvent.getSource().getBindingContext();
+      if (oBindingContext) {
+        var oSelectedUser = oBindingContext.getObject();
+        this._loadUserDialog("edit", oSelectedUser);
+      } else {
+        MessageToast.show("Please select a user to edit");
+      }
     },
 
     onToggleUserStatus: function(oEvent) {
-      var oSelectedUser = oEvent.getSource().getBindingContext().getObject();
-      var oODataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
-      var sPath = "/Employees(userId='" + oSelectedUser.userId + "')";
-      
-      var oUpdatedUser = {
-        status: oSelectedUser.status === "Active" ? "Inactive" : "Active"
-      };
-      
-      oODataModel.update(sPath, oUpdatedUser, {
-        success: function() {
-          oODataModel.refresh();
-          this._loadDataAndComputeAnalytics();
-          MessageToast.show("User status updated successfully");
-        }.bind(this),
-        error: function(oError) {
-          MessageToast.show("Error updating user status");
-          console.error("Error:", oError);
-        }
-      });
+      var oBindingContext = oEvent.getSource().getBindingContext();
+      if (oBindingContext) {
+        var oSelectedUser = oBindingContext.getObject();
+        var oODataModel = this.getView().getModel();
+        var sPath = oBindingContext.getPath();
+        
+        var oUpdatedUser = {
+          status: oSelectedUser.status === "Active" ? "Inactive" : "Active"
+        };
+        
+        oODataModel.update(sPath, oUpdatedUser, {
+          success: function() {
+            oODataModel.refresh();
+            this._loadDataAndComputeAnalytics();
+            MessageToast.show("User status updated successfully");
+          }.bind(this),
+          error: function(oError) {
+            MessageToast.show("Error updating user status");
+            console.error("Error:", oError);
+          }
+        });
+      } else {
+        MessageToast.show("Please select a user to update status");
+      }
     },
 
     _loadUserDialog: function(sMode, oUserData) {
@@ -120,21 +165,18 @@ sap.ui.define([
               content: [
                 new Label({ text: "First Name" }),
                 new Input({ 
-                  id: "firstNameInput",
                   value: "{viewModel>/userData/firstName}", 
                   required: true
                 }),
                 
                 new Label({ text: "Last Name" }),
                 new Input({ 
-                  id: "lastNameInput",
                   value: "{viewModel>/userData/lastName}", 
                   required: true
                 }),
                 
                 new Label({ text: "Email" }),
                 new Input({ 
-                  id: "emailInput",
                   value: "{viewModel>/userData/email}", 
                   type: "Email", 
                   required: true
@@ -142,7 +184,6 @@ sap.ui.define([
                 
                 new Label({ text: "Role" }),
                 new Select({
-                  id: "roleSelect",
                   selectedKey: "{viewModel>/userData/role}",
                   items: [
                     new Item({ key: "Employee", text: "Employee" }),
@@ -154,14 +195,13 @@ sap.ui.define([
                 
                 new Label({ text: "Manager" }),
                 new Select({
-                  id: "managerSelect",
                   selectedKey: "{viewModel>/userData/managerId}",
                   forceSelection: false,
                   items: {
-                    path: "timesheetServiceV2>/Employees",
+                    path: "/Employees",
                     template: new Item({
-                      key: "{timesheetServiceV2>userId}",
-                      text: "{timesheetServiceV2>firstName} {timesheetServiceV2>lastName}"
+                      key: "{userId}",
+                      text: "{firstName} {lastName}"
                     }),
                     filters: [new Filter("role", FilterOperator.EQ, "Manager")]
                   }
@@ -169,13 +209,11 @@ sap.ui.define([
                 
                 new Label({ text: "Department" }),
                 new Input({ 
-                  id: "departmentInput",
                   value: "{viewModel>/userData/department}"
                 }),
                 
                 new Label({ text: "Access Level" }),
                 new Select({
-                  id: "accessLevelSelect",
                   selectedKey: "{viewModel>/userData/accessLevel}",
                   items: [
                     new Item({ key: "Employee", text: "Employee" }),
@@ -187,7 +225,6 @@ sap.ui.define([
                 
                 new Label({ text: "Status" }),
                 new Select({
-                  id: "statusSelect",
                   selectedKey: "{viewModel>/userData/status}",
                   items: [
                     new Item({ key: "Active", text: "Active" }),
@@ -215,7 +252,17 @@ sap.ui.define([
       // Set up the view model for the dialog
       var oViewModel = new JSONModel({
         mode: sMode,
-        userData: oUserData ? JSON.parse(JSON.stringify(oUserData)) : {
+        userData: oUserData ? {
+          userId: oUserData.userId,
+          firstName: oUserData.firstName || "",
+          lastName: oUserData.lastName || "",
+          email: oUserData.email || "",
+          role: oUserData.role || "Employee",
+          managerId: oUserData.managerId || "",
+          department: oUserData.department || "",
+          accessLevel: oUserData.accessLevel || "Employee",
+          status: oUserData.status || "Active"
+        } : {
           firstName: "",
           lastName: "",
           email: "",
@@ -228,22 +275,19 @@ sap.ui.define([
       });
       
       this._oUserDialog.setModel(oViewModel, "viewModel");
-      
-      // Update dialog title
       this._oUserDialog.setTitle(sMode === "create" ? "Create New User" : "Edit User");
-      
       this._oUserDialog.open();
     },
 
     onSaveUser: function() {
       var oDialog = this._oUserDialog;
       var oViewModel = oDialog.getModel("viewModel");
-      var oUserData = JSON.parse(JSON.stringify(oViewModel.getProperty("/userData")));
+      var oUserData = oViewModel.getProperty("/userData");
       var sMode = oViewModel.getProperty("/mode");
-      var oODataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+      var oODataModel = this.getView().getModel();
       
       // Validate required fields
-      if (!oUserData.firstName || !oUserData.lastName || !oUserData.email || !oUserData.role || !oUserData.accessLevel) {
+      if (!oUserData.firstName || !oUserData.lastName || !oUserData.email || !oUserData.role) {
         MessageToast.show("Please fill in all required fields");
         return;
       }
@@ -256,6 +300,9 @@ sap.ui.define([
       }
       
       if (sMode === "create") {
+        // Remove userId for new users (let backend generate it)
+        delete oUserData.userId;
+        
         oODataModel.create("/Employees", oUserData, {
           success: function() {
             oODataModel.refresh();
@@ -269,7 +316,7 @@ sap.ui.define([
           }
         });
       } else {
-        var sPath = "/Employees(userId='" + oUserData.userId + "')";
+        var sPath = "/Employees('" + oUserData.userId + "')";
         oODataModel.update(sPath, oUserData, {
           success: function() {
             oODataModel.refresh();
@@ -297,36 +344,46 @@ sap.ui.define([
     },
 
     onEditProject: function(oEvent) {
-      var oSelectedProject = oEvent.getSource().getBindingContext().getObject();
-      this._loadProjectDialog("edit", oSelectedProject);
+      var oBindingContext = oEvent.getSource().getBindingContext();
+      if (oBindingContext) {
+        var oSelectedProject = oBindingContext.getObject();
+        this._loadProjectDialog("edit", oSelectedProject);
+      } else {
+        MessageToast.show("Please select a project to edit");
+      }
     },
 
     onDeleteProject: function(oEvent) {
-      var oSelectedProject = oEvent.getSource().getBindingContext().getObject();
-      var sPath = "/Projects(projectId='" + oSelectedProject.projectId + "')";
-      
-      MessageBox.confirm(
-        "Are you sure you want to delete project '" + oSelectedProject.name + "'?",
-        {
-          title: "Delete Project",
-          onClose: function(sAction) {
-            if (sAction === MessageBox.Action.OK) {
-              var oODataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
-              oODataModel.remove(sPath, {
-                success: function() {
-                  oODataModel.refresh();
-                  this._loadDataAndComputeAnalytics();
-                  MessageToast.show("Project deleted successfully");
-                }.bind(this),
-                error: function(oError) {
-                  MessageToast.show("Error deleting project");
-                  console.error("Error:", oError);
-                }
-              });
-            }
-          }.bind(this)
-        }
-      );
+      var oBindingContext = oEvent.getSource().getBindingContext();
+      if (oBindingContext) {
+        var oSelectedProject = oBindingContext.getObject();
+        var sPath = oBindingContext.getPath();
+        
+        MessageBox.confirm(
+          "Are you sure you want to delete project '" + (oSelectedProject.name || oSelectedProject.projectName) + "'?",
+          {
+            title: "Delete Project",
+            onClose: function(sAction) {
+              if (sAction === MessageBox.Action.OK) {
+                var oODataModel = this.getView().getModel();
+                oODataModel.remove(sPath, {
+                  success: function() {
+                    oODataModel.refresh();
+                    this._loadDataAndComputeAnalytics();
+                    MessageToast.show("Project deleted successfully");
+                  }.bind(this),
+                  error: function(oError) {
+                    MessageToast.show("Error deleting project");
+                    console.error("Error:", oError);
+                  }
+                });
+              }
+            }.bind(this)
+          }
+        );
+      } else {
+        MessageToast.show("Please select a project to delete");
+      }
     },
 
     _loadProjectDialog: function(sMode, oProjectData) {
@@ -341,27 +398,24 @@ sap.ui.define([
               content: [
                 new Label({text: "Project Name"}),
                 new Input({
-                  id: "projectNameInput",
                   value: "{viewModel>/projectData/name}", 
                   required: true
                 }),
                 
                 new Label({text: "Description"}),
                 new Input({
-                  id: "projectDescInput",
                   value: "{viewModel>/projectData/description}"
                 }),
                 
                 new Label({text: "Project Manager"}),
                 new Select({
-                  id: "projectManagerSelect",
                   selectedKey: "{viewModel>/projectData/managerId}",
                   forceSelection: false,
                   items: {
-                    path: "timesheetServiceV2>/Employees",
+                    path: "/Employees",
                     template: new Item({
-                      key: "{timesheetServiceV2>userId}",
-                      text: "{timesheetServiceV2>firstName} {timesheetServiceV2>lastName}"
+                      key: "{userId}",
+                      text: "{firstName} {lastName}"
                     }),
                     filters: [new Filter("role", FilterOperator.EQ, "Manager")]
                   }
@@ -369,21 +423,18 @@ sap.ui.define([
                 
                 new Label({text: "Budget ($)"}),
                 new Input({
-                  id: "projectBudgetInput",
                   value: "{viewModel>/projectData/budget}", 
                   type: "Number"
                 }),
                 
                 new Label({text: "Allocated Hours"}),
                 new Input({
-                  id: "projectAllocatedHoursInput",
                   value: "{viewModel>/projectData/allocatedHours}", 
                   type: "Number"
                 }),
                 
                 new Label({text: "Start Date"}),
                 new DatePicker({
-                  id: "projectStartDatePicker",
                   value: "{viewModel>/projectData/startDate}", 
                   valueFormat: "yyyy-MM-dd",
                   displayFormat: "MMM dd, yyyy"
@@ -391,7 +442,6 @@ sap.ui.define([
                 
                 new Label({text: "End Date"}),
                 new DatePicker({
-                  id: "projectEndDatePicker",
                   value: "{viewModel>/projectData/endDate}", 
                   valueFormat: "yyyy-MM-dd",
                   displayFormat: "MMM dd, yyyy"
@@ -399,13 +449,11 @@ sap.ui.define([
                 
                 new Label({text: "Client"}),
                 new Input({
-                  id: "projectClientInput",
                   value: "{viewModel>/projectData/client}"
                 }),
                 
                 new Label({text: "Status"}),
                 new Select({
-                  id: "projectStatusSelect",
                   selectedKey: "{viewModel>/projectData/status}",
                   items: [
                     new Item({key: "Planning", text: "Planning"}),
@@ -435,7 +483,18 @@ sap.ui.define([
       // Set up the view model for the dialog
       var oViewModel = new JSONModel({
         mode: sMode,
-        projectData: oProjectData ? JSON.parse(JSON.stringify(oProjectData)) : {
+        projectData: oProjectData ? {
+          projectId: oProjectData.projectId,
+          name: oProjectData.name || "",
+          description: oProjectData.description || "",
+          managerId: oProjectData.managerId || "",
+          budget: oProjectData.budget || 0,
+          allocatedHours: oProjectData.allocatedHours || 0,
+          startDate: oProjectData.startDate || "",
+          endDate: oProjectData.endDate || "",
+          client: oProjectData.client || "",
+          status: oProjectData.status || "Planning"
+        } : {
           name: "",
           description: "",
           managerId: "",
@@ -449,19 +508,16 @@ sap.ui.define([
       });
       
       this._oProjectDialog.setModel(oViewModel, "viewModel");
-      
-      // Update dialog title
       this._oProjectDialog.setTitle(sMode === "create" ? "Create New Project" : "Edit Project");
-      
       this._oProjectDialog.open();
     },
 
     onSaveProject: function() {
       var oDialog = this._oProjectDialog;
       var oViewModel = oDialog.getModel("viewModel");
-      var oProjectData = JSON.parse(JSON.stringify(oViewModel.getProperty("/projectData")));
+      var oProjectData = oViewModel.getProperty("/projectData");
       var sMode = oViewModel.getProperty("/mode");
-      var oODataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+      var oODataModel = this.getView().getModel();
       
       // Validate required fields
       if (!oProjectData.name) {
@@ -478,6 +534,9 @@ sap.ui.define([
       }
       
       if (sMode === "create") {
+        // Remove projectId for new projects (let backend generate it)
+        delete oProjectData.projectId;
+        
         oODataModel.create("/Projects", oProjectData, {
           success: function() {
             oODataModel.refresh();
@@ -491,7 +550,7 @@ sap.ui.define([
           }
         });
       } else {
-        var sPath = "/Projects(projectId='" + oProjectData.projectId + "')";
+        var sPath = "/Projects('" + oProjectData.projectId + "')";
         oODataModel.update(sPath, oProjectData, {
           success: function() {
             oODataModel.refresh();
@@ -536,7 +595,7 @@ sap.ui.define([
           projectName: project.name,
           allocatedHours: allocatedHours,
           bookedHours: usedHours,
-          remainingHours: allocatedHours - usedHours,
+          remainingHours: Math.max(0, allocatedHours - usedHours),
           utilization: allocatedHours > 0 ? Math.round((usedHours / allocatedHours) * 100) : 0
         };
       });
@@ -575,8 +634,8 @@ sap.ui.define([
       
       // Update project durations data
       var aProjectDurations = aProjects.map(function(project) {
-        var startDate = new Date(project.startDate);
-        var endDate = new Date(project.endDate);
+        var startDate = project.startDate ? new Date(project.startDate) : new Date();
+        var endDate = project.endDate ? new Date(project.endDate) : new Date();
         var today = new Date();
         
         var durationDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
@@ -610,22 +669,28 @@ sap.ui.define([
 
     // Utility Functions
     formatCurrency: function(fValue) {
-      if (!fValue) return "$0.00";
+      if (fValue === null || fValue === undefined) return "$0.00";
       return "$" + parseFloat(fValue).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     },
 
     onRefreshUsers: function() {
-      var oODataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+      var oODataModel = this.getView().getModel();
       oODataModel.refresh();
       this._loadDataAndComputeAnalytics();
       MessageToast.show("Users data refreshed");
     },
 
     onRefreshProjects: function() {
-      var oODataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+      var oODataModel = this.getView().getModel();
       oODataModel.refresh();
       this._loadDataAndComputeAnalytics();
       MessageToast.show("Projects data refreshed");
+    },
+    
+    // Format manager name for display
+    formatManagerName: function(manager) {
+      if (!manager) return "";
+      return (manager.firstName || "") + " " + (manager.lastName || "");
     }
   });
 });

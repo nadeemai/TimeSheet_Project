@@ -15,7 +15,7 @@ service EmployeeService {
     managerID.email as managerEmail : String
   } where ID = $user.id;
 
-  // ✅ My Projects - Primary redirection target for Projects
+  // ✅ My Projects - Simple view, aggregation done in handler
   @readonly
   @cds.redirection.target
   entity MyProjects as projection on timesheet.Projects;
@@ -55,25 +55,25 @@ service EmployeeService {
     employee.employeeID as empID : String,
     project.ID as projectID : UUID,
     project.projectID as projectCode : String,
-    project.projectName as Project : String,
-    project.allocatedHours as AllocatedHours : Integer,
-    project.startDate as StartDate : Date,
-    project.endDate as EndDate : Date,
-    hoursWorked as BookedHours : Decimal(10,2),
+    project.projectName,
+    project.allocatedHours,
+    project.startDate,
+    project.endDate,
+    hoursWorked,
     project.projectRole,
     activity.activity as activityName,
-    activity.activityType as activityType : String,
+    activity.activityType,
     workDate,
     task,
     status,
     isBillable
   } where employee.ID = $user.id;
 
-  // ✅ Booked Hours Overview - No redirection target (aggregation only)
+  // ✅ Booked Hours Overview - Simple view, aggregation in handler
   @readonly
   entity BookedHoursOverview as projection on timesheet.Projects;
 
-  // ✅ Project Engagement Duration - No redirection target (aggregation only)
+  // ✅ Project Engagement Duration - Simple view, calculations in handler
   @readonly
   entity ProjectEngagementDuration as projection on timesheet.Projects;
 

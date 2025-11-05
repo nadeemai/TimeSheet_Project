@@ -51,7 +51,7 @@ module.exports = cds.service.impl(async function() {
         return 'On Track';
     };
 
-    // ✅ NEW: MyProjects Handler
+    // NEW: MyProjects Handler
     this.on('READ', 'MyProjects', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) return [];

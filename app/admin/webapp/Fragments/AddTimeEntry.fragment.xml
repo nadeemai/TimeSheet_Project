@@ -4,90 +4,102 @@
     xmlns:l="sap.ui.layout"
     xmlns:f="sap.ui.layout.form"
     xmlns:app="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1">
-    
+
     <Dialog
         id="addEntryDialog"
         title="Add New Time Entry"
-        contentWidth="700px"
-        contentHeight="550px"
+        contentWidth="500px"
+        contentHeight="500px"
         resizable="true"
         class="sapUiResponsivePadding">
-        
+
         <content>
-            <f:SimpleForm id="simpleForm"
+            <f:SimpleForm
+                id="simpleForm"
                 layout="ResponsiveGridLayout"
                 editable="true"
                 class="sapUiSmallMargin">
-                
+
                 <f:content>
-                    <!-- Date Selection Section -->
-                    <!-- <core:Title id="dateTitle" text="Date Selection"/> -->
-                    <Label id="dateLabel" text="Activity Date"/>
+                    <!-- Activity Date -->
+                    <Label id="_IDGenLabel22" text="Activity Date" />
                     <DatePicker
                         id="entryDatePicker"
                         value="{/newEntry/selectedDate}"
                         placeholder="Select any date in the week"
                         change="onEntryDatePickerChange" />
-                    
-                    <!-- Project Selection Section -->
-                    <!-- <core:Title id="projectTitle" text="Project Selection"/> -->
-                    <Label id="projectLabel" text="Project"/>
+
+                    <!-- Project Selection -->
+                    <Label id="_IDGenLabel23" text="Project" />
                     <ComboBox
                         id="projectComboBox"
                         selectedKey="{/newEntry/projectId}"
-                        items="{/assignedProjects}"
+                        items="{
+                            path: '/assignedProjects'
+                        }"
                         placeholder="Select a Project">
-                        <core:Item id="_IDGenItem2" key="{projectId}" text="{projectName}" />
+                        <core:Item id="_IDGenItem3" key="{projectId}" text="{projectName}" />
                     </ComboBox>
-                    
-                    <!-- Work Type Selection Section -->
-                    <Label id="workTypeLabel" text="Task"/>
+
+                    <!-- Task Selection -->
+                    <Label id="_IDGenLabel24" text="Task" />
                     <ComboBox
                         id="workTypeComboBox"
                         selectedKey="{/newEntry/workType}"
-                        items="{/workTypes}"
+                        items="{
+                            path: '/workTypes'
+                        }"
                         placeholder="Select a Task">
-                        <core:Item id="_IDGenItem3" key="{type}" text="{name}" />
+                        <core:Item id="_IDGenItem4" key="{type}" text="{name}" />
                     </ComboBox>
-                    
-                    <!-- Task Details Section -->
-                    <Label id="taskDetailsLabel" text="Task Details"/>
-                    <!-- -->
-                    
-                    <!-- Hours Selection Section -->
-                    <Label id="hoursLabel" text="Hours"/>
+
+                    <!-- ✅ Task Details -->
+                    <Label id="_IDGenLabel34" text="Task Details" />
+                    <TextArea
+                        id="taskDetailsInput"
+                        value="{/newEntry/taskDetails}"
+                        rows="4"
+                        placeholder="Enter details about the task"
+                        width="100%" />
+
+                    <!-- Hours Selection -->
+                    <Label id="_IDGenLabel35" text="Hours" />
                     <ComboBox
                         id="hoursComboBox"
                         selectedKey="{/newEntry/hours}"
                         placeholder="Select Hours">
-                        <core:Item id="_IDGenItem12" key="1" text="1" />
-                        <core:Item id="_IDGenItem13" key="2" text="2" />
-                        <core:Item id="_IDGenItem14" key="3" text="3" />
-                        <core:Item id="_IDGenItem15" key="4" text="4" />
-                        <core:Item id="_IDGenItem16" key="5" text="5" />
-                        <core:Item id="_IDGenItem17" key="6" text="6" />
-                        <core:Item id="_IDGenItem18" key="7" text="7" />
-                        <core:Item id="_IDGenItem19" key="8" text="8" />
-                        <core:Item id="_IDGenItem20" key="9" text="9" />
-                        <core:Item id="_IDGenItem21" key="10" text="10" />
-                        <core:Item id="_IDGenItem22" key="11" text="11" />
-                        <core:Item id="_IDGenItem23" key="12" text="12" />
-                        <core:Item id="_IDGenItem24" key="13" text="13" />
-                        <core:Item id="_IDGenItem25" key="14" text="14" />
-                        <core:Item id="_IDGenItem26" key="15" text="15" />
+                        <core:Item id="_IDGenItem5" key="1" text="1" />
+                        <core:Item id="_IDGenItem11" key="2" text="2" />
+                        <core:Item id="_IDGenItem12" key="3" text="3" />
+                        <core:Item id="_IDGenItem13" key="4" text="4" />
+                        <core:Item id="_IDGenItem14" key="5" text="5" />
+                        <core:Item id="_IDGenItem15" key="6" text="6" />
+                        <core:Item id="_IDGenItem16" key="7" text="7" />
+                        <core:Item id="_IDGenItem17" key="8" text="8" />
+                        <core:Item id="_IDGenItem18" key="9" text="9" />
+                        <core:Item id="_IDGenItem19" key="10" text="10" />
+                        <core:Item id="_IDGenItem20" key="11" text="11" />
+                        <core:Item id="_IDGenItem21" key="12" text="12" />
+                        <core:Item id="_IDGenItem22" key="13" text="13" />
+                        <core:Item id="_IDGenItem23" key="14" text="14" />
+                        <core:Item id="_IDGenItem24" key="15" text="15" />
                     </ComboBox>
                 </f:content>
             </f:SimpleForm>
         </content>
-        
+
         <buttons>
-            <Button id="_IDGenButton4"
+            <Button
+                id="saveButton"
                 text="Save"
+                type="Emphasized"
                 press="onSaveNewEntry" />
-            <Button id="_IDGenrButton5"
+            <Button
+                id="saveAndNewButton"
                 text="Save + New"
                 press="onSaveAndNewEntry" />
-            <Button id="_IDGenButton3"
+            <Button
+                id="cancelButton"
                 text="Cancel"
                 press="onCancelNewEntry"
                 type="Transparent" />

@@ -1,6 +1,23 @@
 ### Employee Service Test File
 ### Base URL: http://localhost:4004
 
+### Aditya Mishra (Cordys)
+GET http://localhost:4004/odata/v4/employee/MyProjects
+Authorization: Basic aditya.mishra:initial
+
+### Nadeem Abbas (Sony COFA)
+GET http://localhost:4004/odata/v4/employee/MyProjects
+Authorization: Basic nadeem.abbas:initial
+
+### Yugal Kishore (Cordys)
+GET http://localhost:4004/odata/v4/employee/MyProjects
+Authorization: Basic yugal.kishore:initial
+
+### Sumit Jhaldiyal (Sony COFA)
+GET http://localhost:4004/odata/v4/employee/MyProjects
+Authorization: Basic sumit.jhaldiyal:initial
+
+
 # Test MyProjects
 GET http://localhost:4004/odata/v4/employee/MyProjects
 Authorization: Basic aditya.mishra:initial
@@ -71,7 +88,7 @@ Content-Type: application/json
 
 {
   "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d490",
-  "workDate": "2024-11-04",
+  "workDate": "2024-11-05",
   "hoursWorked": 8.0,
   "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d510",
   "project_ID": "b47ac10b-58cc-4372-a567-0e02b2c3d500",
@@ -146,12 +163,12 @@ Content-Type: application/json
 ###
 
 ### 14. POST - Submit Timesheet Action  -------
-POST http://localhost:4004/odata/v4/employee/submitTimesheet
+POST http://localhost:41155/odata/v4/employee/submitTimesheet
 Authorization: Basic aditya.mishra:initial
 Content-Type: application/json
 
 {
-  "timesheetID": "TS009"
+  "timesheetID": "TS002"
 }
 
 ###
@@ -201,7 +218,6 @@ Authorization: Basic aditya.mishra:initial
 ### 20. GET - Read Timesheets with Filter (By Status)
 GET http://localhost:4004/odata/v4/employee/MyTimesheets?$filter=status eq 'Approved'
 Authorization: Basic aditya.mishra:initial
-
 ###
 
 ### 21. POST - Create Multiple Timesheets for Same Day (Testing 15-hour limit)
@@ -210,8 +226,9 @@ Authorization: Basic aditya.mishra:initial
 Content-Type: application/json
 
 {
+  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d490",
   "workDate": "2024-11-04",
-  "hoursWorked": 4.0,
+  "hoursWorked": 8.0,
   "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d511",
   "project_ID": "b47ac10b-58cc-4372-a567-0e02b2c3d500",
   "task": "Developing",
@@ -234,6 +251,7 @@ Authorization: Basic aditya.mishra:initial
 Content-Type: application/json
 
 {
+  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d490",
   "workDate": "2024-11-04",
   "hoursWorked": 16.0,
   "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d510",
@@ -250,6 +268,7 @@ Authorization: Basic aditya.mishra:initial
 Content-Type: application/json
 
 {
+  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d490",
   "workDate": "2024-11-05",
   "hoursWorked": 6.0,
   "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d512",
@@ -268,6 +287,7 @@ Authorization: Basic EMP002:password
 Content-Type: application/json
 
 {
+  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d490",
   "workDate": "2024-11-05",
   "hoursWorked": 2.0,
   "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d523",
