@@ -35,6 +35,16 @@ service EmployeeService {
     *
   } where isActive = true;
 
+  // ✅ NEW: Available Task Types for dropdown
+  @readonly
+  entity AvailableTaskTypes {
+    key code : String @title: 'Task Code';
+    name : String @title: 'Task Name';
+    description : String @title: 'Description';
+    isProjectTask : Boolean @title: 'For Project Work';
+    icon : String @title: 'Icon';
+  };
+
   // My Timesheets - employees can work on any project
   @cds.redirection.target
   entity MyTimesheets as select from timesheet.Timesheets {

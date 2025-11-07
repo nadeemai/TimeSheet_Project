@@ -1,6 +1,9 @@
 ### Employee Service Test File
 ### Base URL: http://localhost:4004
 
+GET http://localhost:4004/odata/v4/employee/AvailableTaskTypes
+Authorization: Basic aditya.mishra:initial
+
 ### Aditya Mishra (Cordys)
 GET http://localhost:4004/odata/v4/employee/MyProjects
 Authorization: Basic aditya.mishra:initial
@@ -283,7 +286,7 @@ Content-Type: application/json
 
 ### 25. POST - Create Timesheet with Client Call Task
 POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Authorization: Basic EMP002:password
+Authorization: Basic aditya.mishra:initial
 Content-Type: application/json
 
 {

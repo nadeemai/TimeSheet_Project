@@ -139,13 +139,18 @@
                                                     <core:Item id="_IDGenItem10" key="{type}" text="{name}"/>
                                                 </ComboBox>
                                                 <!-- Task Detail Button -->
-                                                <HBox id="taskDetailContainer" alignItems="Center" justifyContent="Center">
-                                                    <Button id="taskDetailButton"
-                                                        icon="sap-icon://list"
-                                                        type="Transparent"
-                                                        press="onTaskDetailPress"
-                                                        tooltip="View task details"/>
-                                                </HBox>
+                                                <HBox id="taskDetailContainer"
+    alignItems="Center"
+    justifyContent="Center"
+    binding="{view>}">   <!-- 👈 Add this line -->
+    <Button
+        id="taskDetailButton"
+        icon="sap-icon://list"
+        type="Transparent"
+        press="onTaskDetailPress"
+        tooltip="View task details" />
+</HBox>
+
                                                 <!-- Monday with overflow button -->
                                                 <HBox id="mondayContainer" justifyContent="SpaceBetween" alignItems="Center">
                                                     <Input id="_IDGenInput1"
@@ -299,88 +304,87 @@
                     </IconTabFilter>
                     <IconTabFilter id="_IDGenIconTabFilter3" text="Reports" key="reports" icon="sap-icon://bar-chart" iconColor="Negative">
                         <Panel id="bookedHoursPanel" headerText="Booked Hours Overview" expandable="true" expanded="true">
-    <Table id="bookedHoursTable" items="{/employeeProjectHours}">
-        <columns>
-            <Column id="_IDGenColumn7">
-                <Text id="_IDGenText39" text="Project"/>
-            </Column>
-            <Column id="_IDGenColumn8">
-                <Text id="_IDGenText45" text="Allocated Hours"/>
-            </Column>
-            <Column id="_IDGenColumn26">
-                <Text id="_IDGenText46" text="Booked Hours"/>
-            </Column>
-            <Column id="_IDGenColumn27">
-                <Text id="_IDGenText47" text="Remaining Hours"/>
-            </Column>
-            <Column id="_IDGenColumn28">
-                <Text id="_IDGenText48" text="Utilization"/>
-            </Column>
-        </columns>
-        <items>
-            <ColumnListItem id="_IDGenColumnListItem1">
-                <cells>
-                    <Text id="_IDGenText49" text="{projectName}"/>
-                    <Text id="_IDGenText65" text="{allocatedHours}"/>
-                    <Text id="_IDGenText69" text="{bookedHours}"/>
-                    <Text id="_IDGenText70" text="{remainingHours}"/>
-                    <Text id="_IDGenText71" text="{utilization}%"/>
-                </cells>
-            </ColumnListItem>
-        </items>
-    </Table>
-</Panel>
-
+                            <Table id="bookedHoursTable" items="{/employeeProjectHours}">
+                                <columns>
+                                    <Column id="_IDGenColumn7">
+                                        <Text id="_IDGenText39" text="Project"/>
+                                    </Column>
+                                    <Column id="_IDGenColumn8">
+                                        <Text id="_IDGenText45" text="Allocated Hours"/>
+                                    </Column>
+                                    <Column id="_IDGenColumn26">
+                                        <Text id="_IDGenText46" text="Booked Hours"/>
+                                    </Column>
+                                    <Column id="_IDGenColumn27">
+                                        <Text id="_IDGenText47" text="Remaining Hours"/>
+                                    </Column>
+                                    <Column id="_IDGenColumn28">
+                                        <Text id="_IDGenText48" text="Utilization"/>
+                                    </Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem id="_IDGenColumnListItem1">
+                                        <cells>
+                                            <Text id="_IDGenText49" text="{projectName}"/>
+                                            <Text id="_IDGenText65" text="{allocatedHours}"/>
+                                            <Text id="_IDGenText69" text="{bookedHours}"/>
+                                            <Text id="_IDGenText70" text="{remainingHours}"/>
+                                            <Text id="_IDGenText71" text="{utilization}%"/>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </Panel>
                         <Panel id="durationPanel" headerText="Project Engagement Duration" expandable="true" expanded="true">
-    <Table id="durationTable" items="{/employeeProjectDurations}">
-        <columns>
-            <Column id="_IDGenColumn29">
-                <Text id="_IDGenText72" text="Project"/>
-            </Column>
-            <Column id="_IDGenColumn30">
-                <Text id="_IDGenText73" text="Start Date"/>
-            </Column>
-            <Column id="_IDGenColumn31">
-                <Text id="_IDGenText74" text="End Date"/>
-            </Column>
-            <Column id="_IDGenColumn32">
-                <Text id="_IDGenText75" text="Duration (Days)"/>
-            </Column>
-            <Column id="_IDGenColumn33">
-                <Text id="_IDGenText76" text="Days Remaining"/>
-            </Column>
-            <Column id="_IDGenColumn34">
-                <Text id="_IDGenText77" text="Timeline Status"/>
-            </Column>
-        </columns>
-        <items>
-            <ColumnListItem id="_IDGenColumnListItem2">
-                <cells>
-                    <Text id="_IDGenText78" text="{projectName}"/>
-                    <Text id="_IDGenText79" text="{path: 'startDate', formatter: '.formatDateDisplay'}"/>
-                    <Text id="_IDGenText80" text="{path: 'endDate', formatter: '.formatDateDisplay'}"/>
-                    <Text id="_IDGenText81" text="{durationDays}"/>
-                    <Text id="_IDGenText82" text="{daysRemaining}"/>
-                    <ObjectStatus id="_IDGenObjectStatus11" text="{timelineStatus}"
-                        state="{= ${timelineStatus} === 'Completed' ? 'Success' :
-                                 ${timelineStatus} === 'On Track' ? 'Success' :
-                                 ${timelineStatus} === 'At Risk' ? 'Warning' :
-                                 ${timelineStatus} === 'Delayed' ? 'Error' : 'None' }"/>
-                </cells>
-            </ColumnListItem>
-        </items>
-    </Table>
-</Panel>
+                            <Table id="durationTable" items="{/employeeProjectDurations}">
+                                <columns>
+                                    <Column id="_IDGenColumn29">
+                                        <Text id="_IDGenText72" text="Project"/>
+                                    </Column>
+                                    <Column id="_IDGenColumn30">
+                                        <Text id="_IDGenText73" text="Start Date"/>
+                                    </Column>
+                                    <Column id="_IDGenColumn31">
+                                        <Text id="_IDGenText74" text="End Date"/>
+                                    </Column>
+                                    <Column id="_IDGenColumn32">
+                                        <Text id="_IDGenText75" text="Duration (Days)"/>
+                                    </Column>
+                                    <Column id="_IDGenColumn33">
+                                        <Text id="_IDGenText76" text="Days Remaining"/>
+                                    </Column>
+                                    <Column id="_IDGenColumn34">
+                                        <Text id="_IDGenText77" text="Timeline Status"/>
+                                    </Column>
+                                </columns>
+                                <items>
+                                    <ColumnListItem id="_IDGenColumnListItem2">
+                                        <cells>
+                                            <Text id="_IDGenText78" text="{projectName}"/>
+                                            <Text id="_IDGenText79" text="{path: 'startDate', formatter: '.formatDateDisplay'}"/>
+                                            <Text id="_IDGenText80" text="{path: 'endDate', formatter: '.formatDateDisplay'}"/>
+                                            <Text id="_IDGenText81" text="{durationDays}"/>
+                                            <Text id="_IDGenText82" text="{daysRemaining}"/>
+                                            <ObjectStatus id="_IDGenObjectStatus11" text="{timelineStatus}"
+                                                state="{= ${timelineStatus} === 'Completed' ? 'Success' :
+                                                 ${timelineStatus} === 'On Track' ? 'Success' :
+                                                 ${timelineStatus} === 'At Risk' ? 'Warning' :
+                                                 ${timelineStatus} === 'Delayed' ? 'Error' : 'None' }"/>
+                                        </cells>
+                                    </ColumnListItem>
+                                </items>
+                            </Table>
+                        </Panel>
                     </IconTabFilter>
                 </items>
             </IconTabBar>
         </content>
         <footer>
-            <OverflowToolbar id="_IDGenOverflowToolbar">
+            <!-- <OverflowToolbar id="_IDGenOverflowToolbar">
                 <ToolbarSpacer id="_IDGenToolbarSpacer4"/>
                 <Button id="_IDGenButton17" text="Save Draft" type="Emphasized" press="onSaveDraft"/>
                 <Button id="_IDGenButton18" text="Submit for Approval" type="Accept" press="onSubmitApproval"/>
-            </OverflowToolbar>
+            </OverflowToolbar> -->
         </footer>
     </Page>
 </mvc:View>

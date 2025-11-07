@@ -9,9 +9,11 @@
         id="addEntryDialog"
         title="Add New Time Entry"
         contentWidth="500px"
-        contentHeight="500px"
-        resizable="true"
-        class="sapUiResponsivePadding">
+        resizable="false"
+        verticalScrolling="false"
+        horizontalScrolling="false"
+        class="sapUiResponsivePadding"
+        stretch="false">
 
         <content>
             <f:SimpleForm
@@ -34,9 +36,7 @@
                     <ComboBox
                         id="projectComboBox"
                         selectedKey="{/newEntry/projectId}"
-                        items="{
-                            path: '/assignedProjects'
-                        }"
+                        items="{ path: '/assignedProjects' }"
                         placeholder="Select a Project">
                         <core:Item id="_IDGenItem3" key="{projectId}" text="{projectName}" />
                     </ComboBox>
@@ -46,23 +46,12 @@
                     <ComboBox
                         id="workTypeComboBox"
                         selectedKey="{/newEntry/workType}"
-                        items="{
-                            path: '/workTypes'
-                        }"
+                        items="{ path: '/workTypes' }"
                         placeholder="Select a Task">
                         <core:Item id="_IDGenItem4" key="{type}" text="{name}" />
                     </ComboBox>
 
-                    <!-- ✅ Task Details -->
-                    <Label id="_IDGenLabel34" text="Task Details" />
-                    <TextArea
-                        id="taskDetailsInput"
-                        value="{/newEntry/taskDetails}"
-                        rows="4"
-                        placeholder="Enter details about the task"
-                        width="100%" />
-
-                    <!-- Hours Selection -->
+                    <!-- Hours -->
                     <Label id="_IDGenLabel35" text="Hours" />
                     <ComboBox
                         id="hoursComboBox"
@@ -84,6 +73,15 @@
                         <core:Item id="_IDGenItem23" key="14" text="14" />
                         <core:Item id="_IDGenItem24" key="15" text="15" />
                     </ComboBox>
+
+                    <!-- Task Details -->
+                    <Label id="_IDGenLabel34" text="Task Details" />
+                    <TextArea
+                        id="taskDetailsInput"
+                        value="{/newEntry/taskDetails}"
+                        rows="3"
+                        placeholder="Enter details about the task"
+                        width="100%" />
                 </f:content>
             </f:SimpleForm>
         </content>

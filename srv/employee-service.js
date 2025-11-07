@@ -51,7 +51,7 @@ module.exports = cds.service.impl(async function() {
         return 'On Track';
     };
 
-    // NEW: MyProjects Handler
+    // MyProjects Handler
     this.on('READ', 'MyProjects', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) return [];
@@ -113,7 +113,7 @@ module.exports = cds.service.impl(async function() {
         return projects;
     });
 
-    // ✅ NEW: BookedHoursOverview Handler
+    // BookedHoursOverview Handler
     this.on('READ', 'BookedHoursOverview', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) return [];
@@ -162,7 +162,7 @@ module.exports = cds.service.impl(async function() {
         return overview;
     });
 
-    // ✅ NEW: ProjectEngagementDuration Handler
+    // ProjectEngagementDuration Handler
     this.on('READ', 'ProjectEngagementDuration', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) return [];
@@ -197,6 +197,65 @@ module.exports = cds.service.impl(async function() {
         return projects;
     });
 
+    // AvailableTaskTypes Handler
+    this.on('READ', 'AvailableTaskTypes', async (req) => {
+        const employee = await getAuthenticatedEmployee(req);
+        if (!employee) return [];
+
+        return [
+            {
+                code: 'Designing',
+                name: 'Designing',
+                description: 'UI/UX design, wireframing, mockups, prototyping',
+                isProjectTask: true,
+                icon: '🎨'
+            },
+            {
+                code: 'Developing',
+                name: 'Developing',
+                description: 'Writing code, implementing features, building functionality',
+                isProjectTask: true,
+                icon: '💻'
+            },
+            {
+                code: 'Testing',
+                name: 'Testing',
+                description: 'QA testing, test execution, test case creation',
+                isProjectTask: true,
+                icon: '🧪'
+            },
+            {
+                code: 'Bug Fix',
+                name: 'Bug Fix',
+                description: 'Fixing defects, resolving issues, debugging',
+                isProjectTask: true,
+                icon: '🐛'
+            },
+            {
+                code: 'Deployment',
+                name: 'Deployment',
+                description: 'Release activities, CI/CD, production releases',
+                isProjectTask: true,
+                icon: '🚀'
+            },
+            {
+                code: 'Client Call',
+                name: 'Client Call',
+                description: 'Client meetings, stakeholder communication, demos',
+                isProjectTask: true,
+                icon: '📞'
+            },
+            {
+                code: 'Leave',
+                name: 'Leave',
+                description: 'Time off, vacation, sick leave, personal days',
+                isProjectTask: false,
+                icon: '🏖️'
+            }
+        ];
+    });
+
+
     //  employee access before any READ operations
     this.before('READ', 'MyProfile', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
@@ -221,12 +280,18 @@ module.exports = cds.service.impl(async function() {
 
     // Before CREATE - Validate timesheet entry
     this.before('CREATE', 'MyTimesheets', async (req) => {
-        const { workDate, hoursWorked, activity_ID, nonProjectType_ID, isBillable } = req.data;
+        const { workDate, hoursWorked, activity_ID, nonProjectType_ID, isBillable, task } = req.data;
         
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) return;
 
         const employeeID = employee.ID;
+
+        //  Validate task type
+        const validTasks = ['Designing', 'Developing', 'Testing', 'Bug Fix', 'Deployment', 'Client Call', 'Leave'];
+        if (task && !validTasks.includes(task)) {
+            return req.error(400, `Invalid task type. Must be one of: ${validTasks.join(', ')}`);
+        }
 
         // Validate hours worked - now allows up to 15 hours
         const hoursNum = parseFloat(hoursWorked);
