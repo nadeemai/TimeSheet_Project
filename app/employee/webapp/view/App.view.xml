@@ -1,4 +1,4 @@
-<mvc:View controllerName="employee.com.employee.controller.App"
+<mvc:View controllerName="employee.controller.App"
     displayBlock="true"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">

@@ -44,6 +44,10 @@ modules:
       - employeecomemployee.zip
       name: employeecomemployee
       target-path: app/
+    - artifacts:
+      - employee.zip
+      name: employee
+      target-path: app/
 - name: timesheetapplicationadmin
   type: html5
   path: app/admin
@@ -65,6 +69,16 @@ modules:
     - npm run build:cf
     supported-platforms: []
 - name: employeecomemployee
+  type: html5
+  path: app/employee
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: employee
   type: html5
   path: app/employee
   build-parameters:

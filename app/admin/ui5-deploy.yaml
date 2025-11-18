@@ -2,7 +2,7 @@
 
 specVersion: "3.1"
 metadata:
-  name: admin.com.admin
+  name: admin
 type: application
 resources:
   configuration:
@@ -16,7 +16,7 @@ builder:
     - name: ui5-task-zipper
       afterTask: generateCachebusterInfo
       configuration:
-        archiveName: admincomadmin
+        archiveName: admin
         relativePaths: true
         additionalFiles:
           - xs-app.json

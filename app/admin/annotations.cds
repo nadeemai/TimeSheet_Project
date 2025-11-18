@@ -1,1 +1,1 @@
-using EmployeeService as service from '../../srv/service';
+using AdminService as service from '../../srv/service';

@@ -1,4 +1,5 @@
 using { my.timesheet as timesheet } from '../db/schema';
+using from './user-api';
 
 /**
  * Employee Service - For Employees to manage their timesheets
@@ -7,18 +8,43 @@ using { my.timesheet as timesheet } from '../db/schema';
 @impl: './employee-service.js'
 service EmployeeService {
 
-  // Employee Profile
-  @readonly
-  entity MyProfile as select from timesheet.Employees {
-    *,
-    managerID.firstName || ' ' || managerID.lastName as managerName : String,
-    managerID.email as managerEmail : String
-  } where ID = $user.id;
+// Employee Profile
+@readonly
+entity MyProfile as select from timesheet.Employees {
+  key ID,
+  employeeID,
+  firstName,
+  lastName,
+  email,
+  isActive,
+  userRole,
+  managerID,
+  createdAt,
+  modifiedAt,
+  createdBy,
+  modifiedBy,
+  managerID.firstName || ' ' || managerID.lastName as managerName : String,
+  managerID.email as managerEmail : String
+} where ID = $user.id;
 
-  //My Projects 
+  // In service.cds - EmployeeService section
+// Replace the existing MyProjects entity with this:
   @readonly
   @cds.redirection.target
-  entity MyProjects as projection on timesheet.Projects;
+  entity MyProjects as select from timesheet.Projects {
+    *,
+    projectOwner.firstName || ' ' || projectOwner.lastName as projectOwnerName : String
+  };
+
+  // Helper for UI - List of assigned projects
+  @readonly
+  entity AssignedProjectsList as select from timesheet.Projects {
+    key ID,
+    projectID,
+    projectName,
+    projectRole,
+    status
+  };
 
   // Available Activities - can be filtered by project
   @readonly
@@ -35,7 +61,7 @@ service EmployeeService {
     *
   } where isActive = true;
 
-  // ✅ NEW: Available Task Types for dropdown
+  // Available Task Types for dropdown
   @readonly
   entity AvailableTaskTypes {
     key code : String @title: 'Task Code';
@@ -45,18 +71,95 @@ service EmployeeService {
     icon : String @title: 'Icon';
   };
 
-  // My Timesheets - employees can work on any project
-  @cds.redirection.target
-  entity MyTimesheets as select from timesheet.Timesheets {
-    *,
-    employee.firstName || ' ' || employee.lastName as employeeName : String,
-    activity.activity as activityName : String,
-    project.projectName as projectName : String,
-    project.projectRole as projectRole : String,
-    nonProjectType.typeName as nonProjectTypeName : String,
-    approvedBy.firstName || ' ' || approvedBy.lastName as approvedByName : String
-  } where employee.ID = $user.id;
+//  My Timesheets
+@cds.redirection.target
+entity MyTimesheets as projection on timesheet.Timesheets{
+  key ID,
+  timesheetID,
+  weekStartDate,
+  weekEndDate,
+  task,
+  taskDetails,
+  totalWeekHours,
+  status,
+  isBillable,
+  createdAt,
+  modifiedAt,
+  createdBy,
+  modifiedBy,
+  
+  // Employee info
+  employee.ID as employee_ID : UUID,
+  employee.firstName || ' ' || employee.lastName as employeeName : String,
+  
+  // Project info
+  project.ID as project_ID : UUID,
+  project.projectName as projectName : String,
+  project.projectRole as projectRole : String,
+  
+  // Activity info
+  activity.ID as activity_ID : UUID,
+  activity.activity as activityName : String,
+  
+  // Non-project type info
+  nonProjectType.ID as nonProjectType_ID : UUID,
+  nonProjectType.typeName as nonProjectTypeName : String,
+  
+  // Approval info
+  approvedBy.ID as approvedBy_ID : UUID,
+  approvedBy.firstName || ' ' || approvedBy.lastName as approvedByName : String,
+  approvalDate,
+  
+  //  Monday data
+  mondayDate,
+  mondayDay,
+  mondayHours,
+  mondayTaskDetails,
+  
+  // Tuesday data
+  tuesdayDate,
+  tuesdayDay,
+  tuesdayHours,
+  tuesdayTaskDetails,
+  
+  //  Wednesday data
+  wednesdayDate,
+  wednesdayDay,
+  wednesdayHours,
+  wednesdayTaskDetails,
+  
+  // Thursday data
+  thursdayDate,
+  thursdayDay,
+  thursdayHours,
+  thursdayTaskDetails,
+  
+  // Friday data
+  fridayDate,
+  fridayDay,
+  fridayHours,
+  fridayTaskDetails,
+  
+  // Saturday data
+  saturdayDate,
+  saturdayDay,
+  saturdayHours,
+  saturdayTaskDetails,
+  
+  //Sunday data
+  sundayDate,
+  sundayDay,
+  sundayHours,//
+  sundayTaskDetails,
 
+  // // Associations for CREATE/UPDATE
+  // employee,
+  // project,
+  // activity,
+  // nonProjectType,
+  // approvedBy
+  
+}where employee.ID = $user.id;
   // Progress summary for Reports view
   @readonly
   entity MyProgressSummary as select from timesheet.Timesheets {
@@ -69,40 +172,70 @@ service EmployeeService {
     project.allocatedHours,
     project.startDate,
     project.endDate,
-    hoursWorked,
+    totalWeekHours,
     project.projectRole,
     activity.activity as activityName,
     activity.activityType,
-    workDate,
+    weekStartDate,
+    weekEndDate,
     task,
     status,
     isBillable
   } where employee.ID = $user.id;
 
-//Booked Hours Overview 
+  //Booked Hours Overview 
   @readonly
   entity BookedHoursOverview as projection on timesheet.Projects;
 
-// Project Engagement Duration 
+  // Project Engagement Duration 
   @readonly
   entity ProjectEngagementDuration as projection on timesheet.Projects;
 
-  // Daily summary
+  // Daily summary with date filter capability
   @readonly
   entity MyDailySummary as select from timesheet.Timesheets {
     key ID,
-    workDate,
+    weekStartDate,
+    weekEndDate,
     employee.ID as employeeID : UUID,
-    hoursWorked as totalHours : Decimal(4,2),
-    task
+    mondayHours,
+    mondayDate,
+    mondayDay,
+    tuesdayHours,
+    tuesdayDate,
+    tuesdayDay,
+    wednesdayHours,
+    wednesdayDate,
+    wednesdayDay,
+    thursdayHours,
+    thursdayDate,
+    thursdayDay,
+    fridayHours,
+    fridayDate,
+    fridayDay,
+    saturdayHours,
+    saturdayDate,
+    saturdayDay,
+    sundayHours,
+    sundayDate,
+    sundayDay,
+    totalWeekHours,
+    task,
+    project.projectName as projectName : String
   } where employee.ID = $user.id;
 
   // Actions
   action submitTimesheet(timesheetID: String) returns String;
-  action updateTimesheet(timesheetID: String, hours: Decimal, taskDetails: String) returns String;
+  action updateTimesheet(timesheetID: String, weekData: String) returns String; //  accepts weekly data as JSON
 
-  // Function
+  //Function to validate daily hours for a specific date
   function validateDailyHours(date: Date) returns Decimal;
+  
+  //  Function to get week boundaries for a date
+  function getWeekBoundaries(date: Date) returns {
+    weekStart: Date;
+    weekEnd: Date;
+  };
 }
 
 /**
@@ -161,8 +294,9 @@ service ManagerService {
     project.allocatedHours,
     activity.activity as activityName,
     activity.activityType as activityType : String,
-    workDate,
-    hoursWorked as totalBookedHours : Decimal(10,2),
+    weekStartDate,
+    weekEndDate,
+    totalWeekHours as totalBookedHours : Decimal(10,2),
     task,
     status
   } where employee.managerID.ID = $user.id;
@@ -178,6 +312,13 @@ service ManagerService {
     endDate,
     status
   } where projectOwner.ID = $user.id;
+
+  // ✅ NEW: Get only employees who can be managers (for dropdown)
+  @readonly
+  entity AvailableManagers as select from timesheet.Employees {
+    *,
+    userRole.roleName as roleName : String
+  } where isActive = true and userRole.roleName = 'Manager';
 
   @readonly
   entity AllEmployees as select from timesheet.Employees {
@@ -209,6 +350,17 @@ service AdminService {
     managerID.firstName || ' ' || managerID.lastName as managerName : String,
     userRole.roleName as roleName : String
   };
+
+ @cds.redirection.target
+  entity ProjectAssignments as select from timesheet.ProjectAssignments {
+    *,
+    employee.firstName || ' ' || employee.lastName as employeeName : String,
+    employee.employeeID as employeeEmpID : String,
+    project.projectName,
+    project.projectID as projectCode : String,
+    assignedBy.firstName || ' ' || assignedBy.lastName as assignedByName : String
+  };
+
 
   @cds.redirection.target
   entity UserRoles as select from timesheet.UserRoles {
@@ -269,8 +421,9 @@ service AdminService {
     project.budget,
     activity.activity as activityName,
     activity.activityType as activityType : String,
-    workDate,
-    hoursWorked as totalBookedHours : Decimal(10,2),
+    weekStartDate,
+    weekEndDate,
+    totalWeekHours as totalBookedHours : Decimal(10,2),
     task,
     taskDetails,
     status
@@ -283,6 +436,12 @@ service AdminService {
     roleName,
     description
   };
+
+  @readonly
+  entity AvailableManagers as select from timesheet.Employees {
+    *,
+    userRole.roleName as roleName : String
+  } where isActive = true and userRole.roleName = 'Manager';
 
   // Admin Actions
   action createEmployee(employeeID: String, firstName: String, lastName: String,
@@ -307,4 +466,10 @@ service AdminService {
     projectRole: String, budget: Decimal, allocatedHours: Integer, status: String) returns String;
   action approveTimesheet(timesheetID: String) returns String;
   action rejectTimesheet(timesheetID: String, reason: String) returns String;
+  action deleteEmployeeTimesheets(employeeID: String) returns String;
+  action deleteEmployeeTimesheetsByStatus(employeeID: String, status: String) returns String;
+  action deleteTimesheet(timesheetID: String) returns String;
+  action deleteTimesheetsByWeek(employeeID: String, weekStartDate: Date) returns String;
+  action deleteAllTimesheets() returns String;
+   action unassignProjectFromEmployee(employeeID: String, projectID: String) returns String;
 }

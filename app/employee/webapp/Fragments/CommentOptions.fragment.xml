@@ -1,0 +1,208 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:layout="sap.ui.layout"
+    xmlns:f="sap.ui.layout.form">
+    
+    <Dialog
+        id="commentOptionsDialog"
+        title="Add Comments"
+        contentWidth="800px"
+        contentHeight="600px"
+        resizable="true"
+        draggable="true">
+        
+        <content>
+            <VBox id="_IDGenVBox10" class="sapUiMediumMargin">
+                <!-- Comment Type Selection -->
+                <SegmentedButton 
+                    id="commentTypeSegmented" 
+                    selectedKey="daily" 
+                    selectionChange="onCommentTypeSelect"
+                    class="sapUiMediumMarginBottom">
+                    <items>
+                        <SegmentedButtonItem id="_IDGenSegmentedButtonItem" key="daily" text="Daily"/>
+                        <SegmentedButtonItem id="_IDGenSegmentedButtonItem1" key="weekly" text="Weekly"/>
+                        <SegmentedButtonItem id="_IDGenSegmentedButtonItem2" key="monthly" text="Monthly"/>
+                    </items>
+                </SegmentedButton>
+                
+                <!-- Daily Comment Section -->
+                <VBox id="dailyCommentSection" visible="{= ${/currentCommentType} === 'daily' }">
+                    <f:SimpleForm id="_IDGenSimpleForm1"
+                        editable="true"
+                        layout="ResponsiveGridLayout"
+                        labelSpanXL="4"
+                        labelSpanL="4"
+                        labelSpanM="4"
+                        labelSpanS="12"
+                        adjustLabelSpan="false"
+                        emptySpanXL="0"
+                        emptySpanL="0"
+                        emptySpanM="0"
+                        emptySpanS="0"
+                        columnsXL="2"
+                        columnsL="2"
+                        columnsM="2"
+                        singleContainerFullSize="false">
+                        <f:content>
+                            <!-- Project (changed from Assignee) -->
+                            <Label id="_IDGenLabel9" text="Project" required="true"/>
+                            <ComboBox id="_IDGenComboBox2" selectedKey="{/selectedProject}" items="{/projects}">
+                                <core:Item id="_IDGenItem1" key="{id}" text="{name}"/>
+                            </ComboBox>
+                            
+                            <!-- Due Date -->
+                            <Label id="_IDGenLabel10" text="Due Date"/>
+                            <DateRangeSelection id="_IDGenDateRangeSelection" 
+                                dateValue="{/dueDateStart}" 
+                                secondDateValue="{/dueDateEnd}"
+                                displayFormat="MMM d"/>
+                            
+                            <!-- Work Type (changed from Projects) -->
+                            <Label id="_IDGenLabel11" text="Work Type" required="true"/>
+                            <ComboBox id="_IDGenComboBox3" selectedKey="{/selectedWorkType}" items="{/workTypes}">
+                                <core:Item id="_IDGenItem6" key="{type}" text="{name}"/>
+                            </ComboBox>
+                            
+                            <!-- Status -->
+                            <Label id="_IDGenLabel43" text="Status"/>
+                            <ComboBox id="_IDGenComboBox4" selectedKey="{/selectedStatus}" items="{/statusOptions}">
+                                <core:Item id="_IDGenItem7" key="{key}" text="{text}"/>
+                            </ComboBox>
+                            
+                            <!-- Priority -->
+                            <Label id="_IDGenLabel50" text="Priority"/>
+                            <ComboBox id="_IDGenComboBox5" selectedKey="{/selectedPriority}" items="{/priorityOptions}">
+                                <core:Item id="_IDGenItem8" key="{key}" text="{text}"/>
+                            </ComboBox>
+                        </f:content>
+                    </f:SimpleForm>
+                    
+                    <!-- Description Section -->
+                    <Panel id="_IDGenPanel6" headerText="Description" expandable="true" expanded="true" class="sapUiMediumMarginTop">
+                        <VBox id="_IDGenVBox11" class="sapUiSmallMargin">
+                            <TextArea id="_IDGenTextArea" 
+                                value="{/dailyCommentText}" 
+                                rows="4" 
+                                width="100%" 
+                                placeholder="Schedule and attend an appointment with an endocrinologist to evaluate and address any issues related to hormonal imbalances or endocrine disorders."
+                                growing="true"
+                                growingMaxLines="10"/>
+                            <CheckBox id="needInputCheckbox" text="Need Input" selected="{/needInput}" class="sapUiSmallMarginTop"/>
+                        </VBox>
+                    </Panel>
+                    
+                    <!-- Comments History -->
+                    <Panel id="_IDGenPanel7" headerText="Comments" expandable="true" expanded="true" class="sapUiMediumMarginTop">
+                        <VBox id="_IDGenVBox22" class="sapUiSmallMargin">
+                            <!-- Existing Comments -->
+                            <VBox id="_IDGenVBox23">
+                                <HBox id="_IDGenHBox7" justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
+                                    <VBox id="_IDGenVBox24">
+                                        <Text id="_IDGenText37" text="John Smith • 17th Feb 2024" class="sapUiTinyMarginBottom"/>
+                                        <Text id="_IDGenText40" text="I'll do that task now, you can start working on another task!" class="sapUiTinyMarginBottom"/>
+                                    </VBox>
+                                </HBox>
+                                <HBox id="_IDGenHBox17" justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
+                                    <VBox id="_IDGenVBox25">
+                                        <Text id="_IDGenText41" text="John Smith • Just Now" class="sapUiTinyMarginBottom"/>
+                                        <Text id="_IDGenText42" text="Hello!" class="sapUiTinyMarginBottom"/>
+                                    </VBox>
+                                </HBox>
+                            </VBox>
+                            
+                            <!-- Add Comment Input -->
+                            <TextArea 
+                                id="newCommentInput"
+                                value="{/newCommentText}"
+                                rows="3"
+                                width="100%"
+                                placeholder="Add a comment..."
+                                growing="true"
+                                class="sapUiSmallMarginTop"/>
+                            <Button id="_IDGenButton13" 
+                                text="Add Comment"
+                                type="Emphasized"
+                                press="onAddNewComment"
+                                class="sapUiTinyMarginTop"
+                                enabled="{= ${/newCommentText} &amp;&amp; ${/newCommentText}.length > 0 }"/>
+                        </VBox>
+                    </Panel>
+                </VBox>
+                
+                <!-- Weekly Comment Section -->
+                <VBox id="weeklyCommentSection" visible="{= ${/currentCommentType} === 'weekly' }">
+                    <f:SimpleForm id="_IDGenSimpleForm2"
+                        editable="true"
+                        layout="ResponsiveGridLayout"
+                        class="sapUiMediumMarginTop">
+                        <f:content>
+                            <Label id="_IDGenLabel51" text="Week"/>
+                            <Text id="_IDGenText43" text="{/currentWeek}"/>
+                            <Label id="_IDGenLabel52" text="Weekly Summary" required="true"/>
+                            <TextArea id="_IDGenTextArea1" 
+                                value="{/weeklyCommentText}" 
+                                rows="6" 
+                                width="100%" 
+                                placeholder="Enter your weekly summary and accomplishments..."
+                                growing="true"
+                                growingMaxLines="10"/>
+                        </f:content>
+                    </f:SimpleForm>
+                    
+                    <!-- Weekly Goals -->
+                    <Panel id="_IDGenPanel8" headerText="Weekly Goals" expandable="true" class="sapUiMediumMarginTop">
+                        <VBox id="_IDGenVBox47" class="sapUiSmallMargin">
+                            <CheckBox id="_IDGenCheckBox" text="Complete project milestones" selected="true"/>
+                            <CheckBox id="_IDGenCheckBox1" text="Team meetings and coordination" selected="true"/>
+                            <CheckBox id="_IDGenCheckBox2" text="Documentation updates" selected="false"/>
+                            <CheckBox id="_IDGenCheckBox3" text="Client deliverables" selected="true"/>
+                        </VBox>
+                    </Panel>
+                </VBox>
+                
+                <!-- Monthly Comment Section -->
+                <VBox id="monthlyCommentSection" visible="{= ${/currentCommentType} === 'monthly' }">
+                    <f:SimpleForm id="_IDGenSimpleForm3"
+                        editable="true"
+                        layout="ResponsiveGridLayout"
+                        class="sapUiMediumMarginTop">
+                        <f:content>
+                            <Label id="_IDGenLabel53" text="Month"/>
+                            <Text id="_IDGenText44" text="{/currentMonth}"/>
+                            <Label id="_IDGenLabel54" text="Monthly Review" required="true"/>
+                            <TextArea id="_IDGenTextArea2" 
+                                value="{/monthlyCommentText}" 
+                                rows="8" 
+                                width="100%" 
+                                placeholder="Enter your monthly review, achievements, and plans for next month..."
+                                growing="true"
+                                growingMaxLines="12"/>
+                        </f:content>
+                    </f:SimpleForm>
+                    
+                    <!-- Monthly Achievements -->
+                    <Panel id="_IDGenPanel9" headerText="Monthly Achievements" expandable="true" class="sapUiMediumMarginTop">
+                        <VBox id="_IDGenVBox48" class="sapUiSmallMargin">
+                            <CheckBox id="_IDGenCheckBox4" text="Project milestones completed" selected="true"/>
+                            <CheckBox id="_IDGenCheckBox5" text="Team performance reviews" selected="false"/>
+                            <CheckBox id="_IDGenCheckBox6" text="Budget and resource planning" selected="true"/>
+                            <CheckBox id="_IDGenCheckBox7" text="Client satisfaction metrics" selected="true"/>
+                        </VBox>
+                    </Panel>
+                </VBox>
+            </VBox>
+        </content>
+        
+        <buttons>
+            <Button id="_IDGenButton15" 
+                text="Cancel"
+                press="onCancelCommentOption"/>
+            <Button id="_IDGenButton16" 
+                text="Save Comment"
+                type="Emphasized"
+                press="onSaveCommentOption"/>
+        </buttons>
+    </Dialog>
+</core:FragmentDefinition>

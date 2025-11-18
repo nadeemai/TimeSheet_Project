@@ -1,5 +1,12 @@
-### Admin Service Test File
-### Base URL: http://localhost:4004
+POST http://localhost:4009/odata/v4/admin/deleteTimesheet
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+Content-Type: application/json
+
+{
+  "timesheetID": "TS0005"
+}
+
+
 
 ### 1. GET - Read All Employees
 GET http://localhost:4004/odata/v4/admin/Employees
@@ -135,23 +142,25 @@ Content-Type: application/json
 ###
 
 ### 15. POST - Create New Project
-POST http://localhost:4004/odata/v4/admin/createProject
-Authorization: Basic pushpak.jha:initial
+POST http://localhost:8386/odata/v4/admin/createProject
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "projectID": "PRJ003",
-  "projectName": "AI Chatbot Development",
-  "description": "Develop AI-powered customer support chatbot",
-  "startDate": "2024-12-01",
-  "endDate": "2025-05-31",
+  "projectID": "PRJ008",
+  "projectName": "Cordys",
+  "description": "Enterprise integration and BPM platform development",
+  "startDate": "2025-02-01",
+  "endDate": "2026-01-31",
   "projectRole": "Developing",
-  "budget": 600000.00,
-  "allocatedHours": 3500,
+  "budget": 600000,
+  "allocatedHours": 5900,
   "projectOwnerID": "EMP005",
   "isBillable": true
 }
 
+DELETE http://localhost:4005/odata/v4/admin/Projects(projectID='PRJ003') -----
+Authorization: Basic pushpak.jha:initial
 ###
 
 ### 16. POST - Assign Employee to Manager
@@ -167,13 +176,13 @@ Content-Type: application/json
 ###
 
 ### 17. POST - Admin Assign Project to Employee
-POST http://localhost:4004/odata/v4/admin/assignProjectToEmployee
-Authorization: Basic pushpak.jha:initial
+POST http://localhost:4009/odata/v4/admin/assignProjectToEmployee
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "employeeID": "EMP003",
-  "projectID": "PRJ002"
+  "employeeID": "EMP002",
+  "projectID": "PRJ0003"
 }
 
 ###
@@ -240,13 +249,13 @@ Content-Type: application/json
 ###
 
 ### 22. POST - Update Project
-POST http://localhost:4004/odata/v4/admin/updateProject
+POST http://localhost:4005/odata/v4/admin/updateProject
 Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
 
 {
   "projectID": "PRJ001",
-  "projectName": "Cordys Enterprise Platform",
+  "projectName": "Cordys",
   "description": "Enhanced enterprise integration and BPM platform",
   "projectRole": "Developing",
   "budget": 900000.00,
@@ -280,7 +289,7 @@ Content-Type: application/json
 ###
 
 ### 25. POST - Deactivate Employee
-POST http://localhost:4004/odata/v4/admin/deactivateEmployee
+POST http://localhost:4005/odata/v4/admin/deactivateEmployee
 Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
 
@@ -291,13 +300,14 @@ Content-Type: application/json
 ###
 
 ### 26. PATCH - Update Employee (Direct)
-PATCH http://localhost:4004/odata/v4/admin/Employees(a47ac10b-58cc-4372-a567-0e02b2c3d490)
+PATCH http://localhost:4005/odata/v4/admin/Employees(a47ac10b-58cc-4372-a567-0e02b2c3d490)
 Authorization: Basic pushpak.jha:initial
 Content-Type: application/json
 
 {
-  "firstName": "Aditya Kumar",
-  "lastName": "Mishra"
+  "firstName": "Aditya",
+  "lastName": "Mishra",
+  "email":"aditya.mishra@sumodigitech.com"
 }
 
 ###
@@ -326,7 +336,7 @@ Content-Type: application/json
 
 ###
 
-### 29. DELETE - Delete Non-Project Type
+### 29. DELETE - Delete Non-Project Type ------
 DELETE http://localhost:4004/odata/v4/admin/NonProjectTypes(n47ac10b-58cc-4372-a567-0e02b2c3d561)
 Authorization: Basic pushpak.jha:initial
 

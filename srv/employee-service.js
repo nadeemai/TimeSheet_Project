@@ -1,24 +1,36 @@
 const cds = require('@sap/cds');
 
 module.exports = cds.service.impl(async function() {
-    /// Helper to get and validate user
+    // Helper to get and validate user
     const getAuthenticatedEmployee = async (req) => {
         const userId = req.user.id;
+        
+        console.log('🔍 Employee Auth - User ID:', userId);
         
         if (!userId) {
             req.error(401, 'User not authenticated');
             return null;
         }
 
-        // Check if employee exists in database
-        const employee = await SELECT.one.from('my.timesheet.Employees')
+        // Try to find by ID first
+        let employee = await SELECT.one.from('my.timesheet.Employees')
             .where({ ID: userId, isActive: true });
 
+        // If not found by ID, try by email
         if (!employee) {
+            console.log('⚠️ Employee not found by ID, trying by email...');
+            const userEmail = userId.includes('@') ? userId : `${userId}@company.com`;
+            employee = await SELECT.one.from('my.timesheet.Employees')
+                .where({ email: userEmail, isActive: true });
+        }
+
+        if (!employee) {
+            console.log('❌ Employee not found for user ID:', userId);
             req.error(404, 'Employee profile not found or inactive. Please contact administrator.');
             return null;
         }
 
+        console.log('✅ Employee authenticated:', employee.employeeID);
         return employee;
     };
 
@@ -51,67 +63,401 @@ module.exports = cds.service.impl(async function() {
         return 'On Track';
     };
 
-    // MyProjects Handler
-    this.on('READ', 'MyProjects', async (req) => {
-        const employee = await getAuthenticatedEmployee(req);
-        if (!employee) return [];
+    // Helper to get week boundaries (Monday to Sunday)
+    const getWeekBoundaries = (date) => {
+        const inputDate = date ? new Date(date) : new Date();
 
-        const employeeID = employee.ID;
+        if (isNaN(inputDate.getTime())) {
+            throw new Error(`Invalid date passed to getWeekBoundaries: ${date}`);
+        }
 
-        // Get all timesheets for this employee grouped by project
-        const timesheets = await SELECT.from('my.timesheet.Timesheets')
-            .where({ employee_ID: employeeID });
+        const dayOfWeek = inputDate.getDay();
 
-        // Group by project and calculate aggregations
-        const projectMap = {};
+        const monday = new Date(inputDate);
+        const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        monday.setDate(inputDate.getDate() + daysToMonday);
+        monday.setHours(0, 0, 0, 0);
+
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+
+        return {
+            weekStart: monday.toISOString().split('T')[0],
+            weekEnd: sunday.toISOString().split('T')[0]
+        };
+    };
+
+    const getWeekDates = (weekStart) => {
+        const monday = new Date(weekStart);
+        const days = [];
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(monday);
+            date.setDate(monday.getDate() + i);
+            days.push({
+                date: date.toISOString().split('T')[0],
+                day: dayNames[i]
+            });
+        }
+        
+        return days;
+    };
+
+// ✅ SIMPLIFIED: MyTimesheets READ handler - Direct queries without expand
+this.on('READ', 'MyTimesheets', async (req) => {
+    console.log('📊 MyTimesheets READ - Start');
+    console.log('📊 User ID:', req.user.id);
+    
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) {
+        console.log('❌ Employee not found, returning empty array');
+        return [];
+    }
+
+    console.log('✅ Employee found:', employee.employeeID, 'ID:', employee.ID);
+
+    try {
+        // Fetch timesheets - NO EXPAND, just raw data
+        const timesheets = await SELECT.from('my.timesheet.Timesheets')
+            .where({ employee_ID: employee.ID });
+
+        console.log('📋 Found timesheets:', timesheets.length);
+        
+        if (timesheets.length === 0) {
+            console.log('⚠️ No timesheets found for employee');
+            return [];
+        }
+        
+        // Enrich each timesheet with related data
         for (const ts of timesheets) {
-            if (!ts.project_ID) continue;
-
-            if (!projectMap[ts.project_ID]) {
-                // Fetch project details
-                const project = await SELECT.one.from('my.timesheet.Projects')
-                    .where({ ID: ts.project_ID });
-                
-                if (!project) continue;
-
-                projectMap[ts.project_ID] = {
-                    projectID: project.ID,
-                    projectCode: project.projectID,
-                    Project: project.projectName,
-                    AllocatedHours: project.allocatedHours || 0,
-                    BookedHours: 0,
-                    RemainingHours: 0,
-                    Utilization: 0,
-                    status: ts.status,
-                    StartDate: project.startDate,
-                    EndDate: project.endDate,
-                    Duration: calculateDateDiff(project.startDate, project.endDate),
-                    DaysRemaining: calculateDaysRemaining(project.endDate),
-                    TimelineStatus: getTimelineStatus(project.endDate)
-                };
-            }
-
-            // Accumulate hours
-            projectMap[ts.project_ID].BookedHours += parseFloat(ts.hoursWorked || 0);
+            // Set employee info
+            ts.employee_ID = employee.ID;
+            ts.employeeName = `${employee.firstName} ${employee.lastName}`;
             
-            // Keep most recent status
-            if (ts.status === 'Modified' || ts.status === 'Submitted') {
-                projectMap[ts.project_ID].status = ts.status;
+            // Get project info
+if (ts.project_ID) {
+    console.log('🔍 Enriching project for ID:', ts.project_ID);
+    
+    // Try UUID first
+    let project = await SELECT.one
+        .from('my.timesheet.Projects')
+        .where({ ID: ts.project_ID });
+    
+    // Fallback to projectID code if UUID fails
+    if (!project && typeof ts.project_ID === 'string' && !ts.project_ID.includes('-')) {
+        console.log('⚠️ Trying projectID code lookup');
+        project = await SELECT.one
+            .from('my.timesheet.Projects')
+            .where({ projectID: ts.project_ID });
+        
+        // If found, update the ID to UUID for consistency
+        if (project) {
+            ts.project_ID = project.ID;
+        }
+    }
+    
+    if (project) {
+        ts.projectName = project.projectName;
+        ts.projectRole = project.projectRole;
+        console.log(`✅ Enriched timesheet ${ts.timesheetID} with project: ${project.projectName}`);
+    } else {
+        console.log(`⚠️ Project not found for ID: ${ts.project_ID}`);
+    }
+}
+            
+            // Get activity info
+            if (ts.activity_ID) {
+                const activity = await SELECT.one
+                    .from('my.timesheet.Activities')
+                    .where({ ID: ts.activity_ID });
+                
+                if (activity) {
+                    ts.activityName = activity.activity;
+                }
+            }
+            
+            // Get non-project type info
+            if (ts.nonProjectType_ID) {
+                const npt = await SELECT.one
+                    .from('my.timesheet.NonProjectTypes')
+                    .where({ ID: ts.nonProjectType_ID });
+                
+                if (npt) {
+                    ts.nonProjectTypeName = npt.typeName;
+                }
+            }
+            
+            // Get approver info
+            if (ts.approvedBy_ID) {
+                const approver = await SELECT.one
+                    .from('my.timesheet.Employees')
+                    .where({ ID: ts.approvedBy_ID });
+                
+                if (approver) {
+                    ts.approvedByName = `${approver.firstName} ${approver.lastName}`;
+                }
+            }
+        }
+        
+        console.log('✅ Successfully enriched all timesheets');
+        return timesheets;
+        
+    } catch (error) {
+        console.error('❌ Error in MyTimesheets READ:', error);
+        console.error('Stack trace:', error.stack);
+        return [];
+    }
+});
+// FULL CREATE handler — performs the INSERT and returns the created record
+this.on('CREATE', 'MyTimesheets', async (req) => {
+    console.log('🔧 === Full CREATE MyTimesheets Handler START ===');
+    console.log('🔧 User:', req.user && req.user.id);
+    // authenticate employee
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) return req.reject(401, 'Employee not authenticated');
+
+    const employeeID = employee.ID;
+    // copy incoming data (avoid mutating original unexpectedly)
+    const payload = Object.assign({}, req.data);
+
+    // --- basic validations (task, hours, details) ---
+    const validTasks = ['Designing', 'Developing', 'Testing', 'Bug Fix', 'Deployment', 'Client Call', 'Leave'];
+    if (payload.task && !validTasks.includes(payload.task)) {
+        return req.error(400, `Invalid task type. Must be one of: ${validTasks.join(', ')}`);
+    }
+
+    // ensure week boundaries exist (use incoming weekStartDate or date fallback)
+    const inputDateForWeek = payload.date || payload.weekStartDate || new Date().toISOString().split('T')[0];
+    let weekBoundaries;
+    try {
+        weekBoundaries = getWeekBoundaries(inputDateForWeek);
+    } catch (e) {
+        console.error('Invalid date for week boundaries:', inputDateForWeek, e);
+        return req.error(400, `Invalid date provided for week calculation: ${inputDateForWeek}`);
+    }
+    const weekDates = getWeekDates(weekBoundaries.weekStart);
+
+    // set canonical week fields
+    payload.weekStartDate = weekBoundaries.weekStart;
+    payload.weekEndDate = weekBoundaries.weekEnd;
+
+    payload.mondayDate = weekDates[0].date; payload.mondayDay = weekDates[0].day;
+    payload.tuesdayDate = weekDates[1].date; payload.tuesdayDay = weekDates[1].day;
+    payload.wednesdayDate = weekDates[2].date; payload.wednesdayDay = weekDates[2].day;
+    payload.thursdayDate = weekDates[3].date; payload.thursdayDay = weekDates[3].day;
+    payload.fridayDate = weekDates[4].date; payload.fridayDay = weekDates[4].day;
+    payload.saturdayDate = weekDates[5].date; payload.saturdayDay = weekDates[5].day;
+    payload.sundayDate = weekDates[6].date; payload.sundayDay = weekDates[6].day;
+
+    // default numeric fields
+    payload.mondayHours = payload.mondayHours || 0;
+    payload.tuesdayHours = payload.tuesdayHours || 0;
+    payload.wednesdayHours = payload.wednesdayHours || 0;
+    payload.thursdayHours = payload.thursdayHours || 0;
+    payload.fridayHours = payload.fridayHours || 0;
+    payload.saturdayHours = payload.saturdayHours || 0;
+    payload.sundayHours = payload.sundayHours || 0;
+
+    // default details
+    payload.mondayTaskDetails = payload.mondayTaskDetails || '';
+    payload.tuesdayTaskDetails = payload.tuesdayTaskDetails || '';
+    payload.wednesdayTaskDetails = payload.wednesdayTaskDetails || '';
+    payload.thursdayTaskDetails = payload.thursdayTaskDetails || '';
+    payload.fridayTaskDetails = payload.fridayTaskDetails || '';
+    payload.saturdayTaskDetails = payload.saturdayTaskDetails || '';
+    payload.sundayTaskDetails = payload.sundayTaskDetails || '';
+
+    // total week hours (recalculate to avoid trusting client)
+    payload.totalWeekHours =
+        parseFloat(payload.mondayHours || 0) +
+        parseFloat(payload.tuesdayHours || 0) +
+        parseFloat(payload.wednesdayHours || 0) +
+        parseFloat(payload.thursdayHours || 0) +
+        parseFloat(payload.fridayHours || 0) +
+        parseFloat(payload.saturdayHours || 0) +
+        parseFloat(payload.sundayHours || 0);
+
+    // per-day limits & detail presence
+    const dayChecks = [
+        { day: 'Monday', hours: payload.mondayHours, details: payload.mondayTaskDetails },
+        { day: 'Tuesday', hours: payload.tuesdayHours, details: payload.tuesdayTaskDetails },
+        { day: 'Wednesday', hours: payload.wednesdayHours, details: payload.wednesdayTaskDetails },
+        { day: 'Thursday', hours: payload.thursdayHours, details: payload.thursdayTaskDetails },
+        { day: 'Friday', hours: payload.fridayHours, details: payload.fridayTaskDetails },
+        { day: 'Saturday', hours: payload.saturdayHours, details: payload.saturdayTaskDetails },
+        { day: 'Sunday', hours: payload.sundayHours, details: payload.sundayTaskDetails }
+    ];
+    for (const d of dayChecks) {
+        if (d.hours > 15) return req.error(400, `${d.day} hours cannot exceed 15. Current: ${d.hours}`);
+        if (d.hours > 0 && (!d.details || d.details.trim() === '')) return req.error(400, `${d.day}: Task details are required when hours are entered.`);
+    }
+
+    // project / non-project rules
+    if (!payload.project_ID && payload.task !== 'Leave' && !payload.nonProjectType_ID) {
+        return req.error(400, 'Project is required for project-related tasks. Please select a project or choose a non-project task like Leave.');
+    }
+
+    // activity / non-project existence checks
+    if (payload.activity_ID) {
+        const activity = await SELECT.one.from('my.timesheet.Activities').where({ ID: payload.activity_ID });
+        if (!activity) return req.error(404, 'Activity not found');
+        if (activity.status !== 'Active') return req.error(400, 'This activity is not active');
+        payload.project_ID = activity.project_ID || null;
+    }
+    if (payload.nonProjectType_ID) {
+        const npt = await SELECT.one.from('my.timesheet.NonProjectTypes').where({ ID: payload.nonProjectType_ID });
+        if (!npt) return req.error(404, 'Non-Project Type not found');
+        if (!npt.isActive) return req.error(400, 'This non-project type is not active');
+    }
+
+    // attach employee and default status
+    payload.employee_ID = employeeID;
+    payload.status = payload.status || 'Draft';
+
+    // ensure timesheetID exists (generate if not)
+    if (!payload.timesheetID) {
+        const existingForEmployee = await SELECT.from('my.timesheet.Timesheets').where({ employee_ID: employeeID });
+        payload.timesheetID = `TS${String(existingForEmployee.length + 1).padStart(4, '0')}`;
+        console.log('✅ Generated timesheetID (CREATE handler):', payload.timesheetID);
+    }
+
+    // Duplicate check (same employee, same week, same task+project)
+    const dupWhere = {
+        employee_ID: employeeID,
+        weekStartDate: payload.weekStartDate,
+        task: payload.task
+    };
+    if (payload.project_ID) dupWhere.project_ID = payload.project_ID;
+
+    const existing = await SELECT.from('my.timesheet.Timesheets').where(dupWhere);
+    if (existing.length > 0) {
+        return req.error(400, `A timesheet entry for this ${payload.project_ID ? 'project/' : ''}task already exists for week starting ${payload.weekStartDate}. Please update the existing entry instead.`);
+    }
+
+    // --- PERFORM THE INSERT EXPLICITLY ---
+    try {
+        await INSERT.into('my.timesheet.Timesheets').entries(payload);
+        // SELECT back the inserted row using stable unique key (timesheetID + employee_ID)
+        const created = await SELECT.one.from('my.timesheet.Timesheets')
+            .where({ timesheetID: payload.timesheetID, employee_ID: employeeID });
+
+        if (!created) {
+            console.error('❌ Insert reported success but SELECT could not find the created row.');
+            return req.error(500, 'Failed to verify created timesheet.');
+        }
+
+        // enrich returned object (project name, employeeName, activityName) — optional but helpful
+        if (created.project_ID) {
+            const project = await SELECT.one.from('my.timesheet.Projects').columns('projectName','projectRole').where({ ID: created.project_ID });
+            if (project) { created.projectName = project.projectName; created.projectRole = project.projectRole; }
+        }
+        if (created.employee_ID) {
+            const emp = await SELECT.one.from('my.timesheet.Employees').columns('firstName','lastName','employeeID').where({ ID: created.employee_ID });
+            if (emp) created.employeeName = `${emp.firstName} ${emp.lastName}`;
+        }
+        if (created.activity_ID) {
+            const act = await SELECT.one.from('my.timesheet.Activities').columns('activity').where({ ID: created.activity_ID });
+            if (act) created.activityName = act.activity;
+        }
+
+        // make sure OData Location header contains DB ID (CAP will still set HTTP status)
+        try { req._.res.set('location', `MyTimesheets(${created.ID})`); } catch(e) { /* ignore */ }
+
+        console.log('🔧 === Full CREATE MyTimesheets Handler END ===');
+        // returning the created object will make OData return it in response body (201/200)
+        return created;
+
+    } catch (err) {
+        console.error('❌ Error performing explicit INSERT:', err);
+        return req.error(500, 'Failed to create timesheet');
+    }
+});
+
+// This NEW version reads from ProjectAssignments table instead of Timesheets
+
+this.on('READ', 'MyProjects', async (req) => {
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) return [];
+
+    console.log('📊 MyProjects READ - Employee ID:', employee.ID);
+
+    const employeeID = employee.ID;
+
+    // ✅ NEW: Get projects from ProjectAssignments table
+    const assignments = await SELECT.from('my.timesheet.ProjectAssignments')
+        .columns('project_ID')
+        .where({ employee_ID: employeeID, isActive: true });
+
+    console.log('📋 Found project assignments:', assignments.length);
+
+    if (assignments.length === 0) {
+        console.log('⚠️ No projects assigned to employee');
+        return [];
+    }
+
+    // Get unique project IDs
+    const projectIDs = [...new Set(assignments.map(a => a.project_ID).filter(id => id))];
+    
+    // Fetch all assigned projects
+    const projects = await SELECT.from('my.timesheet.Projects')
+        .where({ ID: { in: projectIDs } });
+
+    console.log('✅ MyProjects returning:', projects.length, 'projects');
+
+    // Enrich with project owner names and calculate hours
+    for (const project of projects) {
+        if (project.projectOwner_ID) {
+            const owner = await SELECT.one
+                .from('my.timesheet.Employees')
+                .columns('firstName', 'lastName')
+                .where({ ID: project.projectOwner_ID });
+            
+            if (owner) {
+                project.projectOwnerName = `${owner.firstName} ${owner.lastName}`;
             }
         }
 
-        // Calculate remaining hours and utilization
-        const projects = Object.values(projectMap).map(p => {
-            p.RemainingHours = p.AllocatedHours - p.BookedHours;
-            p.Utilization = p.AllocatedHours > 0 
-                ? parseFloat(((p.BookedHours / p.AllocatedHours) * 100).toFixed(2))
-                : 0;
-            return p;
-        });
+        // Calculate booked hours from timesheets (for reporting)
+        const projectTimesheets = await SELECT.from('my.timesheet.Timesheets')
+            .where({ employee_ID: employeeID, project_ID: project.ID });
+        
+        let bookedHours = 0;
+        for (const ts of projectTimesheets) {
+            bookedHours += parseFloat(ts.totalWeekHours || 0);
+        }
 
-        return projects;
-    });
+        project.BookedHours = bookedHours;
+        project.RemainingHours = (project.allocatedHours || 0) - bookedHours;
+        project.Utilization = project.allocatedHours > 0 
+            ? parseFloat(((bookedHours / project.allocatedHours) * 100).toFixed(2))
+            : 0;
+    }
+
+    return projects;
+});
+
+// ✅ Also update AssignedProjectsList to use ProjectAssignments
+this.on('READ', 'AssignedProjectsList', async (req) => {
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) return [];
+
+    // Get from ProjectAssignments instead of Timesheets
+    const assignments = await SELECT.from('my.timesheet.ProjectAssignments')
+        .columns('project_ID')
+        .where({ employee_ID: employee.ID, isActive: true });
+
+    const projectIDs = [...new Set(assignments.map(a => a.project_ID).filter(id => id))];
+    
+    if (projectIDs.length === 0) return [];
+
+    const projects = await SELECT.from('my.timesheet.Projects')
+        .columns('ID', 'projectID', 'projectName', 'projectRole', 'status')
+        .where({ ID: { in: projectIDs }, status: 'Active' });
+
+    return projects;
+});
 
     // BookedHoursOverview Handler
     this.on('READ', 'BookedHoursOverview', async (req) => {
@@ -120,11 +466,9 @@ module.exports = cds.service.impl(async function() {
 
         const employeeID = employee.ID;
 
-        // Get all timesheets for this employee
         const timesheets = await SELECT.from('my.timesheet.Timesheets')
             .where({ employee_ID: employeeID });
 
-        // Group by project
         const projectMap = {};
         
         for (const ts of timesheets) {
@@ -146,10 +490,9 @@ module.exports = cds.service.impl(async function() {
                 };
             }
 
-            projectMap[ts.project_ID].BookedHours += parseFloat(ts.hoursWorked || 0);
+            projectMap[ts.project_ID].BookedHours += parseFloat(ts.totalWeekHours || 0);
         }
 
-        // Calculate remaining and utilization
         const overview = Object.values(projectMap).map(p => {
             p.RemainingHours = p.AllocatedHours - p.BookedHours;
             const util = p.AllocatedHours > 0 
@@ -169,7 +512,6 @@ module.exports = cds.service.impl(async function() {
 
         const employeeID = employee.ID;
 
-        // Get unique projects for this employee
         const timesheets = await SELECT.from('my.timesheet.Timesheets')
             .columns('project_ID')
             .where({ employee_ID: employeeID });
@@ -255,8 +597,7 @@ module.exports = cds.service.impl(async function() {
         ];
     });
 
-
-    //  employee access before any READ operations
+    // Employee access validation
     this.before('READ', 'MyProfile', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) {
@@ -264,12 +605,12 @@ module.exports = cds.service.impl(async function() {
         }
     });
 
-    this.before('READ', 'MyTimesheets', async (req) => {
-        const employee = await getAuthenticatedEmployee(req);
-        if (!employee) {
-            req.reject(404, 'Employee not found');
-        }
-    });
+    // this.before('READ', 'MyTimesheets', async (req) => {
+    //     const employee = await getAuthenticatedEmployee(req);
+    //     if (!employee) {
+    //         req.reject(404, 'Employee not found');
+    //     }
+    // });
 
     this.before('READ', 'AvailableActivities', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
@@ -278,101 +619,289 @@ module.exports = cds.service.impl(async function() {
         }
     });
 
-    // Before CREATE - Validate timesheet entry
-    this.before('CREATE', 'MyTimesheets', async (req) => {
-        const { workDate, hoursWorked, activity_ID, nonProjectType_ID, isBillable, task } = req.data;
+    // Before CREATE - Validate and prepare weekly batch entry
+this.before('CREATE', 'MyTimesheets', async (req) => {
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) return;
+
+    const employeeID = employee.ID;
+    const { task, project_ID, activity_ID, nonProjectType_ID, isBillable } = req.data;
+     // ✅ NEW: Convert projectID string to UUID if needed
+    if (project_ID) {
+        // Check if it's a UUID format (contains hyphens) or a project code
+        const isUUID = project_ID.includes('-');
         
-        const employee = await getAuthenticatedEmployee(req);
-        if (!employee) return;
+        if (!isUUID) {
+            // It's a project code like "PRJ0003", convert to UUID
+            console.log('⚠️ Converting project code to UUID:', project_ID);
+            const project = await SELECT.one
+                .from('my.timesheet.Projects')
+                .columns('ID')
+                .where({ projectID: project_ID });
+            
+            if (!project) {
+                return req.error(404, `Project with code ${project_ID} not found`);
+            }
+            
+            req.data.project_ID = project.ID; // Replace with UUID
+            console.log('✅ Converted to UUID:', project.ID);
+        } else {
+            // It's already a UUID, verify it exists
+            const project = await SELECT.one
+                .from('my.timesheet.Projects')
+                .columns('ID')
+                .where({ ID: project_ID });
+            
+            if (!project) {
+                return req.error(404, `Project with ID ${project_ID} not found`);
+            }
+        }
+    }
 
-        const employeeID = employee.ID;
+    const validTasks = ['Designing', 'Developing', 'Testing', 'Bug Fix', 'Deployment', 'Client Call', 'Leave'];
+    if (task && !validTasks.includes(task)) {
+        return req.error(400, `Invalid task type. Must be one of: ${validTasks.join(', ')}`);
+    }
 
-        //  Validate task type
-        const validTasks = ['Designing', 'Developing', 'Testing', 'Bug Fix', 'Deployment', 'Client Call', 'Leave'];
-        if (task && !validTasks.includes(task)) {
-            return req.error(400, `Invalid task type. Must be one of: ${validTasks.join(', ')}`);
+    // --- <<< FIX: compute weekBoundaries and weekDates BEFORE using them >>> ---
+    // prefer an explicit date from the request if provided, else fallback to weekStartDate if present, else today
+    const inputDateForWeek = req.data.date || req.data.weekStartDate || new Date().toISOString().split('T')[0];
+    let weekBoundaries;
+    try {
+        weekBoundaries = getWeekBoundaries(inputDateForWeek);
+    } catch (e) {
+        console.error('Invalid date for week boundaries:', inputDateForWeek, e);
+        return req.error(400, `Invalid date provided for week calculation: ${inputDateForWeek}`);
+    }
+    const weekDates = getWeekDates(weekBoundaries.weekStart);
+    // --- <<< end fix >>> ---
+
+    // now safe to assign these values to req.data
+    req.data.weekStartDate = weekBoundaries.weekStart;
+    req.data.weekEndDate   = weekBoundaries.weekEnd;
+
+    req.data.mondayDate    = weekDates[0].date;
+    req.data.mondayDay     = weekDates[0].day;
+    req.data.tuesdayDate   = weekDates[1].date;
+    req.data.tuesdayDay    = weekDates[1].day;
+    req.data.wednesdayDate = weekDates[2].date;
+    req.data.wednesdayDay  = weekDates[2].day;
+    req.data.thursdayDate  = weekDates[3].date;
+    req.data.thursdayDay   = weekDates[3].day;
+    req.data.fridayDate    = weekDates[4].date;
+    req.data.fridayDay     = weekDates[4].day;
+    req.data.saturdayDate  = weekDates[5].date;
+    req.data.saturdayDay   = weekDates[5].day;
+    req.data.sundayDate    = weekDates[6].date;
+    req.data.sundayDay     = weekDates[6].day;
+
+    // default hours/details
+    req.data.mondayHours = req.data.mondayHours || 0;
+    req.data.tuesdayHours = req.data.tuesdayHours || 0;
+    req.data.wednesdayHours = req.data.wednesdayHours || 0;
+    req.data.thursdayHours = req.data.thursdayHours || 0;
+    req.data.fridayHours = req.data.fridayHours || 0;
+    req.data.saturdayHours = req.data.saturdayHours || 0;
+    req.data.sundayHours = req.data.sundayHours || 0;
+
+    req.data.mondayTaskDetails = req.data.mondayTaskDetails || '';
+    req.data.tuesdayTaskDetails = req.data.tuesdayTaskDetails || '';
+    req.data.wednesdayTaskDetails = req.data.wednesdayTaskDetails || '';
+    req.data.thursdayTaskDetails = req.data.thursdayTaskDetails || '';
+    req.data.fridayTaskDetails = req.data.fridayTaskDetails || '';
+    req.data.saturdayTaskDetails = req.data.saturdayTaskDetails || '';
+    req.data.sundayTaskDetails = req.data.sundayTaskDetails || '';
+
+    // total week hours
+    req.data.totalWeekHours =
+        parseFloat(req.data.mondayHours || 0) +
+        parseFloat(req.data.tuesdayHours || 0) +
+        parseFloat(req.data.wednesdayHours || 0) +
+        parseFloat(req.data.thursdayHours || 0) +
+        parseFloat(req.data.fridayHours || 0) +
+        parseFloat(req.data.saturdayHours || 0) +
+        parseFloat(req.data.sundayHours || 0);
+
+    const dailyHours = [
+        { day: 'Monday', hours: req.data.mondayHours },
+        { day: 'Tuesday', hours: req.data.tuesdayHours },
+        { day: 'Wednesday', hours: req.data.wednesdayHours },
+        { day: 'Thursday', hours: req.data.thursdayHours },
+        { day: 'Friday', hours: req.data.fridayHours },
+        { day: 'Saturday', hours: req.data.saturdayHours },
+        { day: 'Sunday', hours: req.data.sundayHours }
+    ];
+
+    for (const day of dailyHours) {
+        if (day.hours > 15) {
+            return req.error(400, `${day.day} hours cannot exceed 15. Current: ${day.hours}`);
+        }
+    }
+
+    const dailyData = [
+        { day: 'Monday', hours: req.data.mondayHours, details: req.data.mondayTaskDetails },
+        { day: 'Tuesday', hours: req.data.tuesdayHours, details: req.data.tuesdayTaskDetails },
+        { day: 'Wednesday', hours: req.data.wednesdayHours, details: req.data.wednesdayTaskDetails },
+        { day: 'Thursday', hours: req.data.thursdayHours, details: req.data.thursdayTaskDetails },
+        { day: 'Friday', hours: req.data.fridayHours, details: req.data.fridayTaskDetails },
+        { day: 'Saturday', hours: req.data.saturdayHours, details: req.data.saturdayTaskDetails },
+        { day: 'Sunday', hours: req.data.sundayHours, details: req.data.sundayTaskDetails }
+    ];
+
+    for (const dayData of dailyData) {
+        if (dayData.hours > 0 && (!dayData.details || dayData.details.trim() === '')) {
+            return req.error(400, `${dayData.day}: Task details are required when hours are entered.`);
+        }
+    }
+
+    // Check for duplicate entries
+    const whereClause = {
+        employee_ID: employeeID,
+        task: task,
+        weekStartDate: weekBoundaries.weekStart
+    };
+
+    if (project_ID) {
+        whereClause.project_ID = project_ID;
+    } else if (task !== 'Leave' && !nonProjectType_ID) {
+        return req.error(400, 'Project is required for project-related tasks. Please select a project or choose a non-project task like Leave.');
+    }
+
+    const existing = await SELECT.from('my.timesheet.Timesheets').where(whereClause);
+
+    if (existing.length > 0) {
+        return req.error(400, `A timesheet entry for this ${project_ID ? 'project/' : ''}task already exists for week starting ${weekBoundaries.weekStart}. Please update the existing entry instead.`);
+    }
+
+    // activity & nonProjectType checks (unchanged)
+    if (activity_ID) {
+        const activity = await SELECT.one.from('my.timesheet.Activities').where({ ID: activity_ID });
+        if (!activity) {
+            return req.error(404, 'Activity not found');
+        }
+        if (activity.status !== 'Active') {
+            return req.error(400, 'This activity is not active');
+        }
+        req.data.project_ID = activity.project_ID || null;
+    }
+
+    if (nonProjectType_ID) {
+        const nonProjectType = await SELECT.one.from('my.timesheet.NonProjectTypes').where({ ID: nonProjectType_ID });
+        if (!nonProjectType) {
+            return req.error(404, 'Non-Project Type not found');
+        }
+        if (!nonProjectType.isActive) {
+            return req.error(400, 'This non-project type is not active');
+        }
+    }
+
+    req.data.employee_ID = employeeID;
+    req.data.status = req.data.status || 'Draft';
+
+    // Generate timesheetID here if not provided
+    if (!req.data.timesheetID) {
+        const employeeTimesheets = await SELECT.from('my.timesheet.Timesheets').where({ employee_ID: employeeID });
+        req.data.timesheetID = `TS${String(employeeTimesheets.length + 1).padStart(4, '0')}`;
+        console.log('✅ Generated timesheetID:', req.data.timesheetID);
+    }
+});
+
+
+// After CREATE - Enrich and return complete data
+this.after('CREATE', 'MyTimesheets', async (result, req) => {
+    console.log('🔧 After CREATE - Start enrichment');
+
+    try {
+        // 1) Prefer the result object if CAP provided it
+        let timesheet = result && result.ID ? result : null;
+
+        // 2) Next fallback: if req.data has an ID (client-provided), fetch by ID
+        if (!timesheet && req.data && req.data.ID) {
+            timesheet = await SELECT.one.from('my.timesheet.Timesheets').where({ ID: req.data.ID });
         }
 
-        // Validate hours worked - now allows up to 15 hours
-        const hoursNum = parseFloat(hoursWorked);
-        if (isNaN(hoursNum) || hoursNum <= 0 || hoursNum > 15) {
-            return req.error(400, 'Hours worked must be between 0 and 15');
+        // 3) Next fallback: use unique timesheetID + employee_ID (we generate timesheetID in before hook)
+        if (!timesheet && req.data && req.data.timesheetID) {
+            timesheet = await SELECT.one.from('my.timesheet.Timesheets')
+                .where({ timesheetID: req.data.timesheetID, employee_ID: req.data.employee_ID });
         }
 
-        // Get current date
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const workDateObj = new Date(workDate);
-        if (isNaN(workDateObj)) {
-            return req.error(400, 'Invalid work date');
+        // 4) Last resort: try to find a recent record for this employee matching weekStartDate + task + project (may be noisy)
+        if (!timesheet && req.data && req.data.employee_ID && req.data.weekStartDate) {
+            timesheet = await SELECT.one.from('my.timesheet.Timesheets')
+                .where({
+                    employee_ID: req.data.employee_ID,
+                    weekStartDate: req.data.weekStartDate,
+                    task: req.data.task
+                });
         }
-        workDateObj.setHours(0, 0, 0, 0);
 
-        // Validation 1: Cannot book billable hours for future weeks
-        if (isBillable && workDateObj > today) {
-            const daysDiff = Math.floor((workDateObj - today) / (1000 * 60 * 60 * 24));
-            if (daysDiff > 7) {
-                return req.error(400, 'Cannot book billable hours for future weeks. Only non-project activities can be booked for future.');
+        if (!timesheet) {
+            console.warn('⚠️ After CREATE: Unable to locate created timesheet in DB; returning request payload as fallback');
+            return req.data || {};
+        }
+
+        console.log('✅ Fetched created timesheet:', timesheet.timesheetID || timesheet.ID);
+
+        // Enrich with project name
+        if (timesheet.project_ID) {
+            const project = await SELECT.one
+                .from('my.timesheet.Projects')
+                .columns('projectName', 'projectRole')
+                .where({ ID: timesheet.project_ID });
+
+            if (project) {
+                timesheet.projectName = project.projectName;
+                timesheet.projectRole = project.projectRole;
+                console.log('✅ Enriched with project name:', project.projectName);
             }
         }
 
-        // Validation 2: Check if activity exists (if provided)
-        if (activity_ID) {
-            const activity = await SELECT.one.from('my.timesheet.Activities').where({ ID: activity_ID });
-            if (!activity) {
-                return req.error(404, 'Activity not found');
-            }
-            if (activity.status !== 'Active') {
-                return req.error(400, 'This activity is not active');
-            }
-            req.data.project_ID = activity.project_ID || null;
-        }
+        // Enrich with employee name
+        if (timesheet.employee_ID) {
+            const employee = await SELECT.one
+                .from('my.timesheet.Employees')
+                .columns('firstName', 'lastName', 'employeeID')
+                .where({ ID: timesheet.employee_ID });
 
-        // Validation 3: Check if non-project type exists (if provided)
-        if (nonProjectType_ID) {
-            const nonProjectType = await SELECT.one.from('my.timesheet.NonProjectTypes').where({ ID: nonProjectType_ID });
-            if (!nonProjectType) {
-                return req.error(404, 'Non-Project Type not found');
-            }
-            if (!nonProjectType.isActive) {
-                return req.error(400, 'This non-project type is not active');
+            if (employee) {
+                timesheet.employeeName = `${employee.firstName} ${employee.lastName}`;
             }
         }
 
-        // Validation 4: Check total hours for the day (must not exceed 15)
-        const existingTimesheets = await SELECT.from('my.timesheet.Timesheets')
-            .where({ employee_ID: employeeID, workDate: workDate });
-       
-        let totalHours = hoursNum;
-        existingTimesheets.forEach(entry => {
-            totalHours += parseFloat(entry.hoursWorked || 0);
-        });
+        // Enrich with activity name
+        if (timesheet.activity_ID) {
+            const activity = await SELECT.one
+                .from('my.timesheet.Activities')
+                .columns('activity')
+                .where({ ID: timesheet.activity_ID });
 
-        if (totalHours > 15) {
-            return req.error(400, `Total hours for ${workDate} cannot exceed 15 hours. Current total: ${totalHours.toFixed(2)}`);
+            if (activity) {
+                timesheet.activityName = activity.activity;
+            }
         }
 
-        // Validation 5: For past dates, total hours should equal or approach 8 (standard working day)
-        if (workDateObj < today && totalHours < 7) {
-            return req.error(400, `Total booked hours for past dates should be close to 8 hours. Current total: ${totalHours.toFixed(2)}`);
+        // Ensure Location header (use actual DB ID)
+        try {
+            req._.res.set('location', `MyTimesheets(${timesheet.ID})`);
+        } catch (e) {
+            // If req._.res not available, ignore - but we still return the timesheet
+            console.warn('⚠️ Could not set location header:', e.message || e);
         }
 
-        req.data.employee_ID = employeeID;
-        req.data.status = req.data.status || 'Draft';
-    });
+        console.log('✅ After CREATE - Enrichment complete, returning enriched timesheet');
+        // Returning the object will make OData return it (201/200) instead of 204
+        return timesheet;
 
-    // After CREATE - Generate timesheet ID
-    this.after('CREATE', 'MyTimesheets', async (data, req) => {
-        const employee = await getAuthenticatedEmployee(req);
-        if (!employee) return;
-        
-        const employeeID = employee.ID;
-        const count = await SELECT.from('my.timesheet.Timesheets').where({ employee_ID: employeeID });
-        const timesheetID = `TS${String(count.length + 1).padStart(4, '0')}`;
-        await UPDATE('my.timesheet.Timesheets').set({ timesheetID }).where({ ID: data.ID });
-    });
+    } catch (error) {
+        console.error('❌ Error in after CREATE enrichment:', error);
+        // return request payload so client gets something meaningful
+        return req.data || {};
+    }
+});
 
-    // Before UPDATE - Check if timesheet is approved
+
+    // Before UPDATE - Recalculate total hours
     this.before('UPDATE', 'MyTimesheets', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) return;
@@ -390,28 +919,83 @@ module.exports = cds.service.impl(async function() {
             return req.error(403, 'You can only update your own timesheets');
         }
 
-        if (timesheet.status === 'Approved') {
-            req.data.status = 'Modified';
+        if (req.data.mondayHours !== undefined || req.data.tuesdayHours !== undefined ||
+            req.data.wednesdayHours !== undefined || req.data.thursdayHours !== undefined ||
+            req.data.fridayHours !== undefined || req.data.saturdayHours !== undefined ||
+            req.data.sundayHours !== undefined) {
+            
+            req.data.totalWeekHours = 
+                parseFloat(req.data.mondayHours !== undefined ? req.data.mondayHours : timesheet.mondayHours || 0) +
+                parseFloat(req.data.tuesdayHours !== undefined ? req.data.tuesdayHours : timesheet.tuesdayHours || 0) +
+                parseFloat(req.data.wednesdayHours !== undefined ? req.data.wednesdayHours : timesheet.wednesdayHours || 0) +
+                parseFloat(req.data.thursdayHours !== undefined ? req.data.thursdayHours : timesheet.thursdayHours || 0) +
+                parseFloat(req.data.fridayHours !== undefined ? req.data.fridayHours : timesheet.fridayHours || 0) +
+                parseFloat(req.data.saturdayHours !== undefined ? req.data.saturdayHours : timesheet.saturdayHours || 0) +
+                parseFloat(req.data.sundayHours !== undefined ? req.data.sundayHours : timesheet.sundayHours || 0);
+
+            const hoursToCheck = [
+                { day: 'Monday', hours: req.data.mondayHours !== undefined ? req.data.mondayHours : timesheet.mondayHours },
+                { day: 'Tuesday', hours: req.data.tuesdayHours !== undefined ? req.data.tuesdayHours : timesheet.tuesdayHours },
+                { day: 'Wednesday', hours: req.data.wednesdayHours !== undefined ? req.data.wednesdayHours : timesheet.wednesdayHours },
+                { day: 'Thursday', hours: req.data.thursdayHours !== undefined ? req.data.thursdayHours : timesheet.thursdayHours },
+                { day: 'Friday', hours: req.data.fridayHours !== undefined ? req.data.fridayHours : timesheet.fridayHours },
+                { day: 'Saturday', hours: req.data.saturdayHours !== undefined ? req.data.saturdayHours : timesheet.saturdayHours },
+                { day: 'Sunday', hours: req.data.sundayHours !== undefined ? req.data.sundayHours : timesheet.sundayHours }
+            ];
+
+            for (const day of hoursToCheck) {
+                if (day.hours > 15) {
+                    return req.error(400, `${day.day} hours cannot exceed 15.`);
+                }
+            }
         }
 
-        if (req.data.hoursWorked !== undefined) {
-            const newHours = parseFloat(req.data.hoursWorked);
-            if (isNaN(newHours) || newHours <= 0 || newHours > 15) {
-                return req.error(400, 'Hours worked must be between 0 and 15');
+        const dailyValidations = [
+            { 
+                day: 'Monday', 
+                hours: req.data.mondayHours !== undefined ? req.data.mondayHours : timesheet.mondayHours,
+                details: req.data.mondayTaskDetails !== undefined ? req.data.mondayTaskDetails : timesheet.mondayTaskDetails
+            },
+            { 
+                day: 'Tuesday', 
+                hours: req.data.tuesdayHours !== undefined ? req.data.tuesdayHours : timesheet.tuesdayHours,
+                details: req.data.tuesdayTaskDetails !== undefined ? req.data.tuesdayTaskDetails : timesheet.tuesdayTaskDetails
+            },
+            { 
+                day: 'Wednesday', 
+                hours: req.data.wednesdayHours !== undefined ? req.data.wednesdayHours : timesheet.wednesdayHours,
+                details: req.data.wednesdayTaskDetails !== undefined ? req.data.wednesdayTaskDetails : timesheet.wednesdayTaskDetails
+            },
+            { 
+                day: 'Thursday', 
+                hours: req.data.thursdayHours !== undefined ? req.data.thursdayHours : timesheet.thursdayHours,
+                details: req.data.thursdayTaskDetails !== undefined ? req.data.thursdayTaskDetails : timesheet.thursdayTaskDetails
+            },
+            { 
+                day: 'Friday', 
+                hours: req.data.fridayHours !== undefined ? req.data.fridayHours : timesheet.fridayHours,
+                details: req.data.fridayTaskDetails !== undefined ? req.data.fridayTaskDetails : timesheet.fridayTaskDetails
+            },
+            { 
+                day: 'Saturday', 
+                hours: req.data.saturdayHours !== undefined ? req.data.saturdayHours : timesheet.saturdayHours,
+                details: req.data.saturdayTaskDetails !== undefined ? req.data.saturdayTaskDetails : timesheet.saturdayTaskDetails
+            },
+            { 
+                day: 'Sunday', 
+                hours: req.data.sundayHours !== undefined ? req.data.sundayHours : timesheet.sundayHours,
+                details: req.data.sundayTaskDetails !== undefined ? req.data.sundayTaskDetails : timesheet.sundayTaskDetails
             }
+        ];
 
-            const workDate = timesheet.workDate;
-            const existingTimesheets = await SELECT.from('my.timesheet.Timesheets')
-                .where({ employee_ID: timesheet.employee_ID, workDate: workDate, ID: { '!=': timesheetInternalID } });
-           
-            let totalHours = newHours;
-            existingTimesheets.forEach(entry => {
-                totalHours += parseFloat(entry.hoursWorked || 0);
-            });
-
-            if (totalHours > 15) {
-                return req.error(400, `Total hours for ${workDate} cannot exceed 15 hours.`);
+        for (const validation of dailyValidations) {
+            if (validation.hours > 0 && (!validation.details || validation.details.trim() === '')) {
+                return req.error(400, `${validation.day}: Task details are required when hours are entered.`);
             }
+        }
+
+        if (timesheet.status === 'Approved') {
+            req.data.status = 'Modified';
         }
     });
 
@@ -430,35 +1014,52 @@ module.exports = cds.service.impl(async function() {
                 await INSERT.into('my.timesheet.Notifications').entries({
                     notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
                     recipient_ID: employee.managerID_ID,
-                    message: `${employee.firstName} ${employee.lastName} modified previously approved timesheet for ${timesheet.workDate}`,
+                    message: `${employee.firstName} ${employee.lastName} modified previously approved timesheet for week ${timesheet.weekStartDate}`,
                     notificationType: 'Timesheet Modified',
                     isRead: false,
                     relatedEntity: 'Timesheet',
                     relatedEntityID: timesheet.ID
                 });
             }
+        }
+    });
 
-            const admins = await SELECT.from('my.timesheet.Employees')
-                .columns('ID', 'userRole_ID')
-                .where({ isActive: true });
-            
-            for (const adminUser of admins) {
-                const role = await SELECT.one.from('my.timesheet.UserRoles')
-                    .where({ ID: adminUser.userRole_ID });
-                
-                if (role && role.roleName === 'Admin') {
-                    await INSERT.into('my.timesheet.Notifications').entries({
-                        notificationID: `NOT${String(notificationCount.length + 2).padStart(4, '0')}`,
-                        recipient_ID: adminUser.ID,
-                        message: `${employee.firstName} ${employee.lastName} modified previously approved timesheet for ${timesheet.workDate}`,
-                        notificationType: 'Timesheet Modified',
-                        isRead: false,
-                        relatedEntity: 'Timesheet',
-                        relatedEntityID: timesheet.ID
-                    });
-                }
+    // Function to get week boundaries
+    this.on('getWeekBoundaries', async (req) => {
+        const { date } = req.data;
+        return getWeekBoundaries(date);
+    });
+
+    // Function to validate daily hours for a specific date
+    this.on('validateDailyHours', async (req) => {
+        const { date } = req.data;
+        
+        const employee = await getAuthenticatedEmployee(req);
+        if (!employee) return 0;
+        
+        const employeeID = employee.ID;
+        const weekBoundaries = getWeekBoundaries(date);
+
+        const timesheets = await SELECT.from('my.timesheet.Timesheets')
+            .where({ employee_ID: employeeID, weekStartDate: weekBoundaries.weekStart });
+       
+        const targetDate = new Date(date);
+        const dayOfWeek = targetDate.getDay();
+        
+        let totalHours = 0;
+        for (const ts of timesheets) {
+            switch(dayOfWeek) {
+                case 1: totalHours += parseFloat(ts.mondayHours || 0); break;
+                case 2: totalHours += parseFloat(ts.tuesdayHours || 0); break;
+                case 3: totalHours += parseFloat(ts.wednesdayHours || 0); break;
+                case 4: totalHours += parseFloat(ts.thursdayHours || 0); break;
+                case 5: totalHours += parseFloat(ts.fridayHours || 0); break;
+                case 6: totalHours += parseFloat(ts.saturdayHours || 0); break;
+                case 0: totalHours += parseFloat(ts.sundayHours || 0); break;
             }
         }
+
+        return totalHours;
     });
 
     // Action: Submit Timesheet
@@ -488,7 +1089,7 @@ module.exports = cds.service.impl(async function() {
             await INSERT.into('my.timesheet.Notifications').entries({
                 notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
                 recipient_ID: employee.managerID_ID,
-                message: `${employee.firstName} ${employee.lastName} submitted timesheet for ${timesheet.workDate}`,
+                message: `${employee.firstName} ${employee.lastName} submitted timesheet for week ${timesheet.weekStartDate}`,
                 notificationType: 'Timesheet Submission',
                 isRead: false,
                 relatedEntity: 'Timesheet',
@@ -499,9 +1100,9 @@ module.exports = cds.service.impl(async function() {
         return 'Timesheet submitted successfully';
     });
 
-    // Action: Update Timesheet
+    // Action: Update Timesheet with weekly data
     this.on('updateTimesheet', async (req) => {
-        const { timesheetID, hours, taskDetails } = req.data;
+        const { timesheetID, weekData } = req.data;
         
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) return 'Employee not found';
@@ -515,9 +1116,59 @@ module.exports = cds.service.impl(async function() {
             return req.error(404, 'Timesheet not found');
         }
 
-        const updateData = {};
-        if (hours !== undefined) updateData.hoursWorked = hours;
-        if (taskDetails !== undefined) updateData.taskDetails = taskDetails;
+        let weeklyData;
+        try {
+            weeklyData = JSON.parse(weekData);
+        } catch (e) {
+            return req.error(400, 'Invalid weekly data format');
+        }
+
+        const updateData = {
+            mondayHours: weeklyData.mondayHours || 0,
+            tuesdayHours: weeklyData.tuesdayHours || 0,
+            wednesdayHours: weeklyData.wednesdayHours || 0,
+            thursdayHours: weeklyData.thursdayHours || 0,
+            fridayHours: weeklyData.fridayHours || 0,
+            saturdayHours: weeklyData.saturdayHours || 0,
+            sundayHours: weeklyData.sundayHours || 0,
+            
+            mondayTaskDetails: weeklyData.mondayTaskDetails || '',
+            tuesdayTaskDetails: weeklyData.tuesdayTaskDetails || '',
+            wednesdayTaskDetails: weeklyData.wednesdayTaskDetails || '',
+            thursdayTaskDetails: weeklyData.thursdayTaskDetails || '',
+            fridayTaskDetails: weeklyData.fridayTaskDetails || '',
+            saturdayTaskDetails: weeklyData.saturdayTaskDetails || '',
+            sundayTaskDetails: weeklyData.sundayTaskDetails || ''
+        };
+
+        if (weeklyData.taskDetails) {
+            updateData.taskDetails = weeklyData.taskDetails;
+        }
+
+        const dailyValidations = [
+            { day: 'Monday', hours: updateData.mondayHours, details: updateData.mondayTaskDetails },
+            { day: 'Tuesday', hours: updateData.tuesdayHours, details: updateData.tuesdayTaskDetails },
+            { day: 'Wednesday', hours: updateData.wednesdayHours, details: updateData.wednesdayTaskDetails },
+            { day: 'Thursday', hours: updateData.thursdayHours, details: updateData.thursdayTaskDetails },
+            { day: 'Friday', hours: updateData.fridayHours, details: updateData.fridayTaskDetails },
+            { day: 'Saturday', hours: updateData.saturdayHours, details: updateData.saturdayTaskDetails },
+            { day: 'Sunday', hours: updateData.sundayHours, details: updateData.sundayTaskDetails }
+        ];
+
+        for (const validation of dailyValidations) {
+            if (validation.hours > 0 && (!validation.details || validation.details.trim() === '')) {
+                return req.error(400, `${validation.day}: Task details are required when hours are entered.`);
+            }
+        }
+        
+        updateData.totalWeekHours = 
+            parseFloat(updateData.mondayHours) +
+            parseFloat(updateData.tuesdayHours) +
+            parseFloat(updateData.wednesdayHours) +
+            parseFloat(updateData.thursdayHours) +
+            parseFloat(updateData.fridayHours) +
+            parseFloat(updateData.saturdayHours) +
+            parseFloat(updateData.sundayHours);
         
         if (timesheet.status === 'Approved') {
             updateData.status = 'Modified';
@@ -526,26 +1177,6 @@ module.exports = cds.service.impl(async function() {
         await UPDATE('my.timesheet.Timesheets').set(updateData).where({ ID: timesheet.ID });
 
         return 'Timesheet updated successfully';
-    });
-
-    // Function: Validate Daily Hours
-    this.on('validateDailyHours', async (req) => {
-        const { date } = req.data;
-        
-        const employee = await getAuthenticatedEmployee(req);
-        if (!employee) return 0;
-        
-        const employeeID = employee.ID;
-
-        const timesheets = await SELECT.from('my.timesheet.Timesheets')
-            .where({ employee_ID: employeeID, workDate: date });
-       
-        let totalHours = 0;
-        timesheets.forEach(entry => {
-            totalHours += parseFloat(entry.hoursWorked || 0);
-        });
-
-        return totalHours;
     });
 
     // Before DELETE timesheet
@@ -567,4 +1198,23 @@ module.exports = cds.service.impl(async function() {
             return req.error(400, 'Cannot delete approved timesheets');
         }
     });
+    // Helper entity for UI - Get assigned project IDs for dropdown
+this.on('READ', 'AssignedProjectsList', async (req) => {
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) return [];
+
+    const timesheets = await SELECT.from('my.timesheet.Timesheets')
+        .columns('project_ID')
+        .where({ employee_ID: employee.ID });
+
+    const projectIDs = [...new Set(timesheets.map(ts => ts.project_ID).filter(id => id))];
+    
+    if (projectIDs.length === 0) return [];
+
+    const projects = await SELECT.from('my.timesheet.Projects')
+        .columns('ID', 'projectID', 'projectName', 'projectRole', 'status')
+        .where({ ID: { in: projectIDs }, status: 'Active' });
+
+    return projects;
+});
 });

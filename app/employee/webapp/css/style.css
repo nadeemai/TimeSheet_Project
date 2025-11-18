@@ -1,1 +1,46 @@
-/* Enter your custom styles here */
+.tsDayCard {
+    padding: 1rem;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    width: 100%; /* make card fit dialog content width */
+}
+
+.tsDayHeader {
+    padding-bottom: 0.3rem;
+    font-weight: 600;
+}
+
+.tsDayComment {
+    color: #444;
+    font-size: 0.7rem;
+    padding-top: 0.3rem;
+    border: 1px solid #ccc;       /* border for task details */
+    border-radius: 4px;
+    padding: 0.5rem;
+    background-color: #fff;
+    word-wrap: break-word;         /* wrap long content */
+    max-width: 100%;               /* do not overflow horizontally */
+    max-height: 150px;             /* scroll if too tall */
+    overflow-y: auto;
+}
+
+.tsSeparator {
+    margin: 1rem 0;
+    opacity: 0.3;
+}
+
+.tsHoursRed {
+    color: orange; /* iMessage-Red vibes */
+    font-weight: bold;
+}
+
+.tsHoursOrange {
+    color: #ff3b30; /* Warm orange */
+    font-weight: bold;
+}
+
+.tsHoursGreen {
+    color: #34c759; /* iOS Success Green */
+    font-weight: bold;
+}

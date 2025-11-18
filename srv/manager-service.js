@@ -99,42 +99,123 @@ module.exports = cds.service.impl(async function() {
     });
 
     // ✅ CHANGE 1: Manager can assign projects to employees
-    this.on('assignProjectToEmployee', async (req) => {
-        const { employeeID, projectID } = req.data;
+  // Manager can assign projects to employees
+this.on('assignProjectToEmployee', async (req) => {
+    const { employeeID, projectID } = req.data;
+    
+    const manager = await getAuthenticatedManager(req);
+    if (!manager) return 'Manager not found';
+
+    // Verify employee exists and belongs to manager's team
+    const employee = await SELECT.one.from(Employees).where({ employeeID });
+    if (!employee) {
+        return req.error(404, 'Employee not found');
+    }
+
+    if (employee.managerID_ID !== manager.ID) {
+        return req.error(403, 'You can only assign projects to your team members');
+    }
+
+    // Verify project exists
+    const project = await SELECT.one.from(Projects).where({ projectID });
+    if (!project) {
+        return req.error(404, 'Project not found');
+    }
+
+    // Check if already assigned
+    const existingAssignment = await SELECT.from(Timesheets)
+        .where({ employee_ID: employee.ID, project_ID: project.ID });
+
+    if (existingAssignment.length === 0) {
+        // Create placeholder timesheet
+        const now = new Date();
+        const currentWeekStart = new Date(now);
+        currentWeekStart.setDate(now.getDate() - now.getDay() + 1);
+        currentWeekStart.setHours(0, 0, 0, 0);
         
-        const manager = await getAuthenticatedManager(req);
-        if (!manager) return 'Manager not found';
-
-        // Verify employee exists and belongs to manager's team
-        const employee = await SELECT.one.from(Employees).where({ employeeID });
-        if (!employee) {
-            return req.error(404, 'Employee not found');
+        const currentWeekEnd = new Date(currentWeekStart);
+        currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
+        
+        const weekStartStr = currentWeekStart.toISOString().split('T')[0];
+        const weekEndStr = currentWeekEnd.toISOString().split('T')[0];
+        
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const weekDates = [];
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(currentWeekStart);
+            date.setDate(currentWeekStart.getDate() + i);
+            weekDates.push(date.toISOString().split('T')[0]);
         }
-
-        if (employee.managerID_ID !== manager.ID) {
-            return req.error(403, 'You can only assign projects to your team members');
-        }
-
-        // Verify project exists
-        const project = await SELECT.one.from(Projects).where({ projectID });
-        if (!project) {
-            return req.error(404, 'Project not found');
-        }
-
-        // Create notification for employee
-        const notificationCount = await SELECT.from(Notifications);
-        await INSERT.into(Notifications).entries({
-            notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
-            recipient_ID: employee.ID,
-            message: `${manager.firstName} ${manager.lastName} assigned you to project: ${project.projectName}`,
-            notificationType: 'Project Assignment',
-            isRead: false,
-            relatedEntity: 'Project',
-            relatedEntityID: project.ID
+        
+        const employeeTimesheets = await SELECT.from(Timesheets)
+            .where({ employee_ID: employee.ID });
+        const timesheetID = `TS${String(employeeTimesheets.length + 1).padStart(4, '0')}`;
+        
+        await INSERT.into(Timesheets).entries({
+            timesheetID: timesheetID,
+            employee_ID: employee.ID,
+            project_ID: project.ID,
+            weekStartDate: weekStartStr,
+            weekEndDate: weekEndStr,
+            task: 'Developing',
+            taskDetails: `Assigned to ${project.projectName}`,
+            status: 'Draft',
+            isBillable: project.isBillable,
+            totalWeekHours: 0,
+            
+            mondayDate: weekDates[0],
+            mondayDay: dayNames[0],
+            mondayHours: 0,
+            mondayTaskDetails: '',
+            
+            tuesdayDate: weekDates[1],
+            tuesdayDay: dayNames[1],
+            tuesdayHours: 0,
+            tuesdayTaskDetails: '',
+            
+            wednesdayDate: weekDates[2],
+            wednesdayDay: dayNames[2],
+            wednesdayHours: 0,
+            wednesdayTaskDetails: '',
+            
+            thursdayDate: weekDates[3],
+            thursdayDay: dayNames[3],
+            thursdayHours: 0,
+            thursdayTaskDetails: '',
+            
+            fridayDate: weekDates[4],
+            fridayDay: dayNames[4],
+            fridayHours: 0,
+            fridayTaskDetails: '',
+            
+            saturdayDate: weekDates[5],
+            saturdayDay: dayNames[5],
+            saturdayHours: 0,
+            saturdayTaskDetails: '',
+            
+            sundayDate: weekDates[6],
+            sundayDay: dayNames[6],
+            sundayHours: 0,
+            sundayTaskDetails: ''
         });
+        
+        console.log(`✅ Created placeholder timesheet ${timesheetID} for ${employee.employeeID} on project ${project.projectID}`);
+    }
 
-        return `Project ${project.projectName} assigned to ${employee.firstName} ${employee.lastName} successfully`;
+    // Create notification
+    const notificationCount = await SELECT.from(Notifications);
+    await INSERT.into(Notifications).entries({
+        notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
+        recipient_ID: employee.ID,
+        message: `${manager.firstName} ${manager.lastName} assigned you to project: ${project.projectName}`,
+        notificationType: 'Project Assignment',
+        isRead: false,
+        relatedEntity: 'Project',
+        relatedEntityID: project.ID
     });
+
+    return `Project ${project.projectName} assigned to ${employee.firstName} ${employee.lastName} successfully`;
+});
 
     // Action: Approve Timesheet
     this.on('approveTimesheet', async (req) => {

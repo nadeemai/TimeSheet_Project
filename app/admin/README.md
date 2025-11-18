@@ -1,18 +1,18 @@
 ## Application Details
 |               |
 | ------------- |
-|**Generation Date and Time**<br>Tue Oct 21 2025 07:17:02 GMT+0000 (Coordinated Universal Time)|
+|**Generation Date and Time**<br>Tue Nov 11 2025 06:38:07 GMT+0000 (Coordinated Universal Time)|
 |**App Generator**<br>SAP Fiori Application Generator|
-|**App Generator Version**<br>1.19.1|
+|**App Generator Version**<br>1.19.5|
 |**Generation Platform**<br>SAP Business Application Studio|
 |**Template Used**<br>Basic V4|
 |**Service Type**<br>Local CAP|
-|**Service URL**<br>http://localhost:4004/odata/v4/employee/|
+|**Service URL**<br>http://localhost:4004/odata/v4/admin/|
 |**Module Name**<br>admin|
-|**Application Title**<br>App Title|
-|**Namespace**<br>admin.com|
+|**Application Title**<br>Admin|
+|**Namespace**<br>|
 |**UI5 Theme**<br>sap_horizon|
-|**UI5 Version**<br>1.141.2|
+|**UI5 Version**<br>1.142.0|
 |**Enable Code Assist Libraries**<br>False|
 |**Enable TypeScript**<br>False|
 |**Add Eslint configuration**<br>False|
@@ -25,7 +25,7 @@ An SAP Fiori application.
 
 -   This app has been generated using the SAP Fiori tools - App Generator, as part of the SAP Fiori tools suite.  To launch the generated app, start your CAP project:  and navigate to the following location in your browser:
 
-http://localhost:4004/admin/webapp/index.html
+http://localhost:4004/admin/index.html
 
 #### Pre-requisites:
 

@@ -2,7 +2,7 @@
 
 specVersion: "3.1"
 metadata:
-  name: employee.com.employee
+  name: employee
 type: application
 server:
   customMiddleware:

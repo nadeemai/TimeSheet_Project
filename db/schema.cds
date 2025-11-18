@@ -45,6 +45,13 @@ entity Projects : cuid, managed {
     isBillable      : Boolean @title: 'Billable' default true;
 }
 
+entity ProjectAssignments : cuid, managed {
+    employee        : Association to Employees @title: 'Employee' @mandatory;
+    project         : Association to Projects @title: 'Project' @mandatory;
+    assignedBy      : Association to Employees @title: 'Assigned By';
+    assignedDate    : DateTime @title: 'Assignment Date' default $now;
+    isActive        : Boolean @title: 'Active Assignment' default true;
+}
 /**
  * Non-Project Types Master Entity
  */
@@ -72,7 +79,7 @@ entity Activities : cuid, managed {
 }
 
 /**
- * Timesheet Transactional Entity 
+ *Timesheet now includes daily task details for each day
  */
 entity Timesheets : cuid, managed {
     timesheetID     : String(10) @title: 'Timesheet ID';
@@ -80,10 +87,59 @@ entity Timesheets : cuid, managed {
     activity        : Association to Activities @title: 'Activity';
     project         : Association to Projects @title: 'Project';
     nonProjectType  : Association to NonProjectTypes @title: 'Non-Project Type';
-    workDate        : Date @title: 'Work Date' @mandatory;
-    hoursWorked     : Decimal(4,2) @title: 'Hours Worked' @mandatory;
+    
+    // Week identification
+    weekStartDate   : Date @title: 'Week Start Date' @mandatory; // Monday of the week
+    weekEndDate     : Date @title: 'Week End Date' @mandatory;   // Sunday of the week
+    
     task            : String(50) @title: 'Task'; // Designing, Testing, Leave, etc.
-    taskDetails     : String(500) @title: 'Task Details/Activity Description' @mandatory;
+    taskDetails     : String(500) @title: 'General Task Details'; // Overall description for the week
+    
+    //Monday - hours and daily task details
+    mondayHours     : Decimal(4,2) @title: 'Monday Hours' default 0;
+    mondayDate      : Date @title: 'Monday Date';
+    mondayDay       : String(10) @title: 'Monday Day' default 'Monday';
+    mondayTaskDetails : String(500) @title: 'Monday Task Details';
+    
+    //Tuesday - hours and daily task details
+    tuesdayHours    : Decimal(4,2) @title: 'Tuesday Hours' default 0;
+    tuesdayDate     : Date @title: 'Tuesday Date';
+    tuesdayDay      : String(10) @title: 'Tuesday Day' default 'Tuesday';
+    tuesdayTaskDetails : String(500) @title: 'Tuesday Task Details';
+    
+    //Wednesday - hours and daily task details
+    wednesdayHours  : Decimal(4,2) @title: 'Wednesday Hours' default 0;
+    wednesdayDate   : Date @title: 'Wednesday Date';
+    wednesdayDay    : String(10) @title: 'Wednesday Day' default 'Wednesday';
+    wednesdayTaskDetails : String(500) @title: 'Wednesday Task Details';
+    
+    //Thursday - hours and daily task details
+    thursdayHours   : Decimal(4,2) @title: 'Thursday Hours' default 0;
+    thursdayDate    : Date @title: 'Thursday Date';
+    thursdayDay     : String(10) @title: 'Thursday Day' default 'Thursday';
+    thursdayTaskDetails : String(500) @title: 'Thursday Task Details';
+    
+    //Friday - hours and daily task details
+    fridayHours     : Decimal(4,2) @title: 'Friday Hours' default 0;
+    fridayDate      : Date @title: 'Friday Date';
+    fridayDay       : String(10) @title: 'Friday Day' default 'Friday';
+    fridayTaskDetails : String(500) @title: 'Friday Task Details'; 
+    
+    //Saturday - hours and daily task details
+    saturdayHours   : Decimal(4,2) @title: 'Saturday Hours' default 0;
+    saturdayDate    : Date @title: 'Saturday Date';
+    saturdayDay     : String(10) @title: 'Saturday Day' default 'Saturday';
+    saturdayTaskDetails : String(500) @title: 'Saturday Task Details'; 
+    
+    //Sunday - hours and daily task details
+    sundayHours     : Decimal(4,2) @title: 'Sunday Hours' default 0;
+    sundayDate      : Date @title: 'Sunday Date';
+    sundayDay       : String(10) @title: 'Sunday Day' default 'Sunday';
+    sundayTaskDetails : String(500) @title: 'Sunday Task Details'; 
+    
+    // Total hours for the week
+    totalWeekHours  : Decimal(5,2) @title: 'Total Week Hours' default 0;
+    
     status          : String(20) @title: 'Status' default 'Draft'; // Draft, Submitted, Approved, Rejected
     approvedBy      : Association to Employees @title: 'Approved By (Manager)';
     approvalDate    : DateTime @title: 'Approval Date';
@@ -111,8 +167,9 @@ entity EmployeeProgressView as projection on Timesheets {
     employee,
     project,
     activity,
-    workDate,
-    hoursWorked,
+    weekStartDate,
+    weekEndDate,
+    totalWeekHours,
     task,
     taskDetails,
     status
@@ -127,8 +184,9 @@ entity ManagerDashboardView as projection on Timesheets {
     project.projectName,
     project.projectRole as projectRole : String,
     activity.activity as activityName,
-    workDate,
-    hoursWorked,
+    weekStartDate,
+    weekEndDate,
+    totalWeekHours,
     task,
     status,
     taskDetails

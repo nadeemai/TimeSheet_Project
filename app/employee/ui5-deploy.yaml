@@ -2,7 +2,7 @@
 
 specVersion: "3.1"
 metadata:
-  name: employee.com.employee
+  name: employee
 type: application
 resources:
   configuration:
@@ -16,7 +16,7 @@ builder:
     - name: ui5-task-zipper
       afterTask: generateCachebusterInfo
       configuration:
-        archiveName: employeecomemployee
+        archiveName: employee
         relativePaths: true
         additionalFiles:
           - xs-app.json

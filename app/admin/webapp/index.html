@@ -1,43 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Employee - Timesheet</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Admin</title>
     <style>
-        html, body, body > div, #container, #container-uiarea { height: 100%; }
+        html, body, body > div, #container, #container-uiarea {
+            height: 100%;
+        }
     </style>
-
-    <!--
-      Dev-friendly UI5 bootstrap:
-      - data-sap-ui-preload="false" avoids Component-preload issues during development.
-      - data-sap-ui-resource-roots maps the namespace to the local folder.
-      - crossorigin="anonymous" reduces some cross-origin storage issues.
-      In production, build Component-preload.js and set data-sap-ui-preload="auto".
-    -->
     <script
         id="sap-ui-bootstrap"
-        src="https://sapui5.hana.ondemand.com/1.141.2/resources/sap-ui-core.js"
+        src="https://sapui5.hana.ondemand.com/1.142.0/resources/sap-ui-core.js"
         data-sap-ui-theme="sap_horizon"
         data-sap-ui-resource-roots='{
-            "admin.com.admin": "./"
+            "admin": "./"
         }'
         data-sap-ui-on-init="module:sap/ui/core/ComponentSupport"
         data-sap-ui-compat-version="edge"
         data-sap-ui-async="true"
-        data-sap-ui-preload="false"
         data-sap-ui-frame-options="trusted"
-        crossorigin="anonymous"
     ></script>
 </head>
 <body class="sapUiBody sapUiSizeCompact" id="content">
-    <!-- Boot the correct admin component -->
     <div
         data-sap-ui-component
-        data-name="admin.com.admin"
+        data-name="admin"
         data-id="container"
-        data-settings='{"id" : "admin.com.admin"}'
-        data-handle-validation="true">
-    </div>
+        data-settings='{"id" : "admin"}'
+        data-handle-validation="true"
+    ></div>
 </body>
 </html>

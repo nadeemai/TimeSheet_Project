@@ -1,0 +1,10 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <Dialog id="_IDGenDialog2" title="Day Field Actions" class="sapUiPopupWithPadding">
+        <HBox id="_IDGenHBox" justifyContent="SpaceBetween">
+            <Button id="_IDGenButton19" text="Edit" type="Emphasized" press="onEditDayField" />
+            <Button id="_IDGenButton20" text="Delete" type="Reject" press="onDeleteDayField" />
+        </HBox>
+    </Dialog>
+</core:FragmentDefinition>

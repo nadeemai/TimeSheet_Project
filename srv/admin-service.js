@@ -3,60 +3,116 @@ const cds = require('@sap/cds');
 module.exports = cds.service.impl(async function() {
     const { Employees, UserRoles, Activities, NonProjectTypes, Projects, Timesheets, Notifications } = this.entities;
 
-    //  Helper to get and validate admin
+    //Helper to get and validate admin with better error handling
     const getAuthenticatedAdmin = async (req) => {
         const userId = req.user.id;
         
+        console.log('🔍 Debug Auth - User ID:', userId);
+        console.log('🔍 Debug Auth - User roles:', req.user.attr);
+        
         if (!userId) {
+            console.log('❌ No user ID found');
             req.error(401, 'User not authenticated');
             return null;
         }
 
-        const admin = await SELECT.one.from(Employees)
-            .where({ ID: userId, isActive: true });
-
-        if (!admin) {
-            req.error(404, 'Admin profile not found or inactive. Please contact administrator.');
+        //Check if user has Admin role in authentication system
+        const hasAdminRole = req.user.is('Admin');
+        console.log('🔍 Debug Auth - Has Admin role in auth system:', hasAdminRole);
+        
+        if (!hasAdminRole) {
+            console.log('❌ User does not have Admin role');
+            req.error(403, 'Admin role required. Please ensure you are logged in with Admin credentials.');
             return null;
         }
 
-        // Verify user has admin role
+        // Try to find employee by ID first
+        let admin = await SELECT.one.from(Employees)
+            .where({ ID: userId, isActive: true });
+
+        //If not found by ID, try to find by email
+        if (!admin) {
+            console.log('⚠️ Admin not found by ID, trying by email...');
+            const userEmail = userId.includes('@') ? userId : `${userId}@sumodigitech.com`;
+            admin = await SELECT.one.from(Employees)
+                .where({ email: userEmail, isActive: true });
+        }
+
+        if (!admin) {
+            console.log('⚠️ Admin profile not found in database, but has Admin role');
+            //Return a minimal admin object to allow operation
+            return { 
+                ID: userId, 
+                isAdmin: true,
+                employeeID: 'SYSTEM_ADMIN'
+            };
+        }
+
+        // Verify user has admin role in database
         if (admin.userRole_ID) {
             const role = await SELECT.one.from(UserRoles)
                 .where({ ID: admin.userRole_ID });
+                
+            console.log('🔍 Debug Auth - Database role:', role?.roleName);
             
             if (role && role.roleName !== 'Admin') {
+                console.log('❌ User role in database is not Admin');
                 req.error(403, 'Access denied. Admin role required.');
                 return null;
             }
         }
 
-        return admin;
+        console.log('✅ Admin authenticated successfully:', admin.employeeID);
+        return admin; 
     };
 
-    //  Validate admin access before sensitive operations
-    this.before(['CREATE', 'UPDATE', 'DELETE'], ['Employees', 'UserRoles', 'Activities', 'NonProjectTypes'], async (req) => {
+    //Separate validation - more lenient for CREATE
+    this.before('CREATE', 'Employees', async (req) => {
+        console.log('🔍 Before CREATE Employee - Start validation');
+        
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) {
-            req.reject(403, 'Admin access required');
+            console.log('❌ Admin validation failed for CREATE');
+            return req.reject(403, 'Admin access required');
+        }
+        
+        console.log('✅ Admin validation passed for CREATE');
+        
+        // Auto-generate employeeID if not provided
+        if (!req.data.employeeID) {
+            const count = await SELECT.from(Employees);
+            req.data.employeeID = `EMP${String(count.length + 1).padStart(4, '0')}`;
+            console.log('🔧 Generated employeeID:', req.data.employeeID);
         }
     });
 
-    // Validate admin access for read operations on sensitive entities
-    this.before('READ', ['Employees', 'Timesheets', 'Notifications'], async (req) => {
+    // Validate admin for UPDATE and DELETE on sensitive entities
+    this.before(['UPDATE', 'DELETE'], ['Employees', 'UserRoles', 'Activities', 'NonProjectTypes'], async (req) => {
+        console.log('🔍 Before UPDATE/DELETE - Start validation');
+        
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) {
-            req.reject(403, 'Admin access required');
+            console.log('❌ Admin validation failed for UPDATE/DELETE');
+            return req.reject(403, 'Admin access required');
         }
+        
+        console.log('✅ Admin validation passed for UPDATE/DELETE');
     });
 
-    // Action: Create Employee
+    // Action: Create Employee with manager assignment
     this.on('createEmployee', async (req) => {
         const { employeeID, firstName, lastName, email, managerEmployeeID, roleID } = req.data;
 
+        console.log('🔍 createEmployee action called');
+        
         // Validate admin
         const admin = await getAuthenticatedAdmin(req);
-        if (!admin) return 'Admin authentication failed';
+        if (!admin) {
+            console.log('❌ createEmployee: Admin authentication failed');
+            return 'Admin authentication failed';
+        }
+
+        console.log('✅ createEmployee: Admin authenticated');
 
         const existing = await SELECT.one.from(Employees).where({ employeeID });
         if (existing) {
@@ -79,6 +135,16 @@ module.exports = cds.service.impl(async function() {
             if (!manager) {
                 return req.error(404, 'Manager not found');
             }
+
+            // Verify that the selected manager has Manager role
+            if (manager.userRole_ID) {
+                const managerRole = await SELECT.one.from(UserRoles)
+                    .where({ ID: manager.userRole_ID });
+                
+                if (!managerRole || managerRole.roleName !== 'Manager') {
+                    return req.error(400, 'Selected employee is not a Manager. Please select a valid Manager.');
+                }
+            }
         }
 
         await INSERT.into(Employees).entries({
@@ -91,6 +157,7 @@ module.exports = cds.service.impl(async function() {
             managerID_ID: manager ? manager.ID : null
         });
 
+        console.log('✅ Employee created successfully:', employeeID);
         return `Employee ${firstName} ${lastName} created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}`;
     });
 
@@ -327,7 +394,7 @@ module.exports = cds.service.impl(async function() {
         return `Project ${projectName} updated successfully`;
     });
 
-    // Action: Assign Employee to Manager
+    //  Action: Assign Employee to Manager (only Managers can be assigned)
     this.on('assignEmployeeToManager', async (req) => {
         const { employeeID, managerEmployeeID } = req.data;
 
@@ -349,58 +416,167 @@ module.exports = cds.service.impl(async function() {
             return req.error(400, 'Cannot assign to inactive manager');
         }
 
+        //Verify that the selected manager has Manager role
+        if (manager.userRole_ID) {
+            const managerRole = await SELECT.one.from(UserRoles)
+                .where({ ID: manager.userRole_ID });
+            
+            if (!managerRole || managerRole.roleName !== 'Manager') {
+                return req.error(400, 'Selected employee is not a Manager. Please select a valid Manager.');
+            }
+        }
+
         await UPDATE(Employees).set({ managerID_ID: manager.ID }).where({ ID: employee.ID });
 
         return `Employee ${employee.firstName} ${employee.lastName} assigned to Manager ${manager.firstName} ${manager.lastName}`;
     });
 
-    // ✅ CHANGE 1: Admin can assign projects to employees
-    this.on('assignProjectToEmployee', async (req) => {
-        const { employeeID, projectID } = req.data;
+    // ✅ REPLACE assignProjectToEmployee in BOTH admin-service.js AND manager-service.js
+
+// For admin-service.js (around line 425):
+this.on('assignProjectToEmployee', async (req) => {
+    const { employeeID, projectID } = req.data;
+    
+    const admin = await getAuthenticatedAdmin(req);
+    if (!admin) return 'Admin authentication failed';
+
+    const employee = await SELECT.one.from(Employees).where({ employeeID });
+    if (!employee) {
+        return req.error(404, 'Employee not found');
+    }
+
+    const project = await SELECT.one.from(Projects).where({ projectID });
+    if (!project) {
+        return req.error(404, 'Project not found');
+    }
+
+    // ✅ Check if assignment already exists in ProjectAssignments table
+    const existingAssignment = await SELECT.one
+        .from('my.timesheet.ProjectAssignments')
+        .where({ employee_ID: employee.ID, project_ID: project.ID, isActive: true });
+
+    if (existingAssignment) {
+        return req.error(400, `Employee is already assigned to project ${project.projectName}`);
+    }
+
+    // ✅ Create ProjectAssignment entry (this is the source of truth)
+    const assignmentCount = await SELECT.from('my.timesheet.ProjectAssignments');
+    await INSERT.into('my.timesheet.ProjectAssignments').entries({
+        employee_ID: employee.ID,
+        project_ID: project.ID,
+        assignedBy_ID: admin.ID,
+        assignedDate: new Date().toISOString(),
+        isActive: true
+    });
+
+    console.log(`✅ Created ProjectAssignment for ${employee.employeeID} → ${project.projectID}`);
+
+    // ✅ OPTIONAL: Create placeholder timesheet for the current week
+    // (This is just for convenience, not required for project assignment)
+    const timesheetsForProject = await SELECT.from(Timesheets)
+        .where({ employee_ID: employee.ID, project_ID: project.ID });
+
+    if (timesheetsForProject.length === 0) {
+        const now = new Date();
+        const currentWeekStart = new Date(now);
+        currentWeekStart.setDate(now.getDate() - now.getDay() + 1);
+        currentWeekStart.setHours(0, 0, 0, 0);
         
-        const admin = await getAuthenticatedAdmin(req);
-        if (!admin) return 'Admin authentication failed';
-
-        // Verify employee exists
-        const employee = await SELECT.one.from(Employees).where({ employeeID });
-        if (!employee) {
-            return req.error(404, 'Employee not found');
+        const currentWeekEnd = new Date(currentWeekStart);
+        currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
+        
+        const weekStartStr = currentWeekStart.toISOString().split('T')[0];
+        const weekEndStr = currentWeekEnd.toISOString().split('T')[0];
+        
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const weekDates = [];
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(currentWeekStart);
+            date.setDate(currentWeekStart.getDate() + i);
+            weekDates.push(date.toISOString().split('T')[0]);
         }
+        
+        const employeeTimesheets = await SELECT.from(Timesheets)
+            .where({ employee_ID: employee.ID });
+        const timesheetID = `TS${String(employeeTimesheets.length + 1).padStart(4, '0')}`;
+        
+        await INSERT.into(Timesheets).entries({
+            timesheetID: timesheetID,
+            employee_ID: employee.ID,
+            project_ID: project.ID,
+            weekStartDate: weekStartStr,
+            weekEndDate: weekEndStr,
+            task: 'Developing',
+            taskDetails: `Assigned to ${project.projectName}`,
+            status: 'Draft',
+            isBillable: project.isBillable,
+            totalWeekHours: 0,
+            
+            mondayDate: weekDates[0],
+            mondayDay: dayNames[0],
+            mondayHours: 0,
+            mondayTaskDetails: '',
+            
+            tuesdayDate: weekDates[1],
+            tuesdayDay: dayNames[1],
+            tuesdayHours: 0,
+            tuesdayTaskDetails: '',
+            
+            wednesdayDate: weekDates[2],
+            wednesdayDay: dayNames[2],
+            wednesdayHours: 0,
+            wednesdayTaskDetails: '',
+            
+            thursdayDate: weekDates[3],
+            thursdayDay: dayNames[3],
+            thursdayHours: 0,
+            thursdayTaskDetails: '',
+            
+            fridayDate: weekDates[4],
+            fridayDay: dayNames[4],
+            fridayHours: 0,
+            fridayTaskDetails: '',
+            
+            saturdayDate: weekDates[5],
+            saturdayDay: dayNames[5],
+            saturdayHours: 0,
+            saturdayTaskDetails: '',
+            
+            sundayDate: weekDates[6],
+            sundayDay: dayNames[6],
+            sundayHours: 0,
+            sundayTaskDetails: ''
+        });
+        
+        console.log(`✅ Created placeholder timesheet ${timesheetID}`);
+    }
 
-        // Verify project exists
-        const project = await SELECT.one.from(Projects).where({ projectID });
-        if (!project) {
-            return req.error(404, 'Project not found');
-        }
+    // Create notifications
+    const notificationCount = await SELECT.from(Notifications);
+    await INSERT.into(Notifications).entries({
+        notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
+        recipient_ID: employee.ID,
+        message: `Admin assigned you to project: ${project.projectName}`,
+        notificationType: 'Project Assignment',
+        isRead: false,
+        relatedEntity: 'Project',
+        relatedEntityID: project.ID
+    });
 
-        // Create notification for employee
-        const notificationCount = await SELECT.from(Notifications);
+    if (employee.managerID_ID) {
         await INSERT.into(Notifications).entries({
-            notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
-            recipient_ID: employee.ID,
-            message: `Admin assigned you to project: ${project.projectName}`,
+            notificationID: `NOT${String(notificationCount.length + 2).padStart(4, '0')}`,
+            recipient_ID: employee.managerID_ID,
+            message: `${employee.firstName} ${employee.lastName} has been assigned to project: ${project.projectName}`,
             notificationType: 'Project Assignment',
             isRead: false,
             relatedEntity: 'Project',
             relatedEntityID: project.ID
         });
+    }
 
-        // Also notify manager if exists
-        if (employee.managerID_ID) {
-            await INSERT.into(Notifications).entries({
-                notificationID: `NOT${String(notificationCount.length + 2).padStart(4, '0')}`,
-                recipient_ID: employee.managerID_ID,
-                message: `${employee.firstName} ${employee.lastName} has been assigned to project: ${project.projectName}`,
-                notificationType: 'Project Assignment',
-                isRead: false,
-                relatedEntity: 'Project',
-                relatedEntityID: project.ID
-            });
-        }
-
-        return `Project ${project.projectName} assigned to ${employee.firstName} ${employee.lastName} successfully`;
-    });
-
+    return `Project ${project.projectName} assigned to ${employee.firstName} ${employee.lastName} successfully`;
+});
     // Action: Deactivate Employee
     this.on('deactivateEmployee', async (req) => {
         const { employeeID } = req.data;
@@ -521,13 +697,7 @@ module.exports = cds.service.impl(async function() {
         }
     });
 
-    // Auto-generate IDs if not provided
-    this.before('CREATE', 'Employees', async (req) => {
-        if (!req.data.employeeID) {
-            const count = await SELECT.from(Employees);
-            req.data.employeeID = `EMP${String(count.length + 1).padStart(4, '0')}`;
-        }
-    });
+    // ✅ REMOVED: Duplicate auto-generate ID logic (moved to before CREATE hook above)
 
     this.before('CREATE', 'UserRoles', async (req) => {
         if (!req.data.roleID) {
@@ -556,50 +726,206 @@ module.exports = cds.service.impl(async function() {
             req.data.projectID = `PRJ${String(count.length + 1).padStart(4, '0')}`;
         }
     });
-    /**
-   * 🟩 Approve Timesheet Handler
-   */
-  this.on("approveTimesheet", async (req) => {
-    const { timesheetID } = req.data;
-    if (!timesheetID) return req.reject(400, "❌ Missing timesheetID");
 
-    // Check if timesheet exists
-    const timesheet = await SELECT.one.from(Timesheets).where({ timesheetID });
-    if (!timesheet) return req.reject(404, `❌ Timesheet ${timesheetID} not found`);
+    // Approve Timesheet Handler
+    this.on("approveTimesheet", async (req) => {
+        const { timesheetID } = req.data;
+        if (!timesheetID) return req.reject(400, "❌ Missing timesheetID");
 
-    // Update status to Approved
-    await UPDATE(Timesheets)
-      .set({
-        status: "Approved",
-        approvalDate: new Date().toISOString(),
-        approvedBy_ID: req.user.id || "admin",
-      })
-      .where({ timesheetID });
+        const timesheet = await SELECT.one.from(Timesheets).where({ timesheetID });
+        if (!timesheet) return req.reject(404, `❌ Timesheet ${timesheetID} not found`);
 
-    return `✅ Timesheet ${timesheetID} approved successfully by ${req.user.id || "admin"}`;
-  });
+        await UPDATE(Timesheets)
+            .set({
+                status: "Approved",
+                approvalDate: new Date().toISOString(),
+                approvedBy_ID: req.user.id || "admin",
+            })
+            .where({ timesheetID });
 
-  /**
-   * 🟥 Reject Timesheet Handler
-   */
-  this.on("rejectTimesheet", async (req) => {
-    const { timesheetID, reason } = req.data;
-    if (!timesheetID) return req.reject(400, "❌ Missing timesheetID");
+        return `✅ Timesheet ${timesheetID} approved successfully`;
+    });
 
-    // Check if timesheet exists
-    const timesheet = await SELECT.one.from(Timesheets).where({ timesheetID });
-    if (!timesheet) return req.reject(404, `❌ Timesheet ${timesheetID} not found`);
+    // Reject Timesheet Handler
+    this.on("rejectTimesheet", async (req) => {
+        const { timesheetID, reason } = req.data;
+        if (!timesheetID) return req.reject(400, "❌ Missing timesheetID");
 
-    // Update status to Rejected with reason
-    await UPDATE(Timesheets)
-      .set({
-        status: "Rejected",
-        comments: reason || "Rejected by Admin",
-        approvalDate: new Date().toISOString(),
-        approvedBy_ID: req.user.id || "admin",
-      })
-      .where({ timesheetID });
+        const timesheet = await SELECT.one.from(Timesheets).where({ timesheetID });
+        if (!timesheet) return req.reject(404, `❌ Timesheet ${timesheetID} not found`);
 
-    return `🚫 Timesheet ${timesheetID} rejected. Reason: ${reason || "No reason provided"}`;
-  });
+        await UPDATE(Timesheets)
+            .set({
+                status: "Rejected",
+                taskDetails: `${timesheet.taskDetails || ''}\nRejection Reason: ${reason || 'No reason provided'}`,
+                approvalDate: new Date().toISOString(),
+                approvedBy_ID: req.user.id || "admin",
+            })
+            .where({ timesheetID });
+
+        return `🚫 Timesheet ${timesheetID} rejected. Reason: ${reason || "No reason provided"}`;
+    });
+   
+    // Action 1: Delete all timesheets for a specific employee
+    this.on('deleteEmployeeTimesheets', async (req) => {
+        const { employeeID } = req.data;
+        
+        console.log('🗑️ deleteEmployeeTimesheets called for:', employeeID);
+        
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
+        if (!employeeID) {
+            return req.error(400, 'Employee ID is required');
+        }
+
+        const employee = await SELECT.one.from(Employees).where({ employeeID });
+        if (!employee) {
+            return req.error(404, `Employee with ID ${employeeID} not found`);
+        }
+
+        try {
+            // Count timesheets before deletion
+            const timesheets = await SELECT.from(Timesheets).where({ employee_ID: employee.ID });
+            const count = timesheets.length;
+            
+            // Delete timesheets
+            await DELETE.from(Timesheets).where({ employee_ID: employee.ID });
+            
+            // Delete related notifications
+            await DELETE.from(Notifications).where({ 
+                relatedEntity: 'Timesheet',
+                recipient_ID: employee.ID 
+            });
+            
+            console.log(`✅ Deleted ${count} timesheets for employee ${employeeID}`);
+            return `Successfully deleted ${count} timesheet(s) for ${employee.firstName} ${employee.lastName}`;
+        } catch (error) {
+            console.error('❌ Error deleting timesheets:', error);
+            return req.error(500, 'Failed to delete timesheets: ' + error.message);
+        }
+    });
+
+    // Action 2: Delete timesheets by status for an employee
+    this.on('deleteEmployeeTimesheetsByStatus', async (req) => {
+        const { employeeID, status } = req.data;
+        
+        console.log('🗑️ deleteEmployeeTimesheetsByStatus called:', { employeeID, status });
+        
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
+        if (!employeeID || !status) {
+            return req.error(400, 'Employee ID and status are required');
+        }
+
+        const employee = await SELECT.one.from(Employees).where({ employeeID });
+        if (!employee) {
+            return req.error(404, 'Employee not found');
+        }
+
+        try {
+            const timesheets = await SELECT.from(Timesheets)
+                .where({ employee_ID: employee.ID, status: status });
+            const count = timesheets.length;
+            
+            await DELETE.from(Timesheets)
+                .where({ employee_ID: employee.ID, status: status });
+            
+            console.log(`✅ Deleted ${count} ${status} timesheets`);
+            return `Successfully deleted ${count} ${status} timesheet(s) for ${employee.firstName} ${employee.lastName}`;
+        } catch (error) {
+            console.error('❌ Error:', error);
+            return req.error(500, 'Failed to delete timesheets: ' + error.message);
+        }
+    });
+
+    // Action 3: Delete specific timesheet by ID
+    this.on('deleteTimesheet', async (req) => {
+        const { timesheetID } = req.data;
+        
+        console.log('🗑️ deleteTimesheet called for:', timesheetID);
+        
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
+        if (!timesheetID) {
+            return req.error(400, 'Timesheet ID is required');
+        }
+
+        const timesheet = await SELECT.one.from(Timesheets).where({ timesheetID });
+        if (!timesheet) {
+            return req.error(404, `Timesheet ${timesheetID} not found`);
+        }
+
+        try {
+            await DELETE.from(Timesheets).where({ ID: timesheet.ID });
+            
+            console.log(`✅ Deleted timesheet ${timesheetID}`);
+            return `Timesheet ${timesheetID} deleted successfully`;
+        } catch (error) {
+            console.error('❌ Error:', error);
+            return req.error(500, 'Failed to delete timesheet: ' + error.message);
+        }
+    });
+
+    // Action 4: Delete timesheets for a specific week
+    this.on('deleteTimesheetsByWeek', async (req) => {
+        const { employeeID, weekStartDate } = req.data;
+        
+        console.log('🗑️ deleteTimesheetsByWeek called:', { employeeID, weekStartDate });
+        
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
+        if (!employeeID || !weekStartDate) {
+            return req.error(400, 'Employee ID and week start date are required');
+        }
+
+        const employee = await SELECT.one.from(Employees).where({ employeeID });
+        if (!employee) {
+            return req.error(404, 'Employee not found');
+        }
+
+        try {
+            const timesheets = await SELECT.from(Timesheets)
+                .where({ employee_ID: employee.ID, weekStartDate: weekStartDate });
+            const count = timesheets.length;
+            
+            await DELETE.from(Timesheets)
+                .where({ employee_ID: employee.ID, weekStartDate: weekStartDate });
+            
+            console.log(`✅ Deleted ${count} timesheets for week ${weekStartDate}`);
+            return `Successfully deleted ${count} timesheet(s) for week starting ${weekStartDate}`;
+        } catch (error) {
+            console.error('❌ Error:', error);
+            return req.error(500, 'Failed to delete timesheets: ' + error.message);
+        }
+    });
+
+    // Action 5: Delete ALL timesheets (all employees) - USE WITH CAUTION!
+    this.on('deleteAllTimesheets', async (req) => {
+        console.log('🗑️ deleteAllTimesheets called - DELETING ALL TIMESHEETS!');
+        
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
+        try {
+            // Count before deletion
+            const timesheets = await SELECT.from(Timesheets);
+            const count = timesheets.length;
+            
+            // Delete all timesheets
+            await DELETE.from(Timesheets);
+            
+            // Delete all timesheet-related notifications
+            await DELETE.from(Notifications).where({ relatedEntity: 'Timesheet' });
+            
+            console.log(`✅ Deleted all ${count} timesheets`);
+            return `Successfully deleted all ${count} timesheet records from the system`;
+        } catch (error) {
+            console.error('❌ Error deleting all timesheets:', error);
+            return req.error(500, 'Failed to delete timesheets: ' + error.message);
+        }
+    });
 });

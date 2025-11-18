@@ -1,0 +1,56 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:l="sap.ui.layout"
+    xmlns:f="sap.ui.layout.form">
+    
+    <Dialog
+        id="editCommentDialog"
+        title="Edit Comment"
+        contentWidth="600px"
+        contentHeight="400px"
+        resizable="true">
+        
+        <content>
+            <VBox id="_IDGenVBox19" class="sapUiMediumMargin">
+                <Label id="_IDGenLabel2" text="Time Entry Details" design="Bold" class="sapUiMediumMarginBottom" />
+                
+                <HBox id="_IDGenHBox16" class="sapUiMediumMarginBottom">
+                    <VBox id="_IDGenVBox20" width="50%">
+                        <Label id="_IDGenLabel3" text="Project:" />
+                        <Text id="_IDGenText66" text="{/editEntry/projectName}" />
+                    </VBox>
+                    <VBox id="_IDGenVBox21" width="50%">
+                        <Label id="_IDGenLabel4" text="Work Type:" />
+                        <Text id="_IDGenText67" text="{/editEntry/workTypeName}" />
+                    </VBox>
+                </HBox>
+                
+                <Label id="_IDGenLabel5" text="Comment" design="Bold" class="sapUiMediumMarginTop" />
+                <TextArea
+                    id="editCommentTextArea"
+                    value="{/editEntry/comment}"
+                    rows="6"
+                    width="100%"
+                    placeholder="Edit your comment here..."
+                    growing="true"
+                    growingMaxLines="10"
+                    maxLength="1000"
+                    liveChange="onCommentLiveChange" />
+                    
+                <Text id="_IDGenText68" text="{= ${/editEntry/comment}.length + ' / 1000 characters'}" class="sapUiTinyMarginTop" />
+            </VBox>
+        </content>
+        
+        <buttons>
+            <Button id="_IDGenButton22"
+                text="Cancel"
+                press="onCancelEditComment"
+                type="Transparent" />
+            <Button id="_IDGenButton23"
+                text="Save"
+                type="Emphasized"
+                press="onSaveEditComment" />
+        </buttons>
+    </Dialog>
+</core:FragmentDefinition>

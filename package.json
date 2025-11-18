@@ -7,6 +7,7 @@
   "private": true,
   "dependencies": {
     "@cap-js-community/odata-v2-adapter": "^1.15.5",
+    "@cap-js/hana": "^2.3.4",
     "@sap/cds": "^9",
     "@sap/xssec": "^4",
     "express": "^4",
@@ -18,7 +19,7 @@
     "@sap/eslint-plugin-cds": "^4",
     "cds-plugin-ui5": "^0.13.0",
     "eslint": "^9",
-    "mbt": "^1.2.29",
+    "mbt": "^1.2.34",
     "rimraf": "^5.0.5"
   },
   "scripts": {
@@ -26,8 +27,8 @@
     "watch": "cds watch",
     "build": "rimraf resources mta_archives && mbt build --mtar archive",
     "deploy": "cf deploy mta_archives/archive.mtar --retries 1",
-    "watch-admin": "cds watch --open admin.com.admin/index.html?sap-ui-xx-viewCache=false",
-    "watch-employee": "cds watch --open employee.com.employee/index.html?sap-ui-xx-viewCache=false --livereload false",
+    "watch-admin": "cds watch --open admin/index.html?sap-ui-xx-viewCache=false --livereload false",
+    "watch-employee": "cds watch --open employee/index.html?sap-ui-xx-viewCache=false --livereload false",
     "watch-manager": "cds watch --open manager.com.manager/index.html?sap-ui-xx-viewCache=false",
     "undeploy": "cf undeploy timesheet-application --delete-services --delete-service-keys --delete-service-brokers"
   },
@@ -36,7 +37,7 @@
       "db": {
         "kind": "hana",
         "credentials": {
-          "database": "db.hana"
+          "url": "db.hana"
         }
       },
       "auth": {
@@ -46,49 +47,49 @@
         "[development]": {
           "kind": "mocked",
           "users": {
-            "aditya.mishra": {
+            "aditya.mishra@sumodigitech.com": {
               "id": "a47ac10b-58cc-4372-a567-0e02b2c3d490",
               "password": "initial",
               "roles": [
                 "Employee"
               ]
             },
-            "nadeem.abbas": {
+            "nadeem.abbas@sumodigitech.com": {
               "id": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
               "password": "initial",
               "roles": [
                 "Employee"
               ]
             },
-            "yugal.kishore": {
+            "yugal.kishore@sumodigitech.com": {
               "id": "a47ac10b-58cc-4372-a567-0e02b2c3d492",
               "password": "initial",
               "roles": [
                 "Employee"
               ]
             },
-            "sumit.jhaldiyal": {
+            "sumit.jhaldiyal@sumodigitech.com": {
               "id": "a47ac10b-58cc-4372-a567-0e02b2c3d493",
               "password": "initial",
               "roles": [
                 "Employee"
               ]
             },
-            "jayant.kumar": {
+            "jayant.kumar@sumodigitech.com": {
               "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
               "password": "initial",
               "roles": [
                 "Manager"
               ]
             },
-            "vikrant.raj": {
+            "vikrant.raj@sumodigitech.com": {
               "id": "f47ac10b-58cc-4372-a567-0e02b2c3d480",
               "password": "initial",
               "roles": [
                 "Manager"
               ]
             },
-            "pushpak.jha": {
+            "pushpak.jha@sumodigitech.com": {
               "id": "a47ac10b-58cc-4372-a567-0e02b2c3d410",
               "password": "initial",
               "roles": [

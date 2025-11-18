@@ -1,348 +1,327 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <mvc:View
-  controllerName="employee.com.employee.controller.Employee"
- 
-  xmlns:mvc="sap.ui.core.mvc"
-  xmlns="sap.m"
-  xmlns:l="sap.ui.layout"
-  xmlns:f="sap.ui.layout.form"
-  xmlns:core="sap.ui.core"
-  xmlns:table="sap.ui.table"
-  height="100%">
-  
-  <Page id="adminPage" title="Admin Dashboard">
-    <content>
-      <!-- Main Navigation -->
-      <IconTabBar id="mainTabBar" class="sapUiResponsiveContentPadding" expanded="true">
-        <items>
-          <!-- User Management Tab -->
-          <IconTabFilter id="userManagementTab" key="users" text="User Management" icon="sap-icon://employee">
-            <Panel id="userPanel" headerText="Employee &amp; Manager Management" expandable="true" expanded="true">
-              <headerToolbar>
-                <Toolbar id="_IDGenToolbar">
-                  <Title id="_IDGenTitle" text="User Management"/>
-                  <ToolbarSpacer id="_IDGenToolbarSpacer"/>
-                  <Button id="addUserBtn" text="Add User" type="Emphasized" icon="sap-icon://add" press="onAddUser"/>
-                  <Button id="refreshUsersBtn" text="Refresh" icon="sap-icon://refresh" press="onRefreshUsers"/>
-                </Toolbar>
-              </headerToolbar>
-              <content>
-                <table:Table 
-                  id="usersTable"
-                  rows="{/users}"
-                  selectionMode="Single"
-                  visibleRowCount="10"
-                  class="sapUiSmallMarginTopBottom">
-                  <table:columns>
-                    <table:Column id="_IDGenColumn1" width="8rem">
-                      <Label id="_IDGenLabel" text="User ID"/>
-                      <table:template>
-                        <Text id="_IDGenText" text="{userId}"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn2" width="12rem">
-                      <Label id="_IDGenLabel1" text="Full Name"/>
-                      <table:template>
-                        <Text id="_IDGenText1" text="{firstName} {lastName}"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn3" width="15rem">
-                      <Label id="_IDGenLabel2" text="Email"/>
-                      <table:template>
-                        <Text id="_IDGenText2" text="{email}"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn4" width="8rem">
-                      <Label id="_IDGenLabel3" text="Role"/>
-                      <table:template>
-                        <Text id="_IDGenText3" text="{role}"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn5" width="12rem">
-                      <Label id="_IDGenLabel4" text="Manager"/>
-                      <table:template>
-                        <Text id="_IDGenText4" text="{managerName}"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn6" width="8rem">
-                      <Label id="_IDGenLabel5" text="Status"/>
-                      <table:template>
-                        <ObjectStatus id="_IDGenObjectStatus" 
-                          text="{status}"
-                          state="{= ${status} === 'Active' ? 'Success' : 'Error' }"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn7" width="12rem">
-                      <Label id="_IDGenLabel6" text="Actions"/>
-                      <table:template>
-                        <HBox id="_IDGenHBox">
-                          <Button id="_IDGenButton" 
-                            text="Edit" 
-                            type="Transparent" 
-                            icon="sap-icon://edit"
-                            press="onEditUser"
-                            class="sapUiTinyMarginEnd"/>
-                          <Button id="_IDGenButton1" 
-                            text="{= ${status} === 'Active' ? 'Deactivate' : 'Activate' }" 
-                            type="Transparent"
-                            icon="{= ${status} === 'Active' ? 'sap-icon://inactive' : 'sap-icon://activate' }"
-                            press="onToggleUserStatus"/>
-                        </HBox>
-                      </table:template>
-                    </table:Column>
-                  </table:columns>
-                </table:Table>
-              </content>
-            </Panel>
-          </IconTabFilter>
+    controllerName="employee.controller.Employee"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:layout="sap.ui.layout"
+    xmlns:table="sap.ui.table"
+    xmlns:f="sap.ui.layout.form"
+    displayBlock="true">
+    <Page id="mainPage" title="Weekly Timesheet" showHeader="true">
+        <headerContent>
+            <Button id="profileButton" icon="sap-icon://person-placeholder" tooltip="My Profile" press="onProfilePress" class="sapUiTinyMarginEnd"/>
+            <Button id="infoButton" icon="sap-icon://information" tooltip="Add Comments" press="onInfoPress" class="sapUiTinyMarginEnd"/>
+            <Button id="settingsBtn" icon="sap-icon://action-settings" tooltip="Settings" press="onSettingsPress"/>
+            <Button id="reportsBtn" icon="sap-icon://business-objects-experience" tooltip="View Reports" press="onViewReports"/>
+            <Button id="logoutBtn" icon="sap-icon://log" tooltip="Logout" press="onLogoutPress"/>
+        </headerContent>
+        <content>
+            <Toolbar id="_IDGenToolbar">
+                <ToolbarSpacer id="_IDGenToolbarSpacer"/>
+                <!-- <Label id="_IDGenLabel32" text="Total Hours:" class="sapUiSmallMarginEnd"/>
+                <Text id="_IDGenText24" text="{/totalWeekHours}" class="sapUiSmallMarginBegin"/> -->
+                <Button id="_IDGenButton7" icon="sap-icon://nav-back" press="onPreviousWeekTS"/>
+                <Button id="_IDGenButton8" icon="sap-icon://navigation-right-arrow" press="onNextWeekTS"/>
+                <Button id="_IDGenButton11" text="Today" press="onCurrentWeekTS"/>
+            </Toolbar>
+            <IconTabBar id="iconTabBar" class="sapUiResponsiveContentPadding" select="onTabSelect" expanded="true">
+                <items>
+         <IconTabFilter id="timesheetTab" text="Timesheet" key="timesheet" icon="sap-icon://timesheet" iconColor="Critical">
+    <Panel headerText="Daily Time Entry" expandable="true" expanded="true">
+        <VBox class="sapUiSmallMargin">
 
-          <!-- Project Management Tab -->
-          <IconTabFilter id="projectManagementTab" key="projects" text="Project Management" icon="sap-icon://projector">
-            <Panel id="projectPanel" headerText="Project Management" expandable="true" expanded="true">
-              <headerToolbar>
-                <Toolbar id="_IDGenToolbar1">
-                  <Title id="_IDGenTitle1" text="Project Management"/>
-                  <ToolbarSpacer id="_IDGenToolbarSpacer1"/>
-                  <Button id="addProjectBtn" text="Create Project" type="Emphasized" icon="sap-icon://add" press="onAddProject"/>
-                  <Button id="refreshProjectsBtn" text="Refresh" icon="sap-icon://refresh" press="onRefreshProjects"/>
-                </Toolbar>
-              </headerToolbar>
-              <content>
-                <table:Table 
-                  id="projectsTable"
-                  rows="{/projects}"
-                  selectionMode="Single"
-                  visibleRowCount="10"
-                  class="sapUiSmallMarginTopBottom">
-                  <table:columns>
-                    <table:Column id="_IDGenColumn8" width="8rem">
-                      <Label id="_IDGenLabel7" text="Project ID"/>
-                      <table:template>
-                        <Text id="_IDGenText5" text="{projectId}"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn9" width="15rem">
-                      <Label id="_IDGenLabel8" text="Project Name"/>
-                      <table:template>
-                        <Text id="_IDGenText6" text="{name}"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn10" width="12rem">
-                      <Label id="_IDGenLabel9" text="Project Manager"/>
-                      <table:template>
-                        <Text id="_IDGenText7" text="{managerName}"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn11" width="10rem">
-                      <Label id="_IDGenLabel10" text="Budget"/>
-                      <table:template>
-                        <Text id="_IDGenText8" text="{path: 'budget', formatter: '.formatCurrency'}"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn12" width="8rem">
-                      <Label id="_IDGenLabel11" text="Allocated Hours"/>
-                      <table:template>
-                        <Text id="_IDGenText9" text="{allocatedHours}"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn13" width="8rem">
-                      <Label id="_IDGenLabel12" text="Used Hours"/>
-                      <table:template>
-                        <!-- <Text id="_IDGenText10" text="{usedHours}"/> -->
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn14" width="8rem">
-                      <Label id="_IDGenLabel13" text="Status"/>
-                      <table:template>
-                        <ObjectStatus id="_IDGenObjectStatus1" 
-                          text="{status}"
-                          state="{= ${status} === 'Active' ? 'Success' : ${status} === 'Completed' ? 'Success' : 'Warning' }"/>
-                      </table:template>
-                    </table:Column>
-                    <table:Column id="_IDGenColumn15" width="12rem">
-                      <Label id="_IDGenLabel14" text="Actions"/>
-                      <table:template>
-                        <HBox id="_IDGenHBox1">
-                          <Button id="_IDGenButton2" 
-                            text="Edit" 
-                            type="Transparent" 
-                            icon="sap-icon://edit"
-                            press="onEditProject"
-                            class="sapUiTinyMarginEnd"/>
-                          <Button id="_IDGenButton3" 
-                            text="Delete" 
-                            type="Transparent"
-                            icon="sap-icon://delete"
-                            press="onDeleteProject"/>
-                        </HBox>
-                      </table:template>
-                    </table:Column>
-                  </table:columns>
-                </table:Table>
-              </content>
-            </Panel>
-          </IconTabFilter>
+            <!-- Week Navigation with better spacing -->
+            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiMediumMarginBottom">
+                <Title text="Log Your Work Hours" level="H3"/>
+                <HBox class="sapUiTinyMarginEnd">
+                    <Button text="Previous Week" press="onPreviousWeekTS" type="Default" class="sapUiTinyMarginEnd"/>
+                    <Button text="Current Week" press="onCurrentWeekTS" type="Emphasized" class="sapUiTinyMarginEnd"/>
+                    <Button text="Next Week" press="onNextWeekTS" type="Default" class="sapUiTinyMarginEnd"/>
+                    <DatePicker id="datePicker" value="{timeEntryModel>/selectedDate}" change="onDatePickerChange" placeholder="Select any date" width="150px" class="sapUiTinyMarginEnd"/>
+                    <Button icon="sap-icon://add" text="Record Time" press="onAddEntry" type="Emphasized"/>
+                </HBox>
+            </HBox>
 
-          <!-- Analytics Tab -->
-          <IconTabFilter id="analyticsTab" key="analytics" text="Analytics &amp; Reports" icon="sap-icon://business-objects-experience">
-            <Panel id="analyticsPanel" headerText="Project &amp; Team Analytics" expandable="true" expanded="true">
-              <headerToolbar>
-                <Toolbar id="_IDGenToolbar2">
-                  <Title id="_IDGenTitle2" text="Project Analytics"/>
-                  <ToolbarSpacer id="_IDGenToolbarSpacer2"/>
-                  <Button id="refreshAnalyticsBtn" text="Refresh Data" icon="sap-icon://refresh" press="onRefreshAnalytics"/>
-                </Toolbar>
-              </headerToolbar>
-              <content>
-                <l:Grid id="_IDGenGrid" defaultSpan="L6 M6 S12" class="sapUiSmallMarginTop">
-                  <l:content>
-                    <!-- Project Hours Overview -->
-                    <Panel id="_IDGenPanel" headerText="Project Hours Overview">
-                      <table:Table 
-                        id="projectHoursTable"
-                        rows="{/projectHours}"
-                        selectionMode="None"
-                        visibleRowCount="5">
-                        <table:columns>
-                          <table:Column id="_IDGenColumn16" width="15rem">
-                            <Label id="_IDGenLabel15" text="Project"/>
-                            <table:template>
-                              <Text id="_IDGenText11" text="{projectName}"/>
-                            </table:template>
-                          </table:Column>
-                          <table:Column id="_IDGenColumn17" width="10rem">
-                            <Label id="_IDGenLabel16" text="Allocated Hours"/>
-                            <table:template>
-                              <Text id="_IDGenText12" text="{allocatedHours}"/>
-                            </table:template>
-                          </table:Column>
-                          <table:Column id="_IDGenColumn18" width="10rem">
-                            <Label id="_IDGenLabel17" text="Booked Hours"/>
-                            <table:template>
-                              <Text id="_IDGenText13" text="{bookedHours}"/>
-                            </table:template>
-                          </table:Column>
-                          <table:Column id="_IDGenColumn19" width="10rem">
-                            <Label id="_IDGenLabel18" text="Remaining Hours"/>
-                            <table:template>
-                              <Text id="_IDGenText14" text="{remainingHours}"/>
-                            </table:template>
-                          </table:Column>
-                          <table:Column id="_IDGenColumn20" width="10rem">
-                            <Label id="_IDGenLabel19" text="Utilization %"/>
-                            <table:template>
-                              <ProgressIndicator id="_IDGenProgressIndicator" 
-                                displayValue="{utilization}%"
-                                percentValue="{utilization}"
-                                state="{= ${utilization} > 90 ? 'Error' : ${utilization} > 75 ? 'Warning' : 'Success' }"/>
-                            </table:template>
-                          </table:Column>
-                        </table:columns>
-                      </table:Table>
-                    </Panel>
+            <!-- Timesheet Table with improved styling -->
+            <Table
+                id="timesheetTable"
+                items="{path: 'timeEntryModel>/timeEntries'}"
+                mode="None"
+                class="sapUiSizeCompact"
+                alternateRowColors="true">
 
-                    <!-- Manager Team Overview -->
-                    <Panel id="_IDGenPanel1" headerText="Manager Team Overview">
-                      <table:Table 
-                        id="managerTeamsTable"
-                        rows="{/managerTeams}"
-                        selectionMode="None"
-                        visibleRowCount="5">
-                        <table:columns>
-                          <table:Column id="_IDGenColumn21" width="12rem">
-                            <Label id="_IDGenLabel20" text="Manager"/>
-                            <table:template>
-                              <Text id="_IDGenText15" text="{managerName}"/>
-                            </table:template>
-                          </table:Column>
-                          <table:Column id="_IDGenColumn22" width="8rem">
-                            <Label id="_IDGenLabel21" text="Team Size"/>
-                            <table:template>
-                              <Text id="_IDGenText16" text="{teamSize}"/>
-                            </table:template>
-                          </table:Column>
-                          <table:Column id="_IDGenColumn23" width="10rem">
-                            <Label id="_IDGenLabel22" text="Total Projects"/>
-                            <table:template>
-                              <Text id="_IDGenText17" text="{totalProjects}"/>
-                            </table:template>
-                          </table:Column>
-                          <table:Column id="_IDGenColumn24" width="12rem">
-                            <Label id="_IDGenLabel23" text="Total Booked Hours"/>
-                            <table:template>
-                              <Text id="_IDGenText18" text="{totalBookedHours}"/>
-                            </table:template>
-                          </table:Column>
-                          <table:Column id="_IDGenColumn25" width="12rem">
-                            <Label id="_IDGenLabel24" text="Avg. Utilization"/>
-                            <table:template>
-                              <ProgressIndicator id="_IDGenProgressIndicator1" 
-                                displayValue="{avgUtilization}%"
-                                percentValue="{avgUtilization}"
-                                state="{= ${avgUtilization} > 90 ? 'Error' : ${avgUtilization} > 75 ? 'Warning' : 'Success' }"/>
-                            </table:template>
-                          </table:Column>
-                        </table:columns>
-                      </table:Table>
-                    </Panel>
-                  </l:content>
-                </l:Grid>
 
-                <!-- Project Engagement Duration -->
-                <Panel id="_IDGenPanel2" headerText="Project Engagement Duration" class="sapUiMediumMarginTop">
-                  <table:Table 
-                    id="projectDurationTable"
-                    rows="{/projectDurations}"
-                    selectionMode="None"
-                    visibleRowCount="5">
-                    <table:columns>
-                      <table:Column id="_IDGenColumn26" width="15rem">
-                        <Label id="_IDGenLabel25" text="Project"/>
-                        <table:template>
-                          <Text id="_IDGenText19" text="{projectName}"/>
-                        </table:template>
-                      </table:Column>
-                      <table:Column id="_IDGenColumn27" width="12rem">
-                        <Label id="_IDGenLabel26" text="Start Date"/>
-                        <table:template>
-                          <Text id="_IDGenText20" text="{path: 'startDate', type: 'sap.ui.model.type.Date', formatOptions: { pattern: 'MMM d, yyyy' }}"/>
-                        </table:template>
-                      </table:Column>
-                      <table:Column id="_IDGenColumn28" width="12rem">
-                        <Label id="_IDGenLabel27" text="End Date"/>
-                        <table:template>
-                          <Text id="_IDGenText21" text="{path: 'endDate', type: 'sap.ui.model.type.Date', formatOptions: { pattern: 'MMM d, yyyy' }}"/>
-                        </table:template>
-                      </table:Column>
-                      <table:Column id="_IDGenColumn29" width="10rem">
-                        <Label id="_IDGenLabel28" text="Duration (Days)"/>
-                        <table:template>
-                          <Text id="_IDGenText22" text="{durationDays}"/>
-                        </table:template>
-                      </table:Column>
-                      <table:Column id="_IDGenColumn30" width="10rem">
-                        <Label id="_IDGenLabel29" text="Days Remaining"/>
-                        <table:template>
-                          <ObjectStatus id="_IDGenObjectStatus2" 
-                            text="{daysRemaining}"
-                            />
-                        </table:template>
-                      </table:Column>
-                      <table:Column id="_IDGenColumn31" width="12rem">
-                        <Label id="_IDGenLabel30" text="Status"/>
-                        <table:template>
-                          <ObjectStatus id="_IDGenObjectStatus3" 
-                            text="{timelineStatus}"
-                            state="{= ${timelineStatus} === 'On Track' ? 'Success' : ${timelineStatus} === 'At Risk' ? 'Warning' : 'Error' }"/>
-                        </table:template>
-                      </table:Column>
-                    </table:columns>
-                  </table:Table>
-                </Panel>
-              </content>
-            </Panel>
-          </IconTabFilter>
-        </items>
-      </IconTabBar>
-    </content>
-  </Page>
+                <columns>
+                    <!-- Project -->
+                    <Column width="10em" class="sapUiSmallMarginEnd">
+                        <Text text="Project" class="sapUiTinyMarginBottom"/>
+                    </Column>
+                    
+                    <!-- Task -->
+                    <Column width="10em" class="sapUiSmallMarginEnd">
+                        <Text text="Task" class="sapUiTinyMarginBottom"/>
+                    </Column>
+                    
+                    <!-- Task Details -->
+                    <Column width="7em" hAlign="Center" class="sapUiSmallMarginEnd">
+                        <Text text="Task Details" class="sapUiTinyMarginBottom"/>
+                    </Column>
+                    
+                    <!-- Monday -->
+                    <Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+        <Label text="Mon" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/mondayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusMon" 
+            text="{timeEntryModel>/dailyTotals/monday}" 
+            class="sapUiSmallMarginTop"
+            state="{= ${timeEntryModel>/dailyTotals/monday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+                 <!-- Tuesday -->
+<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+        <Label text="Tue" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/tuesdayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusTue" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/tuesday}" 
+            state="{= ${timeEntryModel>/dailyTotals/tuesday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+<!-- Wednesday -->
+<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+        <Label text="Wed" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/wednesdayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusWed" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/wednesday}" 
+            state="{= ${timeEntryModel>/dailyTotals/wednesday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+<!-- Thursday -->
+<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+        <Label text="Thu" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/thursdayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusThu" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/thursday}" 
+            state="{= ${timeEntryModel>/dailyTotals/thursday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+<!-- Friday -->
+<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+        <Label text="Fri" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/fridayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusFri" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/friday}" 
+            state="{= ${timeEntryModel>/dailyTotals/friday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+<!-- Saturday -->
+<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+        <Label text="Sat" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/saturdayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusSat" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/saturday}" 
+            state="{= ${timeEntryModel>/dailyTotals/saturday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+        <Label text="Sun" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/sundayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusSun" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/sunday}" 
+            state="{= ${timeEntryModel>/dailyTotals/sunday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+                </columns>
+
+                <items>
+    <ColumnListItem class="sapUiSmallMarginTopBottom">
+        <cells>
+
+            <!-- Project Name -->
+            <VBox class="sapUiSmallMarginBegin">
+                <Text text="{timeEntryModel>projectName}" class="sapUiSmallMarginTop"/>
+            </VBox>
+
+            <!-- Task Name -->
+            <VBox class="sapUiSmallMarginBegin">
+                <Text text="{timeEntryModel>workType}" class="sapUiSmallMarginTop"/>
+            </VBox>
+
+            <!-- Task detail button -->
+            <HBox alignItems="Center" justifyContent="Center">
+                <Button icon="sap-icon://list" type="Transparent"
+                        press="onTaskDetailPress" tooltip="View task details"/>
+            </HBox>
+
+            <!-- Monday -->
+            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+                <Input value="{timeEntryModel>mondayHours}" editable="false" width="55px" textAlign="Center"/>
+                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
+                    <customData><core:CustomData key="day" value="monday" writeToDom="true"/></customData>
+                </Button>
+            </HBox>
+
+            <!-- Tuesday -->
+            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+                <Input value="{timeEntryModel>tuesdayHours}" editable="false" width="55px" textAlign="Center"/>
+                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
+                    <customData><core:CustomData key="day" value="tuesday" writeToDom="true"/></customData>
+                </Button>
+            </HBox>
+
+            <!-- Wednesday -->
+            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+                <Input value="{timeEntryModel>wednesdayHours}" editable="false" width="55px" textAlign="Center"/>
+                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
+                    <customData><core:CustomData key="day" value="wednesday" writeToDom="true"/></customData>
+                </Button>
+            </HBox>
+
+            <!-- Thursday -->
+            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+                <Input value="{timeEntryModel>thursdayHours}" editable="false" width="55px" textAlign="Center"/>
+                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
+                    <customData><core:CustomData key="day" value="thursday" writeToDom="true"/></customData>
+                </Button>
+            </HBox>
+
+            <!-- Friday -->
+            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+                <Input value="{timeEntryModel>fridayHours}" editable="false" width="55px" textAlign="Center"/>
+                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
+                    <customData><core:CustomData key="day" value="friday" writeToDom="true"/></customData>
+                </Button>
+            </HBox>
+
+            <!-- Saturday -->
+            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+                <Input value="{timeEntryModel>saturdayHours}" editable="false" width="55px" textAlign="Center"/>
+                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
+                    <customData><core:CustomData key="day" value="saturday" writeToDom="true"/></customData>
+                </Button>
+            </HBox>
+
+            <!-- Sunday -->
+            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+                <Input value="{timeEntryModel>sundayHours}" editable="false" width="55px" textAlign="Center"/>
+                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
+                    <customData><core:CustomData key="day" value="sunday" writeToDom="true"/></customData>
+                </Button>
+            </HBox>
+
+        </cells>
+    </ColumnListItem>
+</items>
+
+            </Table>
+
+        </VBox>
+    </Panel>
+</IconTabFilter>
+               <IconTabFilter id="_IDGenIconTabFilter" text="Projects" key="projects" icon="sap-icon://background" iconColor="Positive">
+    <Panel id="_IDGenPanel" headerText="Assigned Projects" expandable="true" expanded="true">
+        <List id="projectsList" mode="SingleSelectMaster" items="{
+                path: 'assignedProjects>/assignedProjects'
+            }" selectionChange="onProjectSelect">
+            <StandardListItem
+                title="{assignedProjects>projectName}"      
+                description="{assignedProjects>managerName}" 
+                info="{assignedProjects>status}"
+                infoState="{= ${assignedProjects>status} === 'Approved' ? 'Success' : ${assignedProjects>status} === 'On Hold' ? 'Warning' : 'Error' }"
+                type="Active"/>
+        </List>
+    </Panel>
+</IconTabFilter>
+                    <IconTabFilter id="_IDGenIconTabFilter3" text="Reports" key="reports" icon="sap-icon://bar-chart" iconColor="Negative">
+                        <Panel id="bookedHoursPanel" headerText="Booked Hours Overview" expandable="true" expanded="true">
+                           <Table id="bookedHoursTable" items="{bookedHoursModel>/employeeProjectHours}">
+    <columns>
+        <Column><Text text="Project"/></Column>
+        <Column><Text text="Allocated Hours"/></Column>
+        <Column><Text text="Booked Hours"/></Column>
+        <Column><Text text="Remaining Hours"/></Column>
+        <Column><Text text="Utilization"/></Column>
+    </columns>
+    <items>
+       <ColumnListItem>
+    <cells>
+        <Text text="{bookedHoursModel>Project}"/>
+        <Text text="{bookedHoursModel>AllocatedHours}"/>
+        <Text text="{bookedHoursModel>BookedHours}"/>
+        <Text text="{bookedHoursModel>RemainingHours}"/>
+        <Text text="{bookedHoursModel>Utilization}"/>
+    </cells>
+</ColumnListItem>
+
+    </items>
+</Table>
+                        </Panel>
+                        <Panel id="durationPanel" headerText="Project Engagement Duration" expandable="true" expanded="true">
+                           <Table id="durationTable" items="{durationModel>/employeeProjectDurations}">
+    <columns>
+        <Column><Text text="Project"/></Column>
+        <Column><Text text="Start Date"/></Column>
+        <Column><Text text="End Date"/></Column>
+        <Column><Text text="Duration (Days)"/></Column>
+        <Column><Text text="Days Remaining"/></Column>
+        <Column><Text text="Timeline Status"/></Column>
+    </columns>
+    <items>
+       <ColumnListItem>
+    <cells>
+        <Text text="{durationModel>Project}"/>
+        <Text text="{path: 'durationModel>StartDate', formatter: '.formatDateDisplay'}"/>
+        <Text text="{path: 'durationModel>EndDate', formatter: '.formatDateDisplay'}"/>
+        <Text text="{durationModel>Duration}"/>
+        <Text text="{durationModel>DaysRemaining}"/>
+        <ObjectStatus 
+            text="{durationModel>TimelineStatus}"
+            state="{= ${durationModel>TimelineStatus} === 'Completed' ? 'Success' :
+                     ${durationModel>TimelineStatus} === 'On Track' ? 'Success' :
+                     ${durationModel>TimelineStatus} === 'At Risk' ? 'Warning' :
+                     ${durationModel>TimelineStatus} === 'Delayed' ? 'Error' : 'None' }"/>
+    </cells>
+</ColumnListItem>
+
+    </items>
+</Table>
+                        </Panel>
+                    </IconTabFilter>
+                </items>
+            </IconTabBar>
+        </content>
+        <footer>
+            <!-- <OverflowToolbar id="_IDGenOverflowToolbar">
+                <ToolbarSpacer id="_IDGenToolbarSpacer4"/>
+                <Button id="_IDGenButton17" text="Save Draft" type="Emphasized" press="onSaveDraft"/>
+                <Button id="_IDGenButton18" text="Submit for Approval" type="Accept" press="onSubmitApproval"/>
+            </OverflowToolbar> -->
+        </footer>
+    </Page>
 </mvc:View>

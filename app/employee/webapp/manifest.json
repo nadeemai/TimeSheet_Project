@@ -1,7 +1,7 @@
 {
   "_version": "1.76.0",
   "sap.app": {
-    "id": "employee.com.employee",
+    "id": "employee",
     "type": "application",
     "i18n": "i18n/i18n.properties",
     "applicationVersion": {
@@ -12,12 +12,12 @@
     "resources": "resources.json",
     "sourceTemplate": {
       "id": "@sap/generator-fiori:basic",
-      "version": "1.19.3",
-      "toolsId": "3fa3f83e-fa26-4ff6-9c1b-bf8e0afd88bf"
+      "version": "1.19.5",
+      "toolsId": "c27cd793-b698-444d-a1df-1ad5d4a8a0d5"
     },
     "dataSources": {
       "mainService": {
-        "uri": "/odata/v4/admin/",
+        "uri": "/odata/v4/employee/",
         "type": "OData",
         "settings": {
           "annotations": [],
@@ -25,7 +25,7 @@
         }
       },
       "timesheetServiceV2": {
-        "uri": "/odata/v2/admin/",
+        "uri": "/odata/v2/employee/",
         "type": "OData",
         "settings": {
           "odataVersion": "2.0",
@@ -51,7 +51,7 @@
     }
   },
   "sap.ui5": {
-    "flexEnabled": true,
+    "flexEnabled": false,
     "dependencies": {
       "minUI5Version": "1.142.0",
       "libs": {
@@ -67,7 +67,7 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "employee.com.employee.i18n.i18n"
+          "bundleName": "employee.i18n.i18n"
         }
       },
       "": {
@@ -79,7 +79,7 @@
           "earlyRequests": true
         }
       },
-       "timesheetServiceV2": {
+      "timesheetServiceV2": {
         "dataSource": "timesheetServiceV2",
         "type": "sap.ui.model.odata.v2.ODataModel",
         "settings": {
@@ -105,28 +105,27 @@
         "transition": "slide",
         "type": "View",
         "viewType": "XML",
-        "path": "employee.com.employee.view",
+        "path": "employee.view",
         "async": true,
-        "viewPath": "employee.com.employee.view"
+        "viewPath": "employee.view"
       },
       "routes": [
-        {
-          "name": "RouteEmployee",
-          "pattern": ":?query:",
-          "target": [
-            "TargetEmployee"
-          ]
-        }
-      ],
-      "targets": {
-        "TargetEmployee": {
-          "id": "Employee",
-          "name": "Employee"
-        }
-      }
+    {
+      "pattern": "",
+      "name": "employee",
+      "target": "employee"
+    }
+  ],
+  "targets": {
+    "employee": {
+      "viewName": "Employee",
+      "viewId": "employee",
+      "viewLevel": 1
+    }
+  }
     },
     "rootView": {
-      "viewName": "employee.com.employee.view.App",
+      "viewName": "employee.view.App",
       "type": "XML",
       "id": "App",
       "async": true

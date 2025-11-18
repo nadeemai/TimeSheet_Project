@@ -1,12 +1,4 @@
 
-###############################################
-# MANAGER SERVICE - COMPLETE API TEST SUITE
-###############################################
-
-### ========================================
-### MANAGER PROFILE
-### ========================================
-
 ### 1. Get My Manager Profile
 GET http://localhost:4004/odata/v4/manager/MyManagerProfile
 Authorization: Basic jayant.kumar:initial
