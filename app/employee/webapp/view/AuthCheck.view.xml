@@ -1,0 +1,11 @@
+<mvc:View
+    controllerName="employee.controller.AuthCheck"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+
+    <!-- Hidden root -->
+    <Panel visible="false" id="hiddenBootstrap">
+        <!-- nothing here, UI should not show -->
+    </Panel>
+
+</mvc:View>

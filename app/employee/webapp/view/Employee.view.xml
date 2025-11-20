@@ -25,7 +25,7 @@
                 <Button id="_IDGenButton8" icon="sap-icon://navigation-right-arrow" press="onNextWeekTS"/>
                 <Button id="_IDGenButton11" text="Today" press="onCurrentWeekTS"/>
             </Toolbar>
-            <IconTabBar id="iconTabBar" class="sapUiResponsiveContentPadding" select="onTabSelect" expanded="true">
+            <IconTabBar id="iconTabBar" select="onTabSelect" expanded="true">
                 <items>
          <IconTabFilter id="timesheetTab" text="Timesheet" key="timesheet" icon="sap-icon://timesheet" iconColor="Critical">
     <Panel headerText="Daily Time Entry" expandable="true" expanded="true">
@@ -36,7 +36,7 @@
                 <Title text="Log Your Work Hours" level="H3"/>
                 <HBox class="sapUiTinyMarginEnd">
                     <Button text="Previous Week" press="onPreviousWeekTS" type="Default" class="sapUiTinyMarginEnd"/>
-                    <Button text="Current Week" press="onCurrentWeekTS" type="Emphasized" class="sapUiTinyMarginEnd"/>
+                    <Button text="Current Week" press="onCurrentWeekTS" type="Default" class="sapUiTinyMarginEnd"/>
                     <Button text="Next Week" press="onNextWeekTS" type="Default" class="sapUiTinyMarginEnd"/>
                     <DatePicker id="datePicker" value="{timeEntryModel>/selectedDate}" change="onDatePickerChange" placeholder="Select any date" width="150px" class="sapUiTinyMarginEnd"/>
                     <Button icon="sap-icon://add" text="Record Time" press="onAddEntry" type="Emphasized"/>
@@ -164,9 +164,10 @@
         <cells>
 
             <!-- Project Name -->
-            <VBox class="sapUiSmallMarginBegin">
-                <Text text="{timeEntryModel>projectName}" class="sapUiSmallMarginTop"/>
-            </VBox>
+           <VBox class="sapUiSmallMarginBegin">
+    <Text text="{timeEntryModel>projectName}" class="sapUiSmallMarginTop"/>
+</VBox>
+
 
             <!-- Task Name -->
             <VBox class="sapUiSmallMarginBegin">
@@ -180,60 +181,112 @@
             </HBox>
 
             <!-- Monday -->
-            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
-                <Input value="{timeEntryModel>mondayHours}" editable="false" width="55px" textAlign="Center"/>
-                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
-                    <customData><core:CustomData key="day" value="monday" writeToDom="true"/></customData>
-                </Button>
-            </HBox>
+            <!-- Monday -->
+<!-- Monday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>mondayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="0" writeToDom="true"/>
+            <core:CustomData key="day" value="monday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
 
-            <!-- Tuesday -->
-            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
-                <Input value="{timeEntryModel>tuesdayHours}" editable="false" width="55px" textAlign="Center"/>
-                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
-                    <customData><core:CustomData key="day" value="tuesday" writeToDom="true"/></customData>
-                </Button>
-            </HBox>
+<!-- Tuesday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>tuesdayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="1" writeToDom="true"/>
+            <core:CustomData key="day" value="tuesday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
 
-            <!-- Wednesday -->
-            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
-                <Input value="{timeEntryModel>wednesdayHours}" editable="false" width="55px" textAlign="Center"/>
-                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
-                    <customData><core:CustomData key="day" value="wednesday" writeToDom="true"/></customData>
-                </Button>
-            </HBox>
+<!-- Wednesday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>wednesdayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="2" writeToDom="true"/>
+            <core:CustomData key="day" value="wednesday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
 
-            <!-- Thursday -->
-            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
-                <Input value="{timeEntryModel>thursdayHours}" editable="false" width="55px" textAlign="Center"/>
-                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
-                    <customData><core:CustomData key="day" value="thursday" writeToDom="true"/></customData>
-                </Button>
-            </HBox>
+<!-- Thursday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>thursdayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="3" writeToDom="true"/>
+            <core:CustomData key="day" value="thursday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
 
-            <!-- Friday -->
-            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
-                <Input value="{timeEntryModel>fridayHours}" editable="false" width="55px" textAlign="Center"/>
-                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
-                    <customData><core:CustomData key="day" value="friday" writeToDom="true"/></customData>
-                </Button>
-            </HBox>
+<!-- Friday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>fridayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="4" writeToDom="true"/>
+            <core:CustomData key="day" value="friday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
 
-            <!-- Saturday -->
-            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
-                <Input value="{timeEntryModel>saturdayHours}" editable="false" width="55px" textAlign="Center"/>
-                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
-                    <customData><core:CustomData key="day" value="saturday" writeToDom="true"/></customData>
-                </Button>
-            </HBox>
+<!-- Saturday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>saturdayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="5" writeToDom="true"/>
+            <core:CustomData key="day" value="saturday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
 
-            <!-- Sunday -->
-            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
-                <Input value="{timeEntryModel>sundayHours}" editable="false" width="55px" textAlign="Center"/>
-                <Button text="⋮" press="onDayOverflowPress" type="Transparent">
-                    <customData><core:CustomData key="day" value="sunday" writeToDom="true"/></customData>
-                </Button>
-            </HBox>
+<!-- Sunday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>sundayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="6" writeToDom="true"/>
+            <core:CustomData key="day" value="sunday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
+
 
         </cells>
     </ColumnListItem>

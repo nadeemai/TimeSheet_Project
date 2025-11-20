@@ -27,8 +27,7 @@ entity MyProfile as select from timesheet.Employees {
   managerID.email as managerEmail : String
 } where ID = $user.id;
 
-  // In service.cds - EmployeeService section
-// Replace the existing MyProjects entity with this:
+
   @readonly
   @cds.redirection.target
   entity MyProjects as select from timesheet.Projects {
@@ -68,7 +67,6 @@ entity MyProfile as select from timesheet.Employees {
     name : String @title: 'Task Name';
     description : String @title: 'Description';
     isProjectTask : Boolean @title: 'For Project Work';
-    icon : String @title: 'Icon';
   };
 
 //  My Timesheets
@@ -313,7 +311,7 @@ service ManagerService {
     status
   } where projectOwner.ID = $user.id;
 
-  // ✅ NEW: Get only employees who can be managers (for dropdown)
+  //Get only employees who can be managers (for dropdown)
   @readonly
   entity AvailableManagers as select from timesheet.Employees {
     *,

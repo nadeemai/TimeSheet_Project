@@ -32,15 +32,30 @@
 
 .tsHoursRed {
     color: orange; /* iMessage-Red vibes */
-    font-weight: bold;
+    
 }
 
 .tsHoursOrange {
     color: #ff3b30; /* Warm orange */
-    font-weight: bold;
+    
 }
 
 .tsHoursGreen {
     color: #34c759; /* iOS Success Green */
-    font-weight: bold;
+
 }
+.itemButton{
+    cursor: text !important;
+}
+
+/* .sapMBtnContent{
+    color: black;
+} */
+.sapUiMediumMarginBottom{
+    margin-bottom: 0px !important;
+}
+
+.sapMBtnInner{
+    color: black !important;
+}
+

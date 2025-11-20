@@ -47,7 +47,7 @@ sap.ui.define([
       });
     },
 
-    // Load Employees from OData service
+    // Load Employees from OData service - FIXED: Enhanced logging to debug role field
     _loadEmployees: function () {
       var oModel = this.getOwnerComponent().getModel("adminService");
       var that = this;
@@ -55,7 +55,16 @@ sap.ui.define([
       oModel.read("/Employees", {
         success: function (oData) {
           var aEmployees = oData.value || oData.results || [];
-          console.log("Raw Employees Data:", aEmployees);
+          console.log("Raw Employees Data from OData:", aEmployees);
+
+          // Log each employee's role data to debug
+          aEmployees.forEach(function(emp, index) {
+            console.log("Employee " + index + " - ID: " + (emp.employeeID || emp.EmployeeID || emp.ID) + 
+                       ", Role fields - roleName: '" + emp.roleName + 
+                       "', Role: '" + emp.Role + 
+                       "', role: '" + emp.role + "'" +
+                       ", accessLevel: '" + emp.accessLevel + "'");
+          });
 
           var aFormattedUsers = that._formatEmployeeData(aEmployees);
 
@@ -63,6 +72,8 @@ sap.ui.define([
           oViewModel.setProperty("/users", aFormattedUsers);
           oViewModel.refresh(true); // Force refresh to update table
           that._refreshAnalyticsData();
+          
+          MessageToast.show("Employees loaded successfully: " + aFormattedUsers.length + " users");
         },
         error: function (oError) {
           console.error("Error loading employees:", oError);
@@ -98,21 +109,63 @@ sap.ui.define([
       });
     },
 
-    // Format employee data from OData to UI model - FIXED to properly handle manager names
+    // Format employee data from OData to UI model - FIXED: Comprehensive role field mapping with priority
     _formatEmployeeData: function (aEmployees) {
-      // First pass: create user objects without manager names
+      // First pass: create user objects with comprehensive role mapping
       var aFormattedUsers = aEmployees.map(function (employee) {
-        return {
-          userId: employee.employeeID || employee.EmployeeID || employee.ID,// Initial value from backend
-          firstName: employee.firstName || employee.FirstName || "",// Initial value from backend
-          lastName: employee.lastName || employee.LastName || "",// Initial value from backend
-          email: employee.email || employee.Email || "",// Initial value from backend
-          role: employee.roleName || employee.Role || "Employee",// Initial value from backend
-          managerId: employee.managerID_ID || employee.ManagerID || "",// Initial value from backend
-          managerName: employee.managerName || employee.ManagerName || "", // Initial value from backend
-          status: employee.isActive ? "Active" : "Inactive",// Initial value from backend
-          accessLevel: employee.accessLevel || "Employee"// Initial value from backend
+        // FIXED: Comprehensive role mapping from all possible OData field names with priority
+        var role = "";
+        
+        // Priority 1: roleName (most common field for role)
+        if (employee.roleName && employee.roleName.trim() !== "") {
+          role = employee.roleName;
+        } 
+        // Priority 2: Role (capitalized field)
+        else if (employee.Role && employee.Role.trim() !== "") {
+          role = employee.Role;
+        } 
+        // Priority 3: role (lowercase field)
+        else if (employee.role && employee.role.trim() !== "") {
+          role = employee.role;
+        }
+        // Priority 4: accessLevel (fallback)
+        else if (employee.accessLevel && employee.accessLevel.trim() !== "") {
+          role = employee.accessLevel;
+        }
+        // Default value
+        else {
+          role = "Employee";
+        }
+
+        // Normalize role values to match UI expectations
+        if (role.toLowerCase().includes("admin")) {
+          role = "Admin";
+        } else if (role.toLowerCase().includes("manager")) {
+          role = "Manager";
+        } else {
+          role = "Employee";
+        }
+
+        console.log("Formatting employee - ID: " + (employee.employeeID || employee.EmployeeID || employee.ID) + 
+                   ", Final normalized role: '" + role + "'" +
+                   " [Source: roleName='" + employee.roleName + 
+                   "', Role='" + employee.Role + 
+                   "', role='" + employee.role + 
+                   "', accessLevel='" + employee.accessLevel + "']");
+
+        var formattedUser = {
+          userId: employee.employeeID || employee.EmployeeID || employee.ID,
+          firstName: employee.firstName || employee.FirstName || "",
+          lastName: employee.lastName || employee.LastName || "",
+          email: employee.email || employee.Email || "",
+          role: role, // FIXED: Use the properly mapped and normalized role
+          managerId: employee.managerID_ID || employee.ManagerID || "",
+          managerName: employee.managerName || employee.ManagerName || "",
+          status: employee.isActive ? "Active" : "Inactive"
         };
+
+        console.log("Formatted user:", formattedUser);
+        return formattedUser;
       });
 
       // Second pass: set manager names by looking up in the same list
@@ -146,8 +199,7 @@ sap.ui.define([
         var budget = parseFloat(project.budget) || 0;
         var allocatedHours = parseFloat(project.allocatedHours) || 0;
 
-
-        // Get manager name - FIXED LOGIC
+        // Get manager name
         var managerName = "Unknown Manager";
         var managerId = project.projectOwner_ID || "";
         
@@ -167,7 +219,6 @@ sap.ui.define([
           managerName: managerName,
           budget: budget,
           allocatedHours: allocatedHours,
-          
           startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : "2025-01-01",
           endDate: project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : "2025-12-31",
           status: project.status || "Active",
@@ -203,7 +254,7 @@ sap.ui.define([
         oModel.refresh(true); // Force refresh to update table
 
         // Update in OData service
-        this._updateEmployeeInOData(oUser);
+        this._updateEmployeeInOData(oUser, false);
       }
     },
 
@@ -263,17 +314,6 @@ sap.ui.define([
                   forceSelection: false
                 }),
 
-                new Label({ text: "Access Level" }),
-                new Select({
-                  selectedKey: "{/userData/accessLevel}",
-                  items: [
-                    new Item({ key: "Employee", text: "Employee" }),
-                    new Item({ key: "Manager", text: "Manager" }),
-                    new Item({ key: "Admin", text: "Admin" })
-                  ],
-                  required: true
-                }),
-
                 new Label({ text: "Status" }),
                 new Select({
                   selectedKey: "{/userData/status}",
@@ -310,7 +350,6 @@ sap.ui.define([
           role: "Employee",
           managerId: "",
           managerName: "",
-          accessLevel: "Employee",
           status: "Active"
         },
         managers: this._getManagersList()
@@ -326,6 +365,7 @@ sap.ui.define([
       return aUsers.filter(user => user.role === "Manager" && user.status === "Active");
     },
 
+    // FIXED: Update local model immediately with correct role and manager name
     onSaveUser: function () {
       var oDialog = this._oUserDialog;
       var oViewModel = oDialog.getModel();
@@ -333,7 +373,7 @@ sap.ui.define([
       var sMode = oViewModel.getProperty("/mode");
 
       // Validate required fields
-      if (!oUserData.firstName || !oUserData.lastName || !oUserData.email || !oUserData.role || !oUserData.accessLevel) {
+      if (!oUserData.firstName || !oUserData.lastName || !oUserData.email || !oUserData.role) {
         MessageToast.show("Please fill in all required fields");
         return;
       }
@@ -357,104 +397,190 @@ sap.ui.define([
         return;
       }
 
+      // FIXED: Update local model immediately with correct role and manager name
+      if (sMode === "edit") {
+        var aUsers = oModel.getProperty("/users");
+        var iIndex = aUsers.findIndex(user => user.userId === oUserData.userId);
+        if (iIndex !== -1) {
+          // Update the user in the local model with ALL fields including role
+          aUsers[iIndex] = {
+            ...aUsers[iIndex],
+            firstName: oUserData.firstName,
+            lastName: oUserData.lastName,
+            email: oUserData.email,
+            role: oUserData.role, // FIXED: This was missing - now role updates immediately
+            managerId: oUserData.managerId,
+            status: oUserData.status
+          };
+          
+          // FIXED: Update manager name if managerId changed or is set
+          if (oUserData.managerId) {
+            var manager = aUsers.find(user => user.userId === oUserData.managerId);
+            if (manager) {
+              aUsers[iIndex].managerName = manager.firstName + " " + manager.lastName;
+            } else {
+              aUsers[iIndex].managerName = "Unknown Manager";
+            }
+          } else {
+            aUsers[iIndex].managerName = ""; // Clear manager name if no manager selected
+          }
+          
+          oModel.setProperty("/users", aUsers);
+          oModel.refresh(true); // Force refresh to update table
+          MessageToast.show("User updated successfully in UI");
+        }
+      } else if (sMode === "create") {
+        // For new users, add to local model temporarily
+        var newUserId = "EMP" + Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
+        var newUser = {
+          userId: newUserId,
+          firstName: oUserData.firstName,
+          lastName: oUserData.lastName,
+          email: oUserData.email,
+          role: oUserData.role,
+          managerId: oUserData.managerId,
+          managerName: "",
+          status: oUserData.status
+        };
+
+        // Set manager name for new user
+        if (oUserData.managerId) {
+          var manager = aUsers.find(user => user.userId === oUserData.managerId);
+          if (manager) {
+            newUser.managerName = manager.firstName + " " + manager.lastName;
+          } else {
+            newUser.managerName = "Unknown Manager";
+          }
+        }
+
+        aUsers.push(newUser);
+        oModel.setProperty("/users", aUsers);
+        oModel.refresh(true);
+        MessageToast.show("User added successfully in UI");
+      }
+
+      // Then update in OData service WITHOUT automatic refresh
       if (sMode === "create") {
-        this._createEmployeeInOData(oUserData);
+        this._createEmployeeInOData(oUserData, false); // Don't refresh after create
       } else {
-        this._updateEmployeeInOData(oUserData);
+        this._updateEmployeeInOData(oUserData, false); // Don't refresh after update
       }
 
       oDialog.close();
     },
 
-    // Create employee in OData service
-    _createEmployeeInOData: function (oUserData) {
+    // Create employee in OData service - FIXED: Added bRefresh parameter
+    _createEmployeeInOData: function (oUserData, bRefresh = true) {
       var oModel = this.getOwnerComponent().getModel("adminService");
       var that = this;
-
-      // Create a valid Employee UUID
-      var sEmployeeUUID = this._generateUUID();
-      // Create a display ID (like EMP123456)
-      // var sEmployeeID = "EMP" + Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
 
       var oEmployeeData = {
         firstName: oUserData.firstName,
         lastName: oUserData.lastName,
         email: oUserData.email,
-        roleName: oUserData.role,
+        roleName: oUserData.role, // FIXED: Ensure role is saved as roleName
         managerID_ID: oUserData.managerId || null,
         isActive: oUserData.status === "Active"
       };
+
+      console.log("Creating employee with payload:", oEmployeeData);
 
       oModel.create("/Employees", oEmployeeData, {
         success: function (oData) {
-          MessageToast.show("User created successfully");
-          that._loadEmployees(); // Reload employees to refresh table and show manager name
+          MessageToast.show("User created successfully in backend");
+          // Only refresh if explicitly requested
+          if (bRefresh) {
+            that._loadEmployees();
+          }
         },
         error: function (oError) {
           console.error("Error creating employee:", oError);
-          MessageToast.show("Error creating user");
+          MessageToast.show("Error creating user in backend");
+          // Only refresh if explicitly requested
+          if (bRefresh) {
+            that._loadEmployees();
+          }
         }
       });
     },
 
-    // Update employee in OData service
-   _updateEmployeeInOData: function (oUserData) {
-  var oModel = this.getOwnerComponent().getModel("adminService");
-  var that = this;
+    // FIXED: Update employee in OData service with comprehensive field mapping and optional refresh
+    _updateEmployeeInOData: function (oUserData, bRefresh = true) {
+      var oModel = this.getOwnerComponent().getModel("adminService");
+      var that = this;
 
-  // Read Employees & find backend ID using employeeId
-  oModel.read("/Employees", {
-    success: function (oData) {
+      // Read Employees & find backend ID using employeeId
+      oModel.read("/Employees", {
+        success: function (oData) {
+          if (!oData.results || oData.results.length === 0) {
+            MessageToast.show("No employees found in backend.");
+            return;
+          }
 
-      if (!oData.results || oData.results.length === 0) {
-        MessageToast.show("No employees found in backend.");
-        return;
-      }
+          // Compare with employeeId (not backend ID)
+          var oMatch = oData.results.find(function (emp) {
+            return emp.employeeID === oUserData.userId;
+          });
 
-      // Compare with employeeId (not backend ID)
-      var oMatch = oData.results.find(function (emp) {
-        return emp.employeeID === oUserData.userId; // <-- matching logic
-      });
+          if (!oMatch) {
+            MessageToast.show("Employee not found. Cannot update.");
+            console.warn("No backend match for employeeId:", oUserData.userId);
+            // Only refresh if explicitly requested
+            if (bRefresh) {
+              that._loadEmployees();
+            }
+            return;
+          }
 
-      if (!oMatch) {
-        MessageToast.show("Employee not found. Cannot update.");
-        console.warn("No backend match for employeeId:", oUserData.employeeId);
-        return;
-      }
+          var backendId = oMatch.ID; // backend CUID
+          console.log("Backend Employee ID → ", backendId);
+          console.log("Original backend data:", oMatch);
 
-      var backendId = oMatch.ID; // backend CUID
-      console.log("Backend Employee ID → ", backendId);
+          // FIXED: Comprehensive payload for update - INCLUDING ALL FIELDS
+          var oEmployeePayload = {
+            firstName: oUserData.firstName,
+            lastName: oUserData.lastName,
+            email: oUserData.email,
+            roleName: oUserData.role, // FIXED: Ensure role is saved as roleName in backend
+            managerID_ID: oUserData.managerId || null,
+            isActive: oUserData.status === "Active"
+          };
 
-      // Payload for update
-      var oEmployeePayload = {
-        firstName: oUserData.firstName,
-        lastName: oUserData.lastName,
-        email: oUserData.email,
-        roleName: oUserData.role,
-        managerID_ID: oUserData.managerId || null,
-        isActive: oUserData.status === "Active"
-      };
+          console.log("Updating employee with payload:", oEmployeePayload);
 
-      var sPath = "/Employees('" + backendId + "')";
+          var sPath = "/Employees('" + backendId + "')";
 
-      oModel.update(sPath, oEmployeePayload, {
-        success: function () {
-          MessageToast.show("User updated successfully");
-          that._loadEmployees();
+          oModel.update(sPath, oEmployeePayload, {
+            success: function () {
+              MessageToast.show("User updated successfully in backend");
+              // Only refresh if explicitly requested
+              if (bRefresh) {
+                that._loadEmployees();
+              }
+            },
+            error: function (oError) {
+              console.error("Error updating employee:", oError);
+              MessageToast.show("Error updating user in backend.");
+              
+              // Only refresh if explicitly requested
+              if (bRefresh) {
+                that._loadEmployees();
+              }
+            }
+          });
         },
+
         error: function (oError) {
-          console.error("Error updating employee:", oError);
-          MessageToast.show("Error updating user");
+          console.error("Failed reading Employees:", oError);
+          MessageToast.show("Error loading employee data");
+          
+          // Only refresh if explicitly requested
+          if (bRefresh) {
+            that._loadEmployees();
+          }
         }
       });
     },
-
-    error: function (oError) {
-      console.error("Failed reading Employees:", oError);
-      MessageToast.show("Error loading employee data");
-    }
-  });
-},
 
     onCancelUser: function () {
       if (this._oUserDialog) {
@@ -538,7 +664,7 @@ sap.ui.define([
 
                 new Label({ text: "Used Hours" }),
                 new Input({
-                  // value: "{/projectData/usedHours}",
+                  value: "{/projectData/usedHours}",
                   type: "Number",
                   valueStateText: "Used Hours must be a number"
                 }),
@@ -600,7 +726,7 @@ sap.ui.define([
           managerId: "",
           budget: 0,
           allocatedHours: 0,
-          // usedHours: 0,
+          usedHours: 0,
           startDate: new Date().toISOString().split('T')[0],
           endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
           client: "",
@@ -613,6 +739,7 @@ sap.ui.define([
       this._oProjectDialog.open();
     },
 
+    // FIXED: Save project with immediate UI update for manager name
     onSaveProject: function () {
       var oDialog = this._oProjectDialog;
       var oViewModel = oDialog.getModel();
@@ -628,7 +755,7 @@ sap.ui.define([
       // Parse numeric values
       oProjectData.budget = parseFloat(oProjectData.budget) || 0;
       oProjectData.allocatedHours = parseFloat(oProjectData.allocatedHours) || 0;
-      // oProjectData.usedHours = parseFloat(oProjectData.usedHours) || 0;
+      oProjectData.usedHours = parseFloat(oProjectData.usedHours) || 0;
 
       // Validate dates
       var startDate = new Date(oProjectData.startDate);
@@ -639,34 +766,96 @@ sap.ui.define([
       }
 
       // Validate hours
-      // if (oProjectData.usedHours < 0 || oProjectData.allocatedHours < 0) {
-      //   MessageToast.show("Hours cannot be negative");
-      //   return;
-      // }
+      if (oProjectData.usedHours < 0 || oProjectData.allocatedHours < 0) {
+        MessageToast.show("Hours cannot be negative");
+        return;
+      }
 
       if (oProjectData.usedHours > oProjectData.allocatedHours) {
         MessageToast.show("Used hours cannot exceed allocated hours");
         return;
       }
 
+      // FIXED: Update local model immediately with manager name
+      if (sMode === "edit") {
+        var oModel = this.getView().getModel();
+        var aProjects = oModel.getProperty("/projects");
+        var iIndex = aProjects.findIndex(project => project.projectId === oProjectData.projectId);
+        
+        if (iIndex !== -1) {
+          // Get manager name from managers list
+          var managers = this._getManagersList();
+          var selectedManager = managers.find(manager => manager.userId === oProjectData.managerId);
+          var managerName = selectedManager ? selectedManager.firstName + " " + selectedManager.lastName : "Unknown Manager";
+          
+          // Update project in local model
+          aProjects[iIndex] = {
+            ...aProjects[iIndex],
+            name: oProjectData.name,
+            description: oProjectData.description,
+            managerId: oProjectData.managerId,
+            managerName: managerName, // FIXED: Set the manager name immediately
+            budget: oProjectData.budget,
+            allocatedHours: oProjectData.allocatedHours,
+            usedHours: oProjectData.usedHours,
+            startDate: oProjectData.startDate,
+            endDate: oProjectData.endDate,
+            client: oProjectData.client,
+            status: oProjectData.status
+          };
+          
+          oModel.setProperty("/projects", aProjects);
+          oModel.refresh(true);
+          MessageToast.show("Project updated successfully in UI");
+        }
+      } else if (sMode === "create") {
+        // For new projects, add to local model temporarily
+        var oModel = this.getView().getModel();
+        var aProjects = oModel.getProperty("/projects");
+        
+        // Get manager name from managers list
+        var managers = this._getManagersList();
+        var selectedManager = managers.find(manager => manager.userId === oProjectData.managerId);
+        var managerName = selectedManager ? selectedManager.firstName + " " + selectedManager.lastName : "Unknown Manager";
+        
+        var newProjectId = "PRJ" + Math.floor(Math.random() * 100000).toString().padStart(5, "0");
+        var newProject = {
+          projectId: newProjectId,
+          name: oProjectData.name,
+          description: oProjectData.description,
+          managerId: oProjectData.managerId,
+          managerName: managerName, // FIXED: Set the manager name immediately
+          budget: oProjectData.budget,
+          allocatedHours: oProjectData.allocatedHours,
+          usedHours: oProjectData.usedHours,
+          startDate: oProjectData.startDate,
+          endDate: oProjectData.endDate,
+          client: oProjectData.client,
+          status: oProjectData.status,
+          isBillable: true,
+          teamMembers: []
+        };
+        
+        aProjects.push(newProject);
+        oModel.setProperty("/projects", aProjects);
+        oModel.refresh(true);
+        MessageToast.show("Project added successfully in UI");
+      }
+
+      // Then update in OData service WITHOUT automatic refresh
       if (sMode === "create") {
-        this._createProjectInOData(oProjectData);
+        this._createProjectInOData(oProjectData, false); // Don't refresh after create
       } else {
-        this._updateProjectInOData(oProjectData);
+        this._updateProjectInOData(oProjectData, false); // Don't refresh after update
       }
 
       oDialog.close();
     },
 
-    // Create project in OData service
-    _createProjectInOData: function (oProjectData) {
+    // Create project in OData service - FIXED: Added bRefresh parameter
+    _createProjectInOData: function (oProjectData, bRefresh = true) {
       var oModel = this.getOwnerComponent().getModel("adminService");
       var that = this;
-
-      // Generate valid UUID for backend
-      // var sProjectUUID = this._generateUUID();
-      // // Generate display ID for frontend
-      // var sProjectID = "PRJ" + Math.floor(Math.random() * 100000).toString().padStart(5, "0");
 
       var oProjectPayload = {
         projectName: oProjectData.name,
@@ -685,137 +874,151 @@ sap.ui.define([
       oModel.create("/Projects", oProjectPayload, {
         success: function (oData) {
           MessageToast.show("Project created successfully");
-          that._loadProjects(); // Reload projects to refresh table
+          // Only refresh if explicitly requested
+          if (bRefresh) {
+            that._loadProjects();
+          }
         },
         error: function (oError) {
           console.error("Error creating project:", oError);
           MessageToast.show("Error creating project");
+          // Only refresh if explicitly requested
+          if (bRefresh) {
+            that._loadProjects();
+          }
         }
       });
     },
 
-    // Update project in OData service
-    _updateProjectInOData: function (oProjectData) {
-  var oModel = this.getOwnerComponent().getModel("adminService");
-  var that = this;
+    // Update project in OData service - FIXED: Added bRefresh parameter
+    _updateProjectInOData: function (oProjectData, bRefresh = true) {
+      var oModel = this.getOwnerComponent().getModel("adminService");
+      var that = this;
 
-  if (!oProjectData.projectId) {
-    MessageToast.show("Missing projectId. Cannot update.");
-    console.warn("No projectId found in projectData:", oProjectData);
-    return;
-  }
-
-  // 1️⃣ Read all projects and find backend CUID
-  oModel.read("/Projects", {
-    success: function (oData) {
-      if (!oData.results || !oData.results.length) {
-        MessageToast.show("No projects found in backend.");
+      if (!oProjectData.projectId) {
+        MessageToast.show("Missing projectId. Cannot update.");
+        console.warn("No projectId found in projectData:", oProjectData);
         return;
       }
 
-      // 2️⃣ Find backend entry by projectId (display value)
-      var backendItem = oData.results.find(p => p.projectID === oProjectData.projectId);
+      // 1️⃣ Read all projects and find backend CUID
+      oModel.read("/Projects", {
+        success: function (oData) {
+          if (!oData.results || !oData.results.length) {
+            MessageToast.show("No projects found in backend.");
+            return;
+          }
 
-      if (!backendItem) {
-        MessageToast.show("Project not found in backend. Cannot update.");
-        console.warn("No backend match for projectId:", oProjectData.projectId);
-        return;
-      }
+          // 2️⃣ Find backend entry by projectId (display value)
+          var backendItem = oData.results.find(p => p.projectID === oProjectData.projectId);
 
-      // 3️⃣ Use backend CUID
-      var backendId = backendItem.ID;
+          if (!backendItem) {
+            MessageToast.show("Project not found in backend. Cannot update.");
+            console.warn("No backend match for projectId:", oProjectData.projectId);
+            return;
+          }
 
-      if (!backendId) {
-        MessageToast.show("Backend Project ID missing. Cannot update.");
-        console.error("Backend item has no ID field:", backendItem);
-        return;
-      }
+          // 3️⃣ Use backend CUID
+          var backendId = backendItem.ID;
 
-      // 4️⃣ Create Update Payload
-      var oProjectPayload = {
-        projectName: oProjectData.name,
-        description: oProjectData.description || "",
-        projectOwner_ID: oProjectData.managerId,
-        budget: parseFloat(oProjectData.budget) || 0,
-        allocatedHours: parseFloat(oProjectData.allocatedHours) || 0,
-        startDate: oProjectData.startDate,
-        endDate: oProjectData.endDate,
-        status: oProjectData.status
-      };
+          if (!backendId) {
+            MessageToast.show("Backend Project ID missing. Cannot update.");
+            console.error("Backend item has no ID field:", backendItem);
+            return;
+          }
 
-      var sPath = "/Projects('" + backendId + "')";
+          // 4️⃣ Create Update Payload
+          var oProjectPayload = {
+            projectName: oProjectData.name,
+            description: oProjectData.description || "",
+            projectOwner_ID: oProjectData.managerId,
+            budget: parseFloat(oProjectData.budget) || 0,
+            allocatedHours: parseFloat(oProjectData.allocatedHours) || 0,
+            startDate: oProjectData.startDate,
+            endDate: oProjectData.endDate,
+            status: oProjectData.status
+          };
 
-      console.log("Updating project:", backendId, oProjectPayload);
+          var sPath = "/Projects('" + backendId + "')";
 
-      // 5️⃣ Perform Update
-      oModel.update(sPath, oProjectPayload, {
-        success: function () {
-          MessageToast.show("Project updated successfully");
-          that._loadProjects();
+          console.log("Updating project:", backendId, oProjectPayload);
+
+          // 5️⃣ Perform Update
+          oModel.update(sPath, oProjectPayload, {
+            success: function () {
+              MessageToast.show("Project updated successfully");
+              // Only refresh if explicitly requested
+              if (bRefresh) {
+                that._loadProjects();
+              }
+            },
+            error: function (oError) {
+              console.error("Error updating project:", oError);
+              MessageToast.show("Error updating project");
+              // Only refresh if explicitly requested
+              if (bRefresh) {
+                that._loadProjects();
+              }
+            }
+          });
         },
-        error: function (oError) {
-          console.error("Error updating project:", oError);
-          MessageToast.show("Error updating project");
+
+        error: function (err) {
+          console.error("Error reading Projects:", err);
+          MessageToast.show("Failed to fetch backend projects.");
         }
       });
     },
-
-    error: function (err) {
-      console.error("Error reading Projects:", err);
-      MessageToast.show("Failed to fetch backend projects.");
-    }
-  });
-},
 
     // Delete project in OData service
     _deleteProjectInOData: function (oProjectData) {
-  var oModel = this.getOwnerComponent().getModel("adminService");
-  var that = this;
+      var oModel = this.getOwnerComponent().getModel("adminService");
+      var that = this;
 
-  // Step 1: Read all Projects to find the correct backend ID
-  oModel.read("/Projects", {
-    success: function (oData) {
+      // Step 1: Read all Projects to find the correct backend ID
+      oModel.read("/Projects", {
+        success: function (oData) {
 
-      if (!oData.results || oData.results.length === 0) {
-        MessageToast.show("No projects found. Cannot delete.");
-        return;
-      }
+          if (!oData.results || oData.results.length === 0) {
+            MessageToast.show("No projects found. Cannot delete.");
+            return;
+          }
 
-      // Step 2: Find the matching project by projectId (display ID)
-      var oMatch = oData.results.find(function (proj) {
-        return proj.projectID === oProjectData.projectId;  // <-- compare here
-      });
+          // Step 2: Find the matching project by projectId (display ID)
+          var oMatch = oData.results.find(function (proj) {
+            return proj.projectID === oProjectData.projectId;
+          });
 
-      if (!oMatch) {
-        MessageToast.show("Project not found. Cannot delete.");
-        console.warn("No backend match for projectId:", oProjectData.projectId);
-        return;
-      }
+          if (!oMatch) {
+            MessageToast.show("Project not found. Cannot delete.");
+            console.warn("No backend match for projectId:", oProjectData.projectId);
+            return;
+          }
 
-      var backendId = oMatch.ID; // <-- This is the real CUID
-      var sPath = "/Projects('" + backendId + "')";
+          var backendId = oMatch.ID;
+          var sPath = "/Projects('" + backendId + "')";
 
-      console.log("Deleting project with backend ID:", backendId);
+          console.log("Deleting project with backend ID:", backendId);
 
-      // Step 3: Delete with valid backend CUID
-      oModel.remove(sPath, {
-        success: function () {
-          MessageToast.show("Project deleted successfully");
-          that._loadProjects();
+          // Step 3: Delete with valid backend CUID
+          oModel.remove(sPath, {
+            success: function () {
+              MessageToast.show("Project deleted successfully");
+              that._loadProjects();
+            },
+            error: function (oError) {
+              console.error("Error deleting project:", oError);
+              MessageToast.show("Error deleting project");
+            }
+          });
         },
+
         error: function (oError) {
-          console.error("Error deleting project:", oError);
-          MessageToast.show("Error deleting project");
+          console.error("Error loading projects:", oError);
+          MessageToast.show("Error fetching project list");
         }
       });
     },
-
-    error: function (oError) {
-      console.error("Error loading projects:", oError);
-      MessageToast.show("Error fetching project list");
-    }
-  });
-},
 
     onCancelProject: function () {
       if (this._oProjectDialog) {
@@ -923,18 +1126,18 @@ sap.ui.define([
       return "$" + value.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     },
 
-    // FIXED: Refresh functions to reload the entire page
+    // Refresh functions to reload the entire page
     onRefreshUsers: function () {
-      this._loadEmployees(); // Reload employees data instead of refreshing the page
+      this._loadEmployees();
       MessageToast.show("Users data refreshed");
     },
 
     onRefreshProjects: function () {
-      this._loadProjects(); // Reload projects data instead of refreshing the page
+      this._loadProjects();
       MessageToast.show("Projects data refreshed");
     },
     
-    // NEW: Function to refresh the entire page
+    // Function to refresh the entire page
     onRefreshPage: function () {
       window.location.reload();
     }

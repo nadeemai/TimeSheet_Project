@@ -431,9 +431,7 @@ module.exports = cds.service.impl(async function() {
         return `Employee ${employee.firstName} ${employee.lastName} assigned to Manager ${manager.firstName} ${manager.lastName}`;
     });
 
-    // ✅ REPLACE assignProjectToEmployee in BOTH admin-service.js AND manager-service.js
-
-// For admin-service.js (around line 425):
+// For admin-service.js:
 this.on('assignProjectToEmployee', async (req) => {
     const { employeeID, projectID } = req.data;
     
@@ -450,7 +448,7 @@ this.on('assignProjectToEmployee', async (req) => {
         return req.error(404, 'Project not found');
     }
 
-    // ✅ Check if assignment already exists in ProjectAssignments table
+    // Check if assignment already exists in ProjectAssignments table
     const existingAssignment = await SELECT.one
         .from('my.timesheet.ProjectAssignments')
         .where({ employee_ID: employee.ID, project_ID: project.ID, isActive: true });
@@ -459,7 +457,7 @@ this.on('assignProjectToEmployee', async (req) => {
         return req.error(400, `Employee is already assigned to project ${project.projectName}`);
     }
 
-    // ✅ Create ProjectAssignment entry (this is the source of truth)
+    // Create ProjectAssignment entry (this is the source of truth)
     const assignmentCount = await SELECT.from('my.timesheet.ProjectAssignments');
     await INSERT.into('my.timesheet.ProjectAssignments').entries({
         employee_ID: employee.ID,
@@ -471,8 +469,7 @@ this.on('assignProjectToEmployee', async (req) => {
 
     console.log(`✅ Created ProjectAssignment for ${employee.employeeID} → ${project.projectID}`);
 
-    // ✅ OPTIONAL: Create placeholder timesheet for the current week
-    // (This is just for convenience, not required for project assignment)
+    // Create placeholder timesheet for the current week
     const timesheetsForProject = await SELECT.from(Timesheets)
         .where({ employee_ID: employee.ID, project_ID: project.ID });
 
@@ -697,7 +694,6 @@ this.on('assignProjectToEmployee', async (req) => {
         }
     });
 
-    // ✅ REMOVED: Duplicate auto-generate ID logic (moved to before CREATE hook above)
 
     this.before('CREATE', 'UserRoles', async (req) => {
         if (!req.data.roleID) {

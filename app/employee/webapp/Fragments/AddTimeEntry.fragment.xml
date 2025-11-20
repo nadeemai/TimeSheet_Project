@@ -9,12 +9,7 @@
         id="addEntryDialog"
         title="Add New Time Entry"
         contentWidth="350px"
-        titleAlignment="Center"
-        contentHeight="300px"
-        resizable="false"
-        verticalScrolling="true"
-        horizontalScrolling="false"
-        stretch="false">
+        titleAlignment="Center">
 
         <content>
             <VBox class="sapUiMediumMarginBeginEnd sapUiSmallMarginTopBottom">
@@ -30,27 +25,29 @@
 
                 <!-- Project Selection -->
                 <VBox class="sapUiTinyMarginBottom">
-                    <Label text="Project:" design="Bold" required="true" class="sapUiTinyMarginBottom" />
-                    <ComboBox
-                        selectedKey="{timeEntryModel>/newEntry/projectId}"
-                        items="{timeEntryModel>/projects}"
-                        placeholder="Select a Project"
-                        width="100%">
-                        <core:Item key="{timeEntryModel>projectId}" text="{timeEntryModel>projectName}" />
-                    </ComboBox>
+                  <Label text="Project:" design="Bold" required="true" class="sapUiTinyMarginBottom" />
+<ComboBox
+    selectedKey="{timeEntryModel>/newEntry/projectId}"
+    items="{timeEntryModel>/projectsToShow}"
+    placeholder="Select a Project"
+    change="onProjectChange"
+    width="100%">
+    <core:Item key="{timeEntryModel>id}" text="{timeEntryModel>name}" />
+</ComboBox>
+
                 </VBox>
 
                 <!-- Task Selection -->
                 <VBox class="sapUiTinyMarginBottom">
                     <Label text="Task:" design="Bold" required="true" class="sapUiTinyMarginBottom" />
-                    <ComboBox
-                        id="workTypeComboBox"
-                        selectedKey="{timeEntryModel>/newEntry/workType}"
-                        items="{timeEntryModel>/workTypes}"
-                        placeholder="Select a Task"
-                        width="100%">
-                        <core:Item key="{timeEntryModel>type}" text="{timeEntryModel>name}" />
-                    </ComboBox>
+                   <ComboBox
+    items="{timeEntryModel>/tasksToShow}"
+    width="100%"
+    enabled="{= !${timeEntryModel>/isTaskDisabled} }"
+    selectedKey="{timeEntryModel>/newEntry/workType}">
+    <core:Item key="{timeEntryModel>type}" text="{timeEntryModel>name}" />
+</ComboBox>
+
                 </VBox>
 
                 <!-- Hours -->
@@ -97,10 +94,10 @@
                 type="Emphasized"
                 icon="sap-icon://save"
                 press="onSaveNewEntry" />
-            <Button
+            <!-- <Button
                 text="Save + New"
                 icon="sap-icon://add"
-                press="onSaveAndNewEntry" />
+                press="onSaveAndNewEntry" /> -->
             <Button
                 text="Cancel"
                 icon="sap-icon://decline"

@@ -1,19 +1,19 @@
 ### Employee Service Test File
 ### Base URL: http://localhost:4004
-GET http://localhost:45917/odata/v4/user-api/getCurrentUser
-Authorization: Basic aditya.mishra@sumodigitech.com:initial
+GET http://localhost:4005/odata/v4/user-api/getCurrentUser
+Authorization: Basic @sumodigitech.com:initial
 
 ### Aditya Mishra (Cordys)
-GET http://localhost:4009/odata/v4/employee/MyProjects
+GET http://localhost:4010/odata/v4/employee/MyProjects
 Authorization: Basic aditya.mishra@sumodigitech.com:initial
 
 ### Nadeem Abbas (Sony COFA)
-GET http://localhost:4009/odata/v4/employee/MyProjects
+GET http://localhost:4010/odata/v4/employee/MyProjects
 Authorization: Basic nadeem.abbas@sumodigitech.com:initial
 
 ### Yugal Kishore (Cordys)
-GET http://localhost:4009/odata/v4/employee/MyProjects
-Authorization: Basic yugal.kishore:initial
+GET http://localhost:4010/odata/v4/employee/MyProjects
+Authorization: Basic yugal.kishore@sumodigitech.com:initial
 
 ### Sumit Jhaldiyal (Sony COFA)
 GET http://localhost:4004/odata/v4/employee/MyProjects
@@ -36,7 +36,7 @@ Authorization: Basic aditya.mishra@sumodigitech.com:initial
 ###
 
 ### 2. GET - Read My Timesheets
-GET http://localhost:4009/odata/v4/employee/MyTimesheets
+GET http://localhost:4010/odata/v4/employee/MyTimesheets
 Authorization: Basic nadeem.abbas@sumodigitech.com:initial
 
 ###
@@ -97,21 +97,20 @@ Content-Type: application/json
 ###
 
 ### 10. POST - Create Timesheet for Different Project
-POST http://localhost:4009/odata/v4/employee/MyTimesheets
+POST http://localhost:7373/odata/v4/employee/MyTimesheets
 Authorization: Basic nadeem.abbas@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "weekStartDate": "2025-11-17",
-  "weekEndDate": "2025-11-23",
-  "project_ID": "c2ee19a8-a6d4-4e93-bbfa-3e07039a7548",
-  "activity_ID": "c47ac10b-58cc-4372-a567-0e02b2c3d520",
+  "weekStartDate": "2025-09-15",
+  "weekEndDate": "2025-09-21",
+  "project_ID": "967eeb86-01be-4d12-a66c-6f2653e7a7ec",
+  "activity_ID": "",
   "task": "Deployment",
   "taskDetails": "Weekly UI/UX design work for Cordys workmodule",
   "status": "Draft",
   "isBillable": true,
   "totalWeekHours": 40.00,
-   "projectName": "RedExAI",
   "mondayHours": 2.0,
   "mondayTaskDetails": "uat",
   "mondayDate": "2025-11-17",
@@ -144,17 +143,17 @@ Content-Type: application/json
 ###
 
 ### 11. POST - Create Non-Project Timesheet (Leave)
-POST http://localhost:4004/odata/v4/employee/MyTimesheets
-Authorization: Basic yugal.kishore:initial
+POST http://localhost:7376/odata/v4/employee/MyTimesheets
+Authorization: Basic nadeem.abbas@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d492",
-  "workDate": "2024-11-05",
-  "hoursWorked": 8.0,
-  "nonProjectType_ID": "n47ac10b-58cc-4372-a567-0e02b2c3d562",
-  "task": "Leave",
-  "taskDetails": "Sick leave",
+  "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
+  "weekStartDate": "2025-09-15",
+  "weekEndDate": "2025-09-21",
+  "nonProjectType_ID": "n47ac10b-58cc-4372-a567-0e02b2c3d561",
+  "task": "",
+  "taskDetails": "solutate",
   "isBillable": false,
   "status": "Draft"
 }

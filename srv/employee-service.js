@@ -105,7 +105,7 @@ module.exports = cds.service.impl(async function() {
         return days;
     };
 
-// ✅ SIMPLIFIED: MyTimesheets READ handler - Direct queries without expand
+// MyTimesheets READ handler - Direct queries without expand
 this.on('READ', 'MyTimesheets', async (req) => {
     console.log('📊 MyTimesheets READ - Start');
     console.log('📊 User ID:', req.user.id);
@@ -130,76 +130,99 @@ this.on('READ', 'MyTimesheets', async (req) => {
             return [];
         }
         
-        // Enrich each timesheet with related data
-        for (const ts of timesheets) {
-            // Set employee info
-            ts.employee_ID = employee.ID;
-            ts.employeeName = `${employee.firstName} ${employee.lastName}`;
-            
-            // Get project info
-if (ts.project_ID) {
-    console.log('🔍 Enriching project for ID:', ts.project_ID);
+       // Enrich each timesheet with related data
+for (const ts of timesheets) {
+    // Set employee info
+    ts.employee_ID = employee.ID;
+    ts.employeeName = `${employee.firstName} ${employee.lastName}`;
     
-    // Try UUID first
-    let project = await SELECT.one
-        .from('my.timesheet.Projects')
-        .where({ ID: ts.project_ID });
-    
-    // Fallback to projectID code if UUID fails
-    if (!project && typeof ts.project_ID === 'string' && !ts.project_ID.includes('-')) {
-        console.log('⚠️ Trying projectID code lookup');
-        project = await SELECT.one
-            .from('my.timesheet.Projects')
-            .where({ projectID: ts.project_ID });
+    // Get project info - ALWAYS set projectName field (even if null)
+    if (ts.project_ID) {
+        console.log('🔍 Enriching project for ID:', ts.project_ID);
         
-        // If found, update the ID to UUID for consistency
-        if (project) {
-            ts.project_ID = project.ID;
+        // Try UUID first
+        let project = await SELECT.one
+            .from('my.timesheet.Projects')
+            .where({ ID: ts.project_ID });
+        
+        // Fallback to projectID code if UUID fails
+        if (!project && typeof ts.project_ID === 'string' && !ts.project_ID.includes('-')) {
+            console.log('⚠️ Trying projectID code lookup');
+            project = await SELECT.one
+                .from('my.timesheet.Projects')
+                .where({ projectID: ts.project_ID });
+            
+            // If found, update the ID to UUID for consistency
+            if (project) {
+                ts.project_ID = project.ID;
+            }
         }
+        
+        if (project) {
+            ts.projectName = project.projectName;
+            ts.projectRole = project.projectRole;
+            console.log(`✅ Enriched timesheet ${ts.timesheetID} with project: ${project.projectName}`);
+        } else {
+            console.log(`⚠️ Project not found for ID: ${ts.project_ID}`);
+            ts.projectName = null;
+            ts.projectRole = null;
+        }
+    } else {
+        // ✅ CRITICAL FIX: Always include projectName field even when null
+        ts.projectName = null;
+        ts.projectRole = null;
+        console.log(`📝 Timesheet ${ts.timesheetID} has no project (non-project activity)`);
     }
     
-    if (project) {
-        ts.projectName = project.projectName;
-        ts.projectRole = project.projectRole;
-        console.log(`✅ Enriched timesheet ${ts.timesheetID} with project: ${project.projectName}`);
+    // Get activity info - ALWAYS set activityName field
+    if (ts.activity_ID) {
+        const activity = await SELECT.one
+            .from('my.timesheet.Activities')
+            .where({ ID: ts.activity_ID });
+        
+        if (activity) {
+            ts.activityName = activity.activity;
+        } else {
+            ts.activityName = null;
+        }
     } else {
-        console.log(`⚠️ Project not found for ID: ${ts.project_ID}`);
+        ts.activityName = null;
+    }
+    
+    // Get non-project type info - ALWAYS set nonProjectTypeName field
+    if (ts.nonProjectType_ID) {
+        const npt = await SELECT.one
+            .from('my.timesheet.NonProjectTypes')
+            .where({ ID: ts.nonProjectType_ID });
+        
+        if (npt) {
+            ts.nonProjectTypeName = npt.typeName;
+            // Also add the code for reference
+            ts.nonProjectTypeID = npt.nonProjectTypeID;
+        } else {
+            ts.nonProjectTypeName = null;
+            ts.nonProjectTypeID = null;
+        }
+    } else {
+        ts.nonProjectTypeName = null;
+        ts.nonProjectTypeID = null;
+    }
+    
+    // Get approver info - ALWAYS set approvedByName field
+    if (ts.approvedBy_ID) {
+        const approver = await SELECT.one
+            .from('my.timesheet.Employees')
+            .where({ ID: ts.approvedBy_ID });
+        
+        if (approver) {
+            ts.approvedByName = `${approver.firstName} ${approver.lastName}`;
+        } else {
+            ts.approvedByName = null;
+        }
+    } else {
+        ts.approvedByName = null;
     }
 }
-            
-            // Get activity info
-            if (ts.activity_ID) {
-                const activity = await SELECT.one
-                    .from('my.timesheet.Activities')
-                    .where({ ID: ts.activity_ID });
-                
-                if (activity) {
-                    ts.activityName = activity.activity;
-                }
-            }
-            
-            // Get non-project type info
-            if (ts.nonProjectType_ID) {
-                const npt = await SELECT.one
-                    .from('my.timesheet.NonProjectTypes')
-                    .where({ ID: ts.nonProjectType_ID });
-                
-                if (npt) {
-                    ts.nonProjectTypeName = npt.typeName;
-                }
-            }
-            
-            // Get approver info
-            if (ts.approvedBy_ID) {
-                const approver = await SELECT.one
-                    .from('my.timesheet.Employees')
-                    .where({ ID: ts.approvedBy_ID });
-                
-                if (approver) {
-                    ts.approvedByName = `${approver.firstName} ${approver.lastName}`;
-                }
-            }
-        }
         
         console.log('✅ Successfully enriched all timesheets');
         return timesheets;
@@ -210,6 +233,7 @@ if (ts.project_ID) {
         return [];
     }
 });
+
 // FULL CREATE handler — performs the INSERT and returns the created record
 this.on('CREATE', 'MyTimesheets', async (req) => {
     console.log('🔧 === Full CREATE MyTimesheets Handler START ===');
@@ -348,19 +372,56 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
             return req.error(500, 'Failed to verify created timesheet.');
         }
 
-        // enrich returned object (project name, employeeName, activityName) — optional but helpful
-        if (created.project_ID) {
-            const project = await SELECT.one.from('my.timesheet.Projects').columns('projectName','projectRole').where({ ID: created.project_ID });
-            if (project) { created.projectName = project.projectName; created.projectRole = project.projectRole; }
-        }
-        if (created.employee_ID) {
-            const emp = await SELECT.one.from('my.timesheet.Employees').columns('firstName','lastName','employeeID').where({ ID: created.employee_ID });
-            if (emp) created.employeeName = `${emp.firstName} ${emp.lastName}`;
-        }
-        if (created.activity_ID) {
-            const act = await SELECT.one.from('my.timesheet.Activities').columns('activity').where({ ID: created.activity_ID });
-            if (act) created.activityName = act.activity;
-        }
+       // enrich returned object - ALWAYS include all fields even if null
+if (created.project_ID) {
+    const project = await SELECT.one.from('my.timesheet.Projects').columns('projectName','projectRole').where({ ID: created.project_ID });
+    if (project) { 
+        created.projectName = project.projectName; 
+        created.projectRole = project.projectRole; 
+    } else {
+        created.projectName = null;
+        created.projectRole = null;
+    }
+} else {
+    created.projectName = null;
+    created.projectRole = null;
+}
+
+if (created.employee_ID) {
+    const emp = await SELECT.one.from('my.timesheet.Employees').columns('firstName','lastName','employeeID').where({ ID: created.employee_ID });
+    if (emp) {
+        created.employeeName = `${emp.firstName} ${emp.lastName}`;
+    } else {
+        created.employeeName = null;
+    }
+} else {
+    created.employeeName = null;
+}
+
+if (created.activity_ID) {
+    const act = await SELECT.one.from('my.timesheet.Activities').columns('activity').where({ ID: created.activity_ID });
+    if (act) {
+        created.activityName = act.activity;
+    } else {
+        created.activityName = null;
+    }
+} else {
+    created.activityName = null;
+}
+
+if (created.nonProjectType_ID) {
+    const npt = await SELECT.one.from('my.timesheet.NonProjectTypes').columns('typeName', 'nonProjectTypeID').where({ ID: created.nonProjectType_ID });
+    if (npt) {
+        created.nonProjectTypeName = npt.typeName;
+        created.nonProjectTypeID = npt.nonProjectTypeID;
+    } else {
+        created.nonProjectTypeName = null;
+        created.nonProjectTypeID = null;
+    }
+} else {
+    created.nonProjectTypeName = null;
+    created.nonProjectTypeID = null;
+}
 
         // make sure OData Location header contains DB ID (CAP will still set HTTP status)
         try { req._.res.set('location', `MyTimesheets(${created.ID})`); } catch(e) { /* ignore */ }
@@ -375,39 +436,28 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
     }
 });
 
-// This NEW version reads from ProjectAssignments table instead of Timesheets
-
+// MyProjects Handler - Shows ALL active projects (not just assigned ones)
 this.on('READ', 'MyProjects', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return [];
 
-    console.log('📊 MyProjects READ - Employee ID:', employee.ID);
+    console.log('📊 MyProjects READ - Showing ALL active projects for employee:', employee.employeeID);
 
     const employeeID = employee.ID;
 
-    // ✅ NEW: Get projects from ProjectAssignments table
-    const assignments = await SELECT.from('my.timesheet.ProjectAssignments')
-        .columns('project_ID')
-        .where({ employee_ID: employeeID, isActive: true });
+    // ✅ NEW: Get ALL active projects from the system
+    const allProjects = await SELECT.from('my.timesheet.Projects')
+        .where({ status: 'Active' });
 
-    console.log('📋 Found project assignments:', assignments.length);
+    console.log('📋 Found active projects:', allProjects.length);
 
-    if (assignments.length === 0) {
-        console.log('⚠️ No projects assigned to employee');
+    if (allProjects.length === 0) {
+        console.log('⚠️ No active projects in the system');
         return [];
     }
 
-    // Get unique project IDs
-    const projectIDs = [...new Set(assignments.map(a => a.project_ID).filter(id => id))];
-    
-    // Fetch all assigned projects
-    const projects = await SELECT.from('my.timesheet.Projects')
-        .where({ ID: { in: projectIDs } });
-
-    console.log('✅ MyProjects returning:', projects.length, 'projects');
-
-    // Enrich with project owner names and calculate hours
-    for (const project of projects) {
+    // Enrich with project owner names and calculate THIS employee's booked hours
+    for (const project of allProjects) {
         if (project.projectOwner_ID) {
             const owner = await SELECT.one
                 .from('my.timesheet.Employees')
@@ -419,7 +469,7 @@ this.on('READ', 'MyProjects', async (req) => {
             }
         }
 
-        // Calculate booked hours from timesheets (for reporting)
+        // Calculate THIS employee's booked hours on this project
         const projectTimesheets = await SELECT.from('my.timesheet.Timesheets')
             .where({ employee_ID: employeeID, project_ID: project.ID });
         
@@ -435,76 +485,73 @@ this.on('READ', 'MyProjects', async (req) => {
             : 0;
     }
 
-    return projects;
+    console.log('✅ MyProjects returning:', allProjects.length, 'projects');
+    return allProjects;
 });
 
-// ✅ Also update AssignedProjectsList to use ProjectAssignments
+// Helper entity for UI - Get ALL active projects for dropdown
 this.on('READ', 'AssignedProjectsList', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return [];
 
-    // Get from ProjectAssignments instead of Timesheets
-    const assignments = await SELECT.from('my.timesheet.ProjectAssignments')
-        .columns('project_ID')
-        .where({ employee_ID: employee.ID, isActive: true });
+    console.log('📋 AssignedProjectsList - Showing ALL active projects');
 
-    const projectIDs = [...new Set(assignments.map(a => a.project_ID).filter(id => id))];
-    
-    if (projectIDs.length === 0) return [];
-
+    // ✅ Return ALL active projects, not just assigned ones
     const projects = await SELECT.from('my.timesheet.Projects')
         .columns('ID', 'projectID', 'projectName', 'projectRole', 'status')
-        .where({ ID: { in: projectIDs }, status: 'Active' });
+        .where({ status: 'Active' });
 
+    console.log('✅ Found', projects.length, 'active projects for dropdown');
     return projects;
 });
 
     // BookedHoursOverview Handler
-    this.on('READ', 'BookedHoursOverview', async (req) => {
-        const employee = await getAuthenticatedEmployee(req);
-        if (!employee) return [];
+// BookedHoursOverview Handler - Shows ALL active projects with employee's hours
+this.on('READ', 'BookedHoursOverview', async (req) => {
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) return [];
 
-        const employeeID = employee.ID;
+    const employeeID = employee.ID;
 
+    // Get ALL active projects
+    const allProjects = await SELECT.from('my.timesheet.Projects')
+        .where({ status: 'Active' });
+
+    const overview = [];
+
+    for (const project of allProjects) {
+        // Get employee's timesheets for this project
         const timesheets = await SELECT.from('my.timesheet.Timesheets')
-            .where({ employee_ID: employeeID });
+            .where({ employee_ID: employeeID, project_ID: project.ID });
 
-        const projectMap = {};
-        
+        let bookedHours = 0;
         for (const ts of timesheets) {
-            if (!ts.project_ID) continue;
-
-            if (!projectMap[ts.project_ID]) {
-                const project = await SELECT.one.from('my.timesheet.Projects')
-                    .where({ ID: ts.project_ID });
-                
-                if (!project) continue;
-
-                projectMap[ts.project_ID] = {
-                    projectID: project.ID,
-                    Project: project.projectName,
-                    AllocatedHours: project.allocatedHours || 0,
-                    BookedHours: 0,
-                    RemainingHours: 0,
-                    Utilization: '0%'
-                };
-            }
-
-            projectMap[ts.project_ID].BookedHours += parseFloat(ts.totalWeekHours || 0);
+            bookedHours += parseFloat(ts.totalWeekHours || 0);
         }
 
-        const overview = Object.values(projectMap).map(p => {
-            p.RemainingHours = p.AllocatedHours - p.BookedHours;
-            const util = p.AllocatedHours > 0 
-                ? ((p.BookedHours / p.AllocatedHours) * 100).toFixed(1)
-                : 0;
-            p.Utilization = `${util}%`;
-            return p;
+        // Only include projects the employee has worked on OR all projects (your choice)
+        // Option 1: Only show projects employee worked on
+        // if (bookedHours > 0) {
+        
+        // Option 2: Show ALL projects (even with 0 hours)
+        const remainingHours = (project.allocatedHours || 0) - bookedHours;
+        const util = project.allocatedHours > 0 
+            ? ((bookedHours / project.allocatedHours) * 100).toFixed(1)
+            : 0;
+
+        overview.push({
+            projectID: project.ID,
+            Project: project.projectName,
+            AllocatedHours: project.allocatedHours || 0,
+            BookedHours: bookedHours,
+            RemainingHours: remainingHours,
+            Utilization: `${util}%`
         });
+        // }
+    }
 
-        return overview;
-    });
-
+    return overview;
+});
     // ProjectEngagementDuration Handler
     this.on('READ', 'ProjectEngagementDuration', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
@@ -550,50 +597,37 @@ this.on('READ', 'AssignedProjectsList', async (req) => {
                 name: 'Designing',
                 description: 'UI/UX design, wireframing, mockups, prototyping',
                 isProjectTask: true,
-                icon: '🎨'
             },
             {
                 code: 'Developing',
                 name: 'Developing',
                 description: 'Writing code, implementing features, building functionality',
                 isProjectTask: true,
-                icon: '💻'
             },
             {
                 code: 'Testing',
                 name: 'Testing',
                 description: 'QA testing, test execution, test case creation',
                 isProjectTask: true,
-                icon: '🧪'
             },
             {
                 code: 'Bug Fix',
                 name: 'Bug Fix',
                 description: 'Fixing defects, resolving issues, debugging',
                 isProjectTask: true,
-                icon: '🐛'
             },
             {
                 code: 'Deployment',
                 name: 'Deployment',
                 description: 'Release activities, CI/CD, production releases',
                 isProjectTask: true,
-                icon: '🚀'
             },
             {
                 code: 'Client Call',
                 name: 'Client Call',
                 description: 'Client meetings, stakeholder communication, demos',
                 isProjectTask: true,
-                icon: '📞'
             },
-            {
-                code: 'Leave',
-                name: 'Leave',
-                description: 'Time off, vacation, sick leave, personal days',
-                isProjectTask: false,
-                icon: '🏖️'
-            }
         ];
     });
 
@@ -663,7 +697,7 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         return req.error(400, `Invalid task type. Must be one of: ${validTasks.join(', ')}`);
     }
 
-    // --- <<< FIX: compute weekBoundaries and weekDates BEFORE using them >>> ---
+    // compute weekBoundaries and weekDates BEFORE using them >>> ---
     // prefer an explicit date from the request if provided, else fallback to weekStartDate if present, else today
     const inputDateForWeek = req.data.date || req.data.weekStartDate || new Date().toISOString().split('T')[0];
     let weekBoundaries;
@@ -674,7 +708,7 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         return req.error(400, `Invalid date provided for week calculation: ${inputDateForWeek}`);
     }
     const weekDates = getWeekDates(weekBoundaries.weekStart);
-    // --- <<< end fix >>> ---
+   
 
     // now safe to assign these values to req.data
     req.data.weekStartDate = weekBoundaries.weekStart;
@@ -761,11 +795,23 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         weekStartDate: weekBoundaries.weekStart
     };
 
-    if (project_ID) {
-        whereClause.project_ID = project_ID;
-    } else if (task !== 'Leave' && !nonProjectType_ID) {
-        return req.error(400, 'Project is required for project-related tasks. Please select a project or choose a non-project task like Leave.');
+    // ✅ NEW: Allow any active project, not just assigned ones
+if (project_ID) {
+    whereClause.project_ID = project_ID;
+    
+    // Verify the project exists and is active
+    const projectExists = await SELECT.one
+        .from('my.timesheet.Projects')
+        .where({ ID: project_ID, status: 'Active' });
+    
+    if (!projectExists) {
+        return req.error(404, 'Project not found or is not active. Please select an active project.');
     }
+    
+    console.log('✅ Employee can work on any active project:', projectExists.projectName);
+} else if (task !== 'Leave' && !nonProjectType_ID) {
+    return req.error(400, 'Project is required for project-related tasks. Please select a project or choose a non-project task like Leave.');
+}
 
     const existing = await SELECT.from('my.timesheet.Timesheets').where(whereClause);
 
@@ -841,45 +887,78 @@ this.after('CREATE', 'MyTimesheets', async (result, req) => {
             return req.data || {};
         }
 
-        console.log('✅ Fetched created timesheet:', timesheet.timesheetID || timesheet.ID);
+ console.log('✅ Fetched created timesheet:', timesheet.timesheetID || timesheet.ID);
 
-        // Enrich with project name
-        if (timesheet.project_ID) {
-            const project = await SELECT.one
-                .from('my.timesheet.Projects')
-                .columns('projectName', 'projectRole')
-                .where({ ID: timesheet.project_ID });
+// Enrich with project name - ALWAYS set field even if null
+if (timesheet.project_ID) {
+    const project = await SELECT.one
+        .from('my.timesheet.Projects')
+        .columns('projectName', 'projectRole')
+        .where({ ID: timesheet.project_ID });
 
-            if (project) {
-                timesheet.projectName = project.projectName;
-                timesheet.projectRole = project.projectRole;
-                console.log('✅ Enriched with project name:', project.projectName);
-            }
-        }
+    if (project) {
+        timesheet.projectName = project.projectName;
+        timesheet.projectRole = project.projectRole;
+        console.log('✅ Enriched with project name:', project.projectName);
+    } else {
+        timesheet.projectName = null;
+        timesheet.projectRole = null;
+    }
+} else {
+    timesheet.projectName = null;
+    timesheet.projectRole = null;
+}
 
-        // Enrich with employee name
-        if (timesheet.employee_ID) {
-            const employee = await SELECT.one
-                .from('my.timesheet.Employees')
-                .columns('firstName', 'lastName', 'employeeID')
-                .where({ ID: timesheet.employee_ID });
+// Enrich with employee name
+if (timesheet.employee_ID) {
+    const employee = await SELECT.one
+        .from('my.timesheet.Employees')
+        .columns('firstName', 'lastName', 'employeeID')
+        .where({ ID: timesheet.employee_ID });
 
-            if (employee) {
-                timesheet.employeeName = `${employee.firstName} ${employee.lastName}`;
-            }
-        }
+    if (employee) {
+        timesheet.employeeName = `${employee.firstName} ${employee.lastName}`;
+    } else {
+        timesheet.employeeName = null;
+    }
+} else {
+    timesheet.employeeName = null;
+}
 
-        // Enrich with activity name
-        if (timesheet.activity_ID) {
-            const activity = await SELECT.one
-                .from('my.timesheet.Activities')
-                .columns('activity')
-                .where({ ID: timesheet.activity_ID });
+// Enrich with activity name - ALWAYS set field
+if (timesheet.activity_ID) {
+    const activity = await SELECT.one
+        .from('my.timesheet.Activities')
+        .columns('activity')
+        .where({ ID: timesheet.activity_ID });
 
-            if (activity) {
-                timesheet.activityName = activity.activity;
-            }
-        }
+    if (activity) {
+        timesheet.activityName = activity.activity;
+    } else {
+        timesheet.activityName = null;
+    }
+} else {
+    timesheet.activityName = null;
+}
+
+// Enrich with non-project type - ALWAYS set field
+if (timesheet.nonProjectType_ID) {
+    const npt = await SELECT.one
+        .from('my.timesheet.NonProjectTypes')
+        .columns('typeName', 'nonProjectTypeID')
+        .where({ ID: timesheet.nonProjectType_ID });
+
+    if (npt) {
+        timesheet.nonProjectTypeName = npt.typeName;
+        timesheet.nonProjectTypeID = npt.nonProjectTypeID;
+    } else {
+        timesheet.nonProjectTypeName = null;
+        timesheet.nonProjectTypeID = null;
+    }
+} else {
+    timesheet.nonProjectTypeName = null;
+    timesheet.nonProjectTypeID = null;
+}
 
         // Ensure Location header (use actual DB ID)
         try {

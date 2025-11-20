@@ -1,9 +1,9 @@
-POST http://localhost:4009/odata/v4/admin/deleteTimesheet
+POST http://localhost:4005/odata/v4/admin/deleteTimesheet
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "timesheetID": "TS0005"
+  "timesheetID": "TS0004"
 }
 
 
@@ -337,8 +337,8 @@ Content-Type: application/json
 ###
 
 ### 29. DELETE - Delete Non-Project Type ------
-DELETE http://localhost:4004/odata/v4/admin/NonProjectTypes(n47ac10b-58cc-4372-a567-0e02b2c3d561)
-Authorization: Basic pushpak.jha:initial
+DELETE http://localhost:4006/odata/v4/admin/NonProjectTypes(9726a089-9336-45e7-80ca-a66a7b47a352)
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
 
 ###
 

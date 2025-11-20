@@ -31,7 +31,15 @@
           "odataVersion": "2.0",
           "annotations": []
         }
-      }
+      },
+      "userAPIService": {
+  "uri": "/odata/v2/user-api/",
+  "type": "OData",
+  "settings": {
+    "odataVersion": "2.0",
+    "annotations": []
+  }
+}
     }
   },
   "sap.ui": {
@@ -88,7 +96,11 @@
             "defaultOperationMode": "Server",
           "defaultUpdateMethod": "MERGE"
         }
-      }
+      },
+      "userAPIService": {
+  "dataSource": "userAPIService"
+}
+
     },
     "resources": {
       "css": [
@@ -109,20 +121,30 @@
         "async": true,
         "viewPath": "employee.view"
       },
-      "routes": [
-    {
-      "pattern": "",
-      "name": "employee",
-      "target": "employee"
-    }
-  ],
-  "targets": {
-    "employee": {
-      "viewName": "Employee",
-      "viewId": "employee",
-      "viewLevel": 1
-    }
+     "routes": [
+  {
+    "pattern": "",
+    "name": "authCheck",
+    "target": "authCheck"
+  },
+  {
+    "pattern": "employee",
+    "name": "employee",
+    "target": "employee"
   }
+],
+"targets": {
+  "authCheck": {
+    "viewName": "AuthCheck",
+    "viewId": "authCheck",
+    "viewLevel": 1
+  },
+  "employee": {
+    "viewName": "Employee",
+    "viewId": "employee",
+    "viewLevel": 2
+  }
+}
     },
     "rootView": {
       "viewName": "employee.view.App",
