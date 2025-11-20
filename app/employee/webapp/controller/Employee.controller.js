@@ -45,7 +45,7 @@ sap.ui.define([
     // Load time entries
     this._loadTimeEntriesFromBackend();
 
-   this._checkCurrentUser();
+//    this._checkCurrentUser();
     // this._loadWeekEntries(today);
 
     // Load projects
@@ -63,7 +63,7 @@ sap.ui.define([
 
             var oJSONModel = new sap.ui.model.json.JSONModel();
             oJSONModel.setData({ assignedProjects: mappedProjects });
-            oView.setModel(oJSONModel, "assignedProjects"); // ✅ now bound correctly
+            oView.setModel(oJSONModel, "assignedProjects"); 
         }.bind(this), // important: bind `this` if needed
         error: function(err) {
             console.error("Failed to load projects", err);
@@ -73,49 +73,11 @@ sap.ui.define([
     this._loadReportData(oProjectModel, oView);
 
 },
-// _openDayEditDialogByInput: function(oInput) {
-//     var sDay = oInput.data("day");
-//     var iRowIndex = parseInt(oInput.data("rowIndex"), 10);
 
-//     var oModel = this.getView().getModel("timeEntryModel");
-//     var aEntries = oModel.getProperty("/timeEntries");
 
-//     if (!aEntries || !aEntries[iRowIndex]) {
-//         sap.m.MessageToast.show("No data found for " + sDay);
-//         return;
-//     }
 
-//     var oEntry = aEntries[iRowIndex];
 
-//     this._currentEditEntry = oEntry;
-//     this._currentEditDay = sDay;
-
-//     this.onEditDayHours();
-// },
-
-_checkCurrentUser: function () {
-    let oUserModel = this.getOwnerComponent().getModel("userAPIService");
-
-    oUserModel.callFunction("/getCurrentUser", {
-        method: "GET",
-        success: (oData) => {
-            console.log("User API Response:", oData);
-
-            if (oData.getCurrentUser.authenticated) {
-                this.getOwnerComponent().getRouter().navTo("Employee");
-            } else {
-                sap.m.MessageBox.error(
-                    "User is authenticated but not found in Employee Role Collection."
-                );
-            }
-        },
-        error: (oError) => {
-            console.error("User API Error:", oError);
-            sap.m.MessageToast.show("Unable to fetch user information.");
-        }
-    });
-},
-
+ 
 _getCurrentWeekMonday: function() {
     let today = new Date();
     let day = today.getDay(); // 0 = Sunday, 1 = Monday, ... 6 = Saturday
@@ -126,10 +88,10 @@ _getCurrentWeekMonday: function() {
     return monday;
 },
 _loadReportData: function(oModel, oView) {
-    // 1️⃣ Booked Hours Overview
+   
     oModel.read("/BookedHoursOverview", {
         success: function(oData) {
-            // Safely extract results array
+          
             var bookedHours = oData.d ? oData.d.results : oData.results;
 
             var oBookedHoursModel = new sap.ui.model.json.JSONModel();
@@ -142,7 +104,7 @@ _loadReportData: function(oModel, oView) {
         }
     });
 
-    // 2️⃣ Project Engagement Duration
+    // 2️Project Engagement Duration
     oModel.read("/ProjectEngagementDuration", {
         success: function(oData) {
             var durations = oData.d ? oData.d.results : oData.results;
@@ -158,9 +120,6 @@ _loadReportData: function(oModel, oView) {
     });
 },
 
-_getReportData: function(){
-    var oReportModel = this.getOwnerComponent().getModel()
-},
 
     _generateWeekDates: function (oCurrentDate) {
     var oStart = new Date(oCurrentDate);
@@ -179,14 +138,6 @@ _getReportData: function(){
 
     return oWeekDates;
 },
-
-// _formatDateForDisplay: function (oDate) {
-//     return oDate.toLocaleDateString("en-GB", {
-//         day: "2-digit",
-//         month: "short",
-//         year: "numeric"
-//     });
-// },
 
 
 _loadTimeEntriesFromBackend: function () {
@@ -251,7 +202,7 @@ let filtered = allResults.filter(item => {
         projectId: item.project_ID,
         nonProjectId: item.nonProjectType_ID,
 
-        // 👇 IMPORTANT: only this is bound to the table column
+        // IMPORTANT: only this is bound to the table column
         projectName: finalName,
 
         // Keep originals if needed for edit dialog
@@ -339,66 +290,8 @@ _calculateDailyTotals: function (timeEntries) {
 
     return totals;
 },
-_formatDisplayDate: function (oDate) {
-    if (!oDate) return "";
-    try {
-        return new Date(oDate).toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric"
-        });
-    } catch (e) {
-        return "";
-    }
-},
 
-// validateDailyHours: function () {
-//     var oModel = this.getView().getModel("timeEntryModel");
-//     var aEntries = oModel.getProperty("/timeEntries") || [];
 
-//     // Initialize day totals
-//     var oDayTotals = {
-//         monday: 0,
-//         tuesday: 0,
-//         wednesday: 0,
-//         thursday: 0,
-//         friday: 0,
-//         saturday: 0,
-//         sunday: 0
-//     };
-
-//     // Sum up hours for each day across all tasks
-//     aEntries.forEach(function (entry) {
-//         oDayTotals.monday += entry.monday || 0;
-//         oDayTotals.tuesday += entry.tuesday || 0;
-//         oDayTotals.wednesday += entry.wednesday || 0;
-//         oDayTotals.thursday += entry.thursday || 0;
-//         oDayTotals.friday += entry.friday || 0;
-//         oDayTotals.saturday += entry.saturday || 0;
-//         oDayTotals.sunday += entry.sunday || 0;
-//     });
-
-//     // Check limits for each day
-//     var bIsValid = true;
-//     Object.keys(oDayTotals).forEach(function (day) {
-//         var total = oDayTotals[day];
-
-//         if (total > 15) {
-//             sap.m.MessageBox.error(
-//                 `❌ Total hours for ${day.charAt(0).toUpperCase() + day.slice(1)} exceed the limit of 15 hours (Current: ${total})`
-//             );
-//             bIsValid = false;
-//         } else if (total < 8 && total > 0) { 
-//             // You can skip validation if total is 0 (means not filled yet)
-//             sap.m.MessageBox.warning(
-//                 `⚠️ Total hours for ${day.charAt(0).toUpperCase() + day.slice(1)} are less than the minimum required 8 hours (Current: ${total})`
-//             );
-//             bIsValid = false;
-//         }
-//     });
-
-//     return bIsValid;
-// },
     _formatDateForModel: function (oDate) {
             return oDate.getFullYear() + "-" +
                 ("0" + (oDate.getMonth() + 1)).slice(-2) + "-" +
@@ -449,172 +342,8 @@ _formatDisplayDate: function (oDate) {
     let d = new Date(selectedDateStr);
     return d > new Date(weekEnd); // anything beyond this week
 },
-//   onAddEntry: function () {
-//     var that = this;
-//     var oModel = this.getView().getModel("timeEntryModel");
-//     var oServiceModel = this.getOwnerComponent().getModel("timesheetServiceV2");
-
-//     var today = new Date();
-//     var selectedDateStr = this._formatDateForModel(today);
-
-//     // Initialize newEntry with empty/default values
-//     oModel.setProperty("/newEntry", {
-//         selectedDate: selectedDateStr,
-//         projectId: "",      // <-- empty for placeholder
-//         projectName: "",    // <-- will be set when user selects
-//         workType: "",
-//         nonProjectTypeID: "",
-//         nonProjectTypeName: "",
-//         hours: "",
-//         taskDetails: "",
-//         dailyComments: {}
-//     });
-
-//     // Load Projects
-//     var loadProjects = new Promise(function (resolve) {
-//         oServiceModel.read("/MyProjects", {
-//             success: function (oData) {
-//                 var aProjects = [];
-//                 if (oData.results) {
-//                     aProjects = oData.results.map(p => ({
-//                         projectId: p.projectID,
-//                         projectName: p.projectName
-//                     }));
-//                 }
-//                 oModel.setProperty("/projects", aProjects);
-//                 resolve();
-//             },
-//             error: function () {
-//                 oModel.setProperty("/projects", []);
-//                 resolve();
-//             }
-//         });
-//     });
-
-//     var loadNonProjects = new Promise(function(resolve){
-//     oServiceModel.read("/AvailableNonProjectTypes", {
-//         success: function(oData){
-//             oModel.setProperty("/nonProjects", oData.results || []);
-//             resolve();
-//         },
-//         error: function(){ oModel.setProperty("/nonProjects", []); resolve(); }
-//     });
-// });
-
-// var loadNonProjectTasks = new Promise(function(resolve){
-//     oServiceModel.read("/AvailableNonProjectTypes", {
-//         success: function(oData){
-//             oModel.setProperty("/nonProjectTasks", oData.results || []);
-//             resolve();
-//         },
-//         error: function(){ oModel.setProperty("/nonProjectTasks", []); resolve(); }
-//     });
-// });
 
 
-//     // Load Tasks
-//     var loadTasks = new Promise(function (resolve) {
-//         oServiceModel.read("/AvailableTaskTypes", {
-//             success: function (oData) {
-//                 var aTasks = [];
-//                 if (oData.results) {
-//                     aTasks = oData.results.map(t => ({ type: t.code, name: t.name }));
-//                 }
-//                 oModel.setProperty("/workTypes", aTasks);
-//                 resolve();
-//             },
-//             error: function () {
-//                 oModel.setProperty("/workTypes", []);
-//                 resolve();
-//             }
-//         });
-//     });
-
-//     // Open the dialog after both projects and tasks are loaded
-// Promise.all([loadProjects, loadTasks, loadNonProjects, loadNonProjectTasks]).then(function () {
-
-//     let weekInfo = that._getCurrentWeekDates(); // you already have similar logic
-//     let isFuture = that._isFutureDate(selectedDateStr, weekInfo.weekStart, weekInfo.weekEnd);
- 
-
-//     let allProjects = oModel.getProperty("/projects") || [];
-//     let nonProjects = oModel.getProperty("/nonProjects") || []; // read from /NonProjectSet OData
-
-//        let normalizedProjects = allProjects.map(p => ({
-//     projectId: p.projectId,
-//     projectName: p.projectName
-// }));
-
-// let normalizedNonProjects = nonProjects.map(np => ({
-//     projectId: np.nonProjectTypeID,   // unique key for non-project
-//     projectName: np.typeName          // normalize label
-// }));
-//     let allTasks = oModel.getProperty("/workTypes") || [];
-//     let nonProjectTasks = oModel.getProperty("/nonProjectTasks") || []; // read from OData
-
-//     if (isFuture) {
-//         // only non-project allowed
-//         oModel.setProperty("/projectsToShow", nonProjects);
-//         oModel.setProperty("/tasksToShow", nonProjectTasks);
-//     } else {
-//         // current week → mix of both
-//         oModel.setProperty("/projectsToShow", [...normalizedProjects,
-//     ...normalizedNonProjects]);
-//         oModel.setProperty("/tasksToShow", [...allTasks]);
-//     }
-
-//     oModel.setProperty("/tasksToShow", []);
-// oModel.setProperty("/isTaskDisabled", true);
-
-
-//     if (!that._oAddEntryDialog) {
-//         that._oAddEntryDialog = sap.ui.xmlfragment(
-//             that.getView().getId(),
-//             "employee.Fragments.AddTimeEntry",
-//             that
-//         );
-//         that.getView().addDependent(that._oAddEntryDialog);
-//     }
-//     that._oAddEntryDialog.open();
-// });
-// },
-
-// onProjectChange: function (oEvent) {
-//     let oModel = this.getView().getModel("timeEntryModel");
-//     let selectedProjectId = oEvent.getSource().getSelectedKey();
-
-//     let normalizedProjects = oModel.getProperty("/projects") || [];
-//     let normalizedNonProjects = oModel.getProperty("/nonProjects") || [];
-//     let allTasks = oModel.getProperty("/workTypes") || [];
-//     let nonProjectTasks = oModel.getProperty("/nonProjectTasks") || [];
-
-//     let isNonProjectSelected =
-//         normalizedNonProjects.some(np => np.nonProjectTypeID === selectedProjectId);
-
-//     if (isNonProjectSelected) {
-//         // When non-project is selected
-//         oModel.setProperty("/tasksToShow", []);  // or nonProjectTasks if needed
-//         oModel.setProperty("/isTaskDisabled", true);
-//     } else {
-//         // Normal project selected
-//         oModel.setProperty("/tasksToShow", allTasks);
-//         oModel.setProperty("/isTaskDisabled", false);
-//     }
-// },
-
-// Add this method to handle user project selection
-// onProjectChange: function (oEvent) {
-//     var oSelectedItem = oEvent.getParameter("selectedItem");
-//     if (!oSelectedItem) return;
-
-//     var oModel = this.getView().getModel("timeEntryModel");
-//     var newEntry = oModel.getProperty("/newEntry") || {};
-
-//     newEntry.projectId = oSelectedItem.getKey();
-//     newEntry.projectName = oSelectedItem.getText(); // <-- set projectName too
-
-//     oModel.setProperty("/newEntry", newEntry);
-// },
 onEntryDatePickerChange: function (oEvent) {
     var that = this;
     var oModel = this.getView().getModel("timeEntryModel");
@@ -717,96 +446,7 @@ onEntryDatePickerChange: function (oEvent) {
         }
     });
 },
-// onSaveNewEntry: function () {
-//     var oModel = this.getView().getModel("timeEntryModel");
-//     var oNewEntry = oModel.getProperty("/newEntry") || {};
-//     var that = this;
 
-//     var hoursForDay = parseFloat(oNewEntry.hours) || 0;
-//     if (hoursForDay <= 0 || hoursForDay > 15) {
-//         sap.m.MessageBox.error("Hours must be between 0 and 15");
-//         return false;
-//     }
-
-//     var selectedDateStr = oNewEntry.selectedDate;
-//     var dayProp = this._dayPropertyFromDate(selectedDateStr); 
-//     var hoursProp = dayProp + "Hours";
-//     var taskProp = dayProp + "TaskDetails";
-
-//     // 🔹 Always check backend first
-//     var oService = this.getOwnerComponent().getModel("timesheetServiceV2");
-//     let employeeID = "a47ac10b-58cc-4372-a567-0e02b2c3d491";
-
-//     // Build backend filter for existing task
-//     var filters = [
-//         new sap.ui.model.Filter("employee_ID", sap.ui.model.FilterOperator.EQ, employeeID),
-//         new sap.ui.model.Filter("task", sap.ui.model.FilterOperator.EQ, oNewEntry.workType)
-//     ];
-
-//     oService.read("/MyTimesheets", {
-//         filters: filters,
-//         success: function(oData) {
-//             let results = oData?.results || [];
-//             let existingEntry = results.length ? results[0] : null;
-
-//             if (existingEntry) {
-//                 // Update only the selected day
-//                 var payloadUpdate = {};
-//                 payloadUpdate[hoursProp] = Number(hoursForDay).toFixed(2);
-//                 payloadUpdate[taskProp] = oNewEntry.taskDetails || "";
-
-//                 oService.update("/MyTimesheets(guid'" + existingEntry.ID + "')", payloadUpdate, {
-//                     success: function() {
-//                         sap.m.MessageToast.show("Entry updated successfully!");
-//                         that._loadTimeEntriesFromBackend(); // Refresh model
-//                     },
-//                     error: function() {
-//                         sap.m.MessageBox.error("Failed to update entry!");
-//                     }
-//                 });
-
-//             } else {
-//                 // Create new row
-//                 var newRow = {
-//                     employee_ID: employeeID,
-//                     project_ID: oNewEntry.projectId || null,
-//                     projectName: oNewEntry.projectName || "",
-//                     task: oNewEntry.workType || "",
-//                     status: "Draft",
-//                     isBillable: true
-//                 };
-
-//                 // Init all days empty
-//                 ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"].forEach(day => {
-//                     newRow[day + "Hours"] = "0.00";
-//                     newRow[day + "TaskDetails"] = "";
-//                     newRow[day + "Date"] = null;
-//                 });
-
-//                 // Set only selected day
-//                 newRow[hoursProp] = Number(hoursForDay).toFixed(2);
-//                 newRow[taskProp] = oNewEntry.taskDetails || "";
-//                 newRow[dayProp + "Date"] = `/Date(${new Date(selectedDateStr).getTime()})/`;
-
-//                 oService.create("/MyTimesheets", newRow, {
-//                     success: function() {
-//                         sap.m.MessageToast.show("New entry created!");
-//                         that._loadTimeEntriesFromBackend();
-//                     },
-//                     error: function() {
-//                         sap.m.MessageBox.error("Failed to create new entry!");
-//                     }
-//                 });
-//             }
-//         },
-//         error: function(err) {
-//             console.error(err);
-//             sap.m.MessageBox.error("Failed to check existing entries!");
-//         }
-//     });
-
-//     return true;
-// },
 _fetchWeekBoundaries: function (selectedDateStr) {
     var oModel = this.getOwnerComponent().getModel("timesheetServiceV2");
     return new Promise((resolve, reject) => {
@@ -820,26 +460,7 @@ _fetchWeekBoundaries: function (selectedDateStr) {
         });
     });
 },
-_fetchNonProjectBackendData: function (typeCode) {
-    var oModel = this.getOwnerComponent().getModel("timesheetServiceV2");
-    return new Promise((resolve, reject) => {
-        oModel.read("/AvailableNonProjectTypes", {
-            success: function (oData) {
-                let list = oData?.results || [];
-                let found = list.find(t =>
-                    t.Code === typeCode || t.ID === typeCode || t.Name === typeCode
-                );
 
-                if (!found) {
-                    reject(`Non-Project type '${typeCode}' not found in backend`);
-                } else {
-                    resolve(found);
-                }
-            },
-            error: reject
-        });
-    });
-},
 onAddEntry: function () {
     var that = this;
     var oModel = this.getView().getModel("timeEntryModel");
@@ -971,12 +592,7 @@ if (isFutureWeek) {
 });
 
 },
-_getWeekStartDate: function(oDate) {
-    var date = new Date(oDate);
-    var day = date.getDay(); // Sunday=0, Monday=1...
-    var diff = date.getDate() - day + (day === 0 ? -6 : 1); // adjust when Sunday
-    return new Date(date.setDate(diff));
-},
+
 
 // Handler for project/non-project selection
 onProjectChange: function (oEvent) {
@@ -1025,7 +641,6 @@ onSaveNewEntry: function() {
 
     // Prepare payload
     var newRow = {
-        employee_ID: oNewEntry.employee_ID || null,
         project_ID: null,
         nonProjectType_ID: null,
         projectName: oNewEntry.projectName || "",
@@ -1129,7 +744,6 @@ _persistToBackend: async function (entry, selectedDateStr, weekData) {
     var task = oNewEntry.taskDetails || "";
     entry[dayProp + "TaskDetails"] = task;
 
-    let employeeID = "a47ac10b-58cc-4372-a567-0e02b2c3d491";
    // 🔹 Always compute week boundary for selected date
 let weekBoundary = await this._getWeekStartEndOData(selectedDateStr);
 console.log("Week boundary:", weekBoundary);
@@ -1157,7 +771,6 @@ let weekEnd = weekBoundary.weekEnd;
     }
 
     var payloadFull = {
-        employee_ID: employeeID,
         weekStartDate: weekStart,
         weekEndDate: weekEnd,
         project_ID: entry.project_ID || null,
@@ -1323,62 +936,7 @@ oModel.setProperty("/tasksToShow", []);
 
     return (total + hoursToAdd) <= 15;
 },
-// _persistToBackend: function (entry, selectedDateStr) {
-//     var oModel = this.getOwnerComponent().getModel("timesheetServiceV2");
 
-//     // Ensure selectedDateStr is in DD/MM/YYYY format before processing
-    
-
-//     var dayProp = this._dayPropertyFromDate(selectedDateStr);
-//     if (!dayProp) {
-//         console.error("❌ dayProp is undefined for date:", selectedDateStr);
-//         return Promise.reject("Invalid day property");
-//     }
-
-//     var oNewEntry = this.getView().getModel("timeEntryModel").getProperty("/newEntry") || {};
-
-//     var hours = entry[dayProp + "Hours"];
-//     var task = oNewEntry.taskDetails || "";
-
-//     // Update UI model so UI stays in sync
-//     entry[dayProp + "TaskDetails"] = task;
-
-//     let employeeID = "a47ac10b-58cc-4372-a567-0e02b2c3d490";
-//     let workDateOData = this._formatDateForOData(selectedDateStr);
-//     let { weekStart, weekEnd } = this._getWeekStartEndOData(selectedDateStr);
-
-
-//     var payload = {
-//         employee_ID: employeeID,
-//         project_ID: entry.projectId,
-//         task: entry.workType,
-//         mondayHours: entry.mondayHours,
-//         mondayTaskDetails: entry.mondayTaskDetails,
-//         tuesdayHours: entry.tuesdayHours,
-//         tuesdayTaskDetails: entry.tuesdayTaskDetails,
-//         wednesdayHours: entry.wednesdayHours,
-//          weekStartDate: weekStart,
-//     weekEndDate: weekEnd,
-//         wednesdayTaskDetails: entry.wednesdayTaskDetails,
-//         thursdayHours: entry.thursdayHours,
-//         thursdayTaskDetails: entry.thursdayTaskDetails,
-//         fridayHours: entry.fridayHours,
-//         fridayTaskDetails: entry.fridayTaskDetails,
-//         saturdayHours: entry.saturdayHours,
-//         saturdayTaskDetails: entry.saturdayTaskDetails,
-//         sundayHours: entry.sundayHours,
-//         sundayTaskDetails: entry.sundayTaskDetails,
-//         status: "Draft",
-//         isBillable: true
-//     };
-
-//     return new Promise((resolve, reject) => {
-//         oModel.create("/MyTimesheets", payload, {
-//             success: resolve,
-//             error: reject
-//         });
-//     });
-// },
 _getWeekStartEndOData: async function (dateStr) {
     if (!dateStr) {
         console.warn("No date provided to _getWeekStartEndOData");
@@ -1571,60 +1129,6 @@ _dayPropertyFromDate: function (dateStr) {
 },
 
 
-_mergePersistResultsIntoModel: function(results, aEntries, oModel) {
-    var that = this;
-
-    results.forEach(function(r) {
-        // find entry matching project + workType
-        var matching = aEntries.find(function(row) {
-            return (row.projectId || null) === (r.response && r.response.project_ID || row.projectId) &&
-                   (row.workType || "") === (r.response && r.response.task || row.workType);
-        });
-
-        // If no matching row found, fallback to first row with same workType
-        if (!matching) {
-            matching = aEntries.find(function(row) {
-                return row.workType === (r.response && r.response.task) || row.workType === (r.workType || row.workType);
-            });
-        }
-
-        // Determine day property from r.workDate
-        var dayProp = that._dayPropertyFromDate(r.workDate);
-
-        if (matching) {
-            // ensure shapes exist
-            matching.dailyTotals = matching.dailyTotals || {monday:0,tuesday:0,wednesday:0,thursday:0,friday:0,saturday:0,sunday:0};
-            matching.dailyComments = matching.dailyComments || {monday:"",tuesday:"",wednesday:"",thursday:"",friday:"",saturday:"",sunday:""};
-
-            // write values
-            matching.dailyTotals[dayProp] = parseFloat(r.hours || 0);
-            matching.dailyComments[dayProp] = r.taskDetails || "";
-
-            // if server returned projectName or projectName present in response, update
-            if (r.response && r.response.projectName) matching.projectName = r.response.projectName;
-            if (r.response && r.response.ID) matching.id = matching.id && matching.id.startsWith("temp-") ? r.response.ID : matching.id;
-
-        } else {
-            // no existing row -> create one from r.response / payload
-            var newRow = {
-                id: r.response && r.response.ID ? r.response.ID : ("srv-" + Date.now()),
-                projectId: r.response && r.response.project_ID ? r.response.project_ID : null,
-                projectName: r.response && r.response.projectName ? r.response.projectName : (r.projectName || "Unknown"),
-                workType: r.response && r.response.task ? r.response.task : (r.workType || ""),
-                dailyTotals: {monday:0,tuesday:0,wednesday:0,thursday:0,friday:0,saturday:0,sunday:0},
-                dailyComments: {monday:"",tuesday:"",wednesday:"",thursday:"",friday:"",saturday:"",sunday:""}
-            };
-            newRow.dailyTotals[dayProp] = parseFloat(r.hours || 0);
-            newRow.dailyComments[dayProp] = r.taskDetails || "";
-            aEntries.push(newRow);
-        }
-    });
-
-    // update model and refresh table binding so UI immediately reflects server state
-    oModel.setProperty("/timeEntries", aEntries);
-    var oTable = this.getView().byId("timesheetTable");
-    if (oTable && oTable.getBinding("items")) oTable.getBinding("items").refresh();
-},
 
 
 
@@ -1983,27 +1487,6 @@ if (newTotalForDay >= 15) {
         oServiceModel.create(sPath, oPayload, { success: fnSuccess, error: fnError });
     }
 },
-// validateDailyHours: function (sDay, fNewHours, aEntries, oEditedEntry) {
-//     let total = 0;
-
-//     aEntries.forEach(entry => {
-//         if (entry[sDay]) {
-//             total += parseFloat(entry[sDay]) || 0;
-//         }
-//     });
-
-//     // adjust for edited entry
-//     let current = parseFloat(oEditedEntry[sDay]) || 0;
-//     total = total - current + fNewHours;
-
-//     if (total > 15) {
-//         sap.m.MessageBox.error(`Total hours for ${this._capitalize(sDay)} cannot exceed 15 (Current: ${total.toFixed(2)})`);
-//         return false;
-//     }
-//     return true;
-// },
-
-
 
 
 _capitalize: function (sText) {
@@ -2236,53 +1719,6 @@ _validateMandatoryFields: function(entry) {
     return true; // All validations passed
 },
 
-// _resetOrLoadWeekEntries: function(oDate) {
-//     var oView = this.getView();
-//     var oModel = oView.getModel("timeEntryModel");
-//     var oMaster = oView.getModel("masterEntriesModel");
-
-//     var weekKey = this._formatDateForModel(oDate); // Monday as key
-//     var allEntries = oMaster.getProperty("/allTimeEntries") || {};
-
-//     // If we already have entries for this week, load them
-//     var aEntries = allEntries[weekKey];
-//     if (!aEntries) {
-//         // No entries → create new from current model
-//         aEntries = oModel.getProperty("/timeEntries") || [];
-//         aEntries.forEach(function(entry){
-//             entry.dailyTotals = { monday:0, tuesday:0, wednesday:0, thursday:0, friday:0, saturday:0, sunday:0 };
-//             entry.dailyComments = { monday:"", tuesday:"", wednesday:"", thursday:"", friday:"", saturday:"", sunday:"" };
-//         });
-//         allEntries[weekKey] = JSON.parse(JSON.stringify(aEntries));
-//         oMaster.setProperty("/allTimeEntries", allEntries);
-//     }
-
-//     // Load entries into working model
-//     oModel.setProperty("/timeEntries", JSON.parse(JSON.stringify(aEntries)));
-
-//     // Recalculate totals for display
-//     var totals = { monday:0, tuesday:0, wednesday:0, thursday:0, friday:0, saturday:0, sunday:0 };
-//     aEntries.forEach(function(entry){
-//         totals.monday += entry.dailyTotals?.monday || 0;
-//         totals.tuesday += entry.dailyTotals?.tuesday || 0;
-//         totals.wednesday += entry.dailyTotals?.wednesday || 0;
-//         totals.thursday += entry.dailyTotals?.thursday || 0;
-//         totals.friday += entry.dailyTotals?.friday || 0;
-//         totals.saturday += entry.dailyTotals?.saturday || 0;
-//         totals.sunday += entry.dailyTotals?.sunday || 0;
-//     });
-//     oModel.setProperty("/dailyTotals", totals);
-
-//     // Also store current week key in model for reference
-//     oModel.setProperty("/currentWeekKey", weekKey);
-
-//     // Refresh table
-//     var oTable = oView.byId("timesheetTable");
-//     if (oTable && oTable.getBinding("items")) {
-//         oTable.getBinding("items").refresh();
-//     }
-// },
-// Utility: parse OData /Date(XXXX)/ to JS Date
 _parseODataDate: function(s) {
     if (!s) return null;
     let match = /\/Date\((\d+)\)\//.exec(s);
@@ -2423,26 +1859,6 @@ _setDatePicker: function(oDate) {
     }
 },
 
-// _applyWeekData: function (aEntries) {
-//     var oModel = this.getView().getModel("timeEntryModel");
-//     var totals = { monday: 0, tuesday: 0, wednesday: 0, thursday: 0, friday: 0, saturday: 0, sunday: 0 };
-
-//     aEntries.forEach(function (entry) {
-//         totals.monday += Number(entry.mondayHours || 0);
-//         totals.tuesday += Number(entry.tuesdayHours || 0);
-//         totals.wednesday += Number(entry.wednesdayHours || 0);
-//         totals.thursday += Number(entry.thursdayHours || 0);
-//         totals.friday += Number(entry.fridayHours || 0);
-//         totals.saturday += Number(entry.saturdayHours || 0);
-//         totals.sunday += Number(entry.sundayHours || 0);
-//     });
-
-//     oModel.setProperty("/dailyTotals", totals);
-//     oModel.setProperty("/timeEntries", aEntries);
-//     oModel.setProperty("/totalWeekHours", Object.values(totals).reduce((a, b) => a + b, 0).toFixed(2));
-// },
-
-// ✅ 2. KEEP your week navigation functions as-is
 onNextWeekTS: function() {
     var oModel = this.getView().getModel("timeEntryModel");
     var monday = new Date(oModel.getProperty("/weekDates/monday"));

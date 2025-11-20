@@ -1,7 +1,7 @@
 ### Employee Service Test File
 ### Base URL: http://localhost:4004
-GET http://localhost:4005/odata/v4/user-api/getCurrentUser
-Authorization: Basic @sumodigitech.com:initial
+GET http://localhost:41857/odata/v4/user-api/getCurrentUser
+Authorization: Basic aditya.mishra@sumodigitech.com:initial
 
 ### Aditya Mishra (Cordys)
 GET http://localhost:4010/odata/v4/employee/MyProjects

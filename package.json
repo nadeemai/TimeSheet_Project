@@ -99,6 +99,11 @@
             }
           }
         }
+      },
+      "[production]": {
+        "auth": {
+          "kind": "mocked"
+        }
       }
     },
     "hana": {

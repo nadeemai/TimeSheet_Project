@@ -21,6 +21,31 @@ sap.ui.define([
 
             // enable routing
             this.getRouter().initialize();
+            this._checkCurrentUser();
+        },
+
+        
+_checkCurrentUser: function () {
+    let oUserModel = this.getOwnerComponent().getModel("userAPIService");
+
+    oUserModel.callFunction("/getCurrentUser", {
+        method: "GET",
+        success: (oData) => {
+            console.log("User API Response:", oData);
+
+            if (oData.getCurrentUser.authenticated) {
+                 this.getRouter().navTo("Employee");
+            } else {
+                sap.m.MessageBox.error(
+                    "User is authenticated but not found in Employee Role Collection."
+                );
+            }
+        },
+        error: (oError) => {
+            console.error("User API Error:", oError);
+            sap.m.MessageToast.show("Unable to fetch user information.");
         }
+    });
+}
     });
 });
