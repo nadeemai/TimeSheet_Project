@@ -795,7 +795,7 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         weekStartDate: weekBoundaries.weekStart
     };
 
-    // ✅ NEW: Allow any active project, not just assigned ones
+    //Allow any active project, not just assigned ones
 if (project_ID) {
     whereClause.project_ID = project_ID;
     

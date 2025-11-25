@@ -574,4 +574,6 @@ service AdminService {
   action deleteTimesheetsByWeek(employeeID: String, weekStartDate: Date)                                                               returns String;
   action deleteAllTimesheets()                                                                                                         returns String;
   action unassignProjectFromEmployee(employeeID: String, projectID: String)                                                            returns String;
+  action deleteEmployee(employeeID: String)                                                                                            returns String;
+  action changeEmployeeRole(employeeID: String, newRoleID: String)                                                                     returns String;
 }

@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mvc:View
+    controllerName="employee.controller.Employee"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:layout="sap.ui.layout"
+    xmlns:table="sap.ui.table"
+    xmlns:f="sap.ui.layout.form"
+    displayBlock="true">
+    <Page id="mainPage" title="Weekly Timesheet" showHeader="true">
+        <headerContent>
+            <Button id="profileButton" icon="sap-icon://person-placeholder" tooltip="My Profile" press="onProfilePress" class="sapUiTinyMarginEnd"/>
+            <Button id="infoButton" icon="sap-icon://information" tooltip="Add Comments" press="onInfoPress" class="sapUiTinyMarginEnd"/>
+            <Button id="settingsBtn" icon="sap-icon://action-settings" tooltip="Settings" press="onSettingsPress"/>
+            <Button id="reportsBtn" icon="sap-icon://business-objects-experience" tooltip="View Reports" press="onViewReports"/>
+            <Button id="logoutBtn" icon="sap-icon://log" tooltip="Logout" press="onLogoutPress"/>
+        </headerContent>
+        <content>
+            <Toolbar id="_IDGenToolbar">
+                <ToolbarSpacer id="_IDGenToolbarSpacer"/>
+                <!-- <Label id="_IDGenLabel32" text="Total Hours:" class="sapUiSmallMarginEnd"/>
+                <Text id="_IDGenText24" text="{/totalWeekHours}" class="sapUiSmallMarginBegin"/> -->
+                <Button id="_IDGenButton7" icon="sap-icon://nav-back" press="onPreviousWeekTS"/>
+                <Button id="_IDGenButton8" icon="sap-icon://navigation-right-arrow" press="onNextWeekTS"/>
+                <Button id="_IDGenButton11" text="Today" press="onCurrentWeekTS"/>
+            </Toolbar>
+            <IconTabBar id="iconTabBar" select="onTabSelect" expanded="true">
+                <items>
+         <IconTabFilter id="timesheetTab" text="Timesheet" key="timesheet" icon="sap-icon://timesheet" iconColor="Critical">
+    <Panel headerText="Daily Time Entry" expandable="true" expanded="true">
+        <VBox class="sapUiSmallMargin">
+
+            <!-- Week Navigation with better spacing -->
+            <HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiMediumMarginBottom">
+                <Title text="Log Your Work Hours" level="H3"/>
+                <HBox class="sapUiTinyMarginEnd">
+                    <Button text="Previous Week" press="onPreviousWeekTS" type="Default" class="sapUiTinyMarginEnd"/>
+                    <Button text="Current Week" press="onCurrentWeekTS" type="Default" class="sapUiTinyMarginEnd"/>
+                    <Button text="Next Week" press="onNextWeekTS" type="Default" class="sapUiTinyMarginEnd"/>
+                    <DatePicker id="datePicker" value="{timeEntryModel>/selectedDate}" change="onDatePickerChange" placeholder="Select any date" width="150px" class="sapUiTinyMarginEnd"/>
+                    <Button icon="sap-icon://add" text="Record Time" press="onAddEntry" type="Emphasized"/>
+                </HBox>
+            </HBox>
+
+            <!-- Timesheet Table with improved styling -->
+            <Table
+                id="timesheetTable"
+                items="{path: 'timeEntryModel>/timeEntries'}"
+                mode="None"
+                class="sapUiSizeCompact"
+                alternateRowColors="true">
+
+
+                <columns>
+                    <!-- Project -->
+                    <Column width="7em" class="sapUiSmallMarginBegin">
+                        <Text text="Project" class=""/>
+                    </Column>
+                    
+                    <!-- Task -->
+                    <Column width="8em" class="sapUiSmallMarginBegin">
+                        <Text text="Task" class=""/>
+                    </Column>
+                    
+                    <!-- Task Details -->
+                    <Column width="5em" hAlign="Center" class="">
+                        <Text text="Task Details" class=""/>
+                    </Column>
+                    
+                    <!-- Monday -->
+                    <Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
+        <Label text="Mon" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/mondayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusMon" 
+            text="{timeEntryModel>/dailyTotals/monday}" 
+            class="sapUiSmallMarginTop"
+            state="{= ${timeEntryModel>/dailyTotals/monday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+                 <!-- Tuesday -->
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
+        <Label text="Tue" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/tuesdayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusTue" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/tuesday}" 
+            state="{= ${timeEntryModel>/dailyTotals/tuesday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+<!-- Wednesday -->
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
+        <Label text="Wed" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/wednesdayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusWed" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/wednesday}" 
+            state="{= ${timeEntryModel>/dailyTotals/wednesday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+<!-- Thursday -->
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
+        <Label text="Thu" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/thursdayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusThu" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/thursday}" 
+            state="{= ${timeEntryModel>/dailyTotals/thursday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+<!-- Friday -->
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
+        <Label text="Fri" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/fridayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusFri" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/friday}" 
+            state="{= ${timeEntryModel>/dailyTotals/friday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+<!-- Saturday -->
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
+        <Label text="Sat" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/saturdayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusSat" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/saturday}" 
+            state="{= ${timeEntryModel>/dailyTotals/saturday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
+        <Label text="Sun" design="Bold"/>
+        <Text text="{timeEntryModel>/weekDates/sundayFormatted}" class="sapUiTinyMarginTop"/>
+        <ObjectStatus 
+            id="_IDGenObjectStatusSun" 
+            class="sapUiSmallMarginTop"
+            text="{timeEntryModel>/dailyTotals/sunday}" 
+            state="{= ${timeEntryModel>/dailyTotals/sunday} >= 8 ? 'Success' : 'Error' }"/>
+    </VBox>
+</Column>
+
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
+        <Label text="" design="Bold"/>
+        <Text text="Total Hours" class="sapUiTinyMarginTop"/>
+       <ObjectStatus
+        class="sapUiSmallMarginTop"
+        text="{timeEntryModel>/totalWeekHours}"
+        state="Success"  />
+    </VBox>
+</Column>
+
+                </columns>
+
+                <items>
+    <ColumnListItem class="sapUiSmallMarginBegin">
+        <cells>
+
+            <!-- Project Name -->
+           <VBox class="sapUiSmallMarginBegin">
+    <Text text="{timeEntryModel>projectName}" class="sapUiSmallMarginTop"/>
+</VBox>
+
+
+            <!-- Task Name -->
+            <VBox class="sapUiSmallMarginBegin">
+                <Text text="{timeEntryModel>workType}" class="sapUiSmallMarginTop"/>
+            </VBox>
+
+            <!-- Task detail button -->
+            <HBox alignItems="Center" justifyContent="Center">
+                <Button icon="sap-icon://list" type="Transparent"
+                        press="onTaskDetailPress" tooltip="View task details"/>
+            </HBox>
+
+            <!-- Monday -->
+            <!-- Monday -->
+<!-- Monday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>mondayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="0" writeToDom="true"/>
+            <core:CustomData key="day" value="monday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
+
+<!-- Tuesday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>tuesdayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="1" writeToDom="true"/>
+            <core:CustomData key="day" value="tuesday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
+
+<!-- Wednesday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>wednesdayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="2" writeToDom="true"/>
+            <core:CustomData key="day" value="wednesday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
+
+<!-- Thursday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>thursdayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="3" writeToDom="true"/>
+            <core:CustomData key="day" value="thursday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
+
+<!-- Friday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>fridayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="4" writeToDom="true"/>
+            <core:CustomData key="day" value="friday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
+
+<!-- Saturday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>saturdayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="5" writeToDom="true"/>
+            <core:CustomData key="day" value="saturday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
+
+<!-- Sunday -->
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
+    <Button 
+        text="{timeEntryModel>sundayHours}" 
+        press="onEditDailyHours" 
+        width="55px" 
+        class="itemButton"
+        textAlign="Center">
+        <customData>
+            <core:CustomData key="rowIndex" value="6" writeToDom="true"/>
+            <core:CustomData key="day" value="sunday" writeToDom="true"/>
+        </customData>
+    </Button>
+</HBox>
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
+    <Text text="{timeEntryModel>totalWeekHours}"></Text>
+</HBox>
+
+
+        </cells>
+    </ColumnListItem>
+</items>
+
+            </Table>
+
+        </VBox>
+    </Panel>
+</IconTabFilter>
+               <IconTabFilter id="_IDGenIconTabFilter" text="Projects" key="projects" icon="sap-icon://background" iconColor="Positive">
+    <Panel id="_IDGenPanel" headerText="Assigned Projects" expandable="true" expanded="true">
+        <List id="projectsList" mode="SingleSelectMaster" items="{
+                path: 'assignedProjects>/assignedProjects'
+            }" selectionChange="onProjectSelect">
+            <StandardListItem
+                title="{assignedProjects>projectName}"      
+                description="{assignedProjects>managerName}" 
+                info="{assignedProjects>status}"
+                infoState="{= ${assignedProjects>status} === 'Approved' ? 'Success' : ${assignedProjects>status} === 'On Hold' ? 'Warning' : 'Error' }"
+                type="Active"/>
+        </List>
+    </Panel>
+</IconTabFilter>
+                    <IconTabFilter id="_IDGenIconTabFilter3" text="Reports" key="reports" icon="sap-icon://bar-chart" iconColor="Negative">
+                        <Panel id="bookedHoursPanel" headerText="Booked Hours Overview" expandable="true" expanded="true">
+                           <Table id="bookedHoursTable" items="{bookedHoursModel>/employeeProjectHours}">
+    <columns>
+        <Column><Text text="Project"/></Column>
+        <Column><Text text="Allocated Hours"/></Column>
+        <Column><Text text="Booked Hours"/></Column>
+        <Column><Text text="Remaining Hours"/></Column>
+        <Column><Text text="Utilization"/></Column>
+    </columns>
+    <items>
+       <ColumnListItem>
+    <cells>
+        <Text text="{bookedHoursModel>Project}"/>
+        <Text text="{bookedHoursModel>AllocatedHours}"/>
+        <Text text="{bookedHoursModel>BookedHours}"/>
+        <Text text="{bookedHoursModel>RemainingHours}"/>
+        <Text text="{bookedHoursModel>Utilization}"/>
+    </cells>
+</ColumnListItem>
+
+    </items>
+</Table>
+                        </Panel>
+                        <Panel id="durationPanel" headerText="Project Engagement Duration" expandable="true" expanded="true">
+                           <Table id="durationTable" items="{durationModel>/employeeProjectDurations}">
+    <columns>
+        <Column><Text text="Project"/></Column>
+        <Column><Text text="Start Date"/></Column>
+        <Column><Text text="End Date"/></Column>
+        <Column><Text text="Duration (Days)"/></Column>
+        <Column><Text text="Days Remaining"/></Column>
+        <Column><Text text="Timeline Status"/></Column>
+    </columns>
+    <items>
+       <ColumnListItem>
+    <cells>
+        <Text text="{durationModel>Project}"/>
+        <Text text="{path: 'durationModel>StartDate', formatter: '.formatDateDisplay'}"/>
+        <Text text="{path: 'durationModel>EndDate', formatter: '.formatDateDisplay'}"/>
+        <Text text="{durationModel>Duration}"/>
+        <Text text="{durationModel>DaysRemaining}"/>
+        <ObjectStatus 
+            text="{durationModel>TimelineStatus}"
+            state="{= ${durationModel>TimelineStatus} === 'Completed' ? 'Success' :
+                     ${durationModel>TimelineStatus} === 'On Track' ? 'Success' :
+                     ${durationModel>TimelineStatus} === 'At Risk' ? 'Warning' :
+                     ${durationModel>TimelineStatus} === 'Delayed' ? 'Error' : 'None' }"/>
+    </cells>
+</ColumnListItem>
+
+    </items>
+</Table>
+                        </Panel>
+                    </IconTabFilter>
+                </items>
+            </IconTabBar>
+        </content>
+        <footer>
+            <!-- <OverflowToolbar id="_IDGenOverflowToolbar">
+                <ToolbarSpacer id="_IDGenToolbarSpacer4"/>
+                <Button id="_IDGenButton17" text="Save Draft" type="Emphasized" press="onSaveDraft"/>
+                <Button id="_IDGenButton18" text="Submit for Approval" type="Accept" press="onSubmitApproval"/>
+            </OverflowToolbar> -->
+        </footer>
+    </Page>
+</mvc:View>

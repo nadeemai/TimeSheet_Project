@@ -1,16 +1,16 @@
-POST http://localhost:4005/odata/v4/admin/deleteTimesheet
+POST http://localhost:9833/odata/v4/admin/deleteTimesheet
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "timesheetID": "TS0004"
+  "timesheetID": "TS002"
 }
 
 
 
 ### 1. GET - Read All Employees
-GET http://localhost:4004/odata/v4/admin/Employees
-Authorization: Basic pushpak.jha:initial
+GET http://localhost:3422/odata/v4/admin/Employees
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
 
 ###
 
@@ -164,12 +164,12 @@ Authorization: Basic pushpak.jha:initial
 ###
 
 ### 16. POST - Assign Employee to Manager
-POST http://localhost:4004/odata/v4/admin/assignEmployeeToManager
-Authorization: Basic pushpak.jha:initial
+POST http://localhost:4008/odata/v4/admin/assignEmployeeToManager
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "employeeID": "EMP008",
+  "employeeID": "EMP004",
   "managerEmployeeID": "EMP006"
 }
 
@@ -188,15 +188,15 @@ Content-Type: application/json
 ###
 
 ### 18. POST - Update Employee Details
-POST http://localhost:4004/odata/v4/admin/updateEmployeeDetails
-Authorization: Basic pushpak.jha:initial
+POST http://localhost:4008/odata/v4/admin/updateEmployeeDetails
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
   "employeeID": "EMP001",
   "firstName": "Aditya",
   "lastName": "Mishra",
-  "email": "aditya.mishra.updated@company.com"
+  "email": "aditya.mishra@sumodigitech.com",
 }
 
 ###
@@ -307,7 +307,8 @@ Content-Type: application/json
 {
   "firstName": "Aditya",
   "lastName": "Mishra",
-  "email":"aditya.mishra@sumodigitech.com"
+  "email":"aditya.mishra@sumodigitech.com",
+  "roleID" : ""
 }
 
 ###
@@ -343,8 +344,8 @@ Authorization: Basic pushpak.jha@sumodigitech.com:initial
 ###
 
 ### 30. GET - Read Timesheets with Filter (By Employee)
-GET http://localhost:4004/odata/v4/admin/Timesheets?$filter=employee/employeeID eq 'EMP001'
-Authorization: Basic pushpak.jha:initial
+GET http://localhost:399/odata/v4/admin/Timesheets?$filter=employee/employeeID eq 'EMP001'
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
 
 ###
 
@@ -407,3 +408,53 @@ GET http://localhost:4004/odata/v4/admin/Employees(a47ac10b-58cc-4372-a567-0e02b
 Authorization: Basic pushpak.jha:initial
 
 ###
+### 1. Delete Employee
+POST http://localhost:4004/odata/v4/admin/deleteEmployee
+Content-Type: application/json
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+{
+  "employeeID": "EMP007"
+}
+
+### 2. Change Employee Role - Employee to Manager
+POST http://localhost:4008/odata/v4/admin/changeEmployeeRole
+Content-Type: application/json
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+{
+  "employeeID": "EMP004",
+  "newRoleID": "2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e"
+}
+
+### 3. Change Employee Role - Manager to Employee
+POST http://localhost:4008/odata/v4/admin/changeEmployeeRole
+Content-Type: application/json
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+{
+  "employeeID": "EMP004",
+  "newRoleID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+}
+
+### 4. Change Employee Role - Employee to Admin
+POST http://localhost:4004/odata/v4/admin/changeEmployeeRole
+Content-Type: application/json
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+{
+  "employeeID": "EMP0001",
+  "newRoleID": "3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f"
+}
+
+### 5. Get All Roles (to find Role IDs)
+GET http://localhost:4008/odata/v4/admin/UserRoles
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+### 6. Get All Employees (to check current roles)
+GET http://localhost:4004/odata/v4/admin/Employees
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+### 7. Get Specific Employee Details
+GET http://localhost:4008/odata/v4/admin/Employees?$filter=employeeID eq 'EMP006'
+Authorization: Basic pushpak.jha@sumodigitech.com:initial

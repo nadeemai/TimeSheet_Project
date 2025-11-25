@@ -121,30 +121,21 @@
         "async": true,
         "viewPath": "employee.view"
       },
-     "routes": [
+   "routes": [
   {
     "pattern": "",
-    "name": "authCheck",
-    "target": "authCheck"
-  },
-  {
-    "pattern": "employee",
     "name": "employee",
     "target": "employee"
   }
 ],
 "targets": {
-  "authCheck": {
-    "viewName": "AuthCheck",
-    "viewId": "authCheck",
-    "viewLevel": 1
-  },
   "employee": {
     "viewName": "Employee",
     "viewId": "employee",
-    "viewLevel": 2
+    "viewLevel": 1
   }
 }
+
     },
     "rootView": {
       "viewName": "employee.view.App",

@@ -1,0 +1,51 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:l="sap.ui.layout">
+    
+    <Dialog id="_IDGenDialog1"
+        title="Edit Hours"
+        contentWidth="300px"
+        afterClose="onAfterCloseEditDialog">
+        
+        <content>
+            <VBox id="_IDGenVBox3" class="sapUiSmallMargin">
+                <Label
+                    id="projectNameLabel"
+                    text="Project: "
+                    class="sapUiTinyMarginBottom"/>
+                
+                <Label
+                    id="workTypeNameLabel"
+                    text="Work Type: "
+                    class="sapUiTinyMarginBottom"/>
+                
+                <Label id="_IDGenLabel36"
+                    text="Enter Hours (0-24):"
+                    class="sapUiSmallMarginTop"/>
+                
+                <Input
+                    id="editHoursInput"
+                    type="Number"
+                    placeholder="Enter hours (0-24)"
+                    liveChange="onEditHoursLiveChange"
+                    class="sapUiTinyMarginTop"/>
+            </VBox>
+        </content>
+        
+        <beginButton>
+            <Button id="_IDGenButton4"
+                text="Save"
+                type="Emphasized"
+                press="onSaveEditHours"/>
+        </beginButton>
+        
+        <endButton>
+            <Button id="_IDGenButton14"
+                text="Cancel"
+                press="onCancelEditHours"/>
+        </endButton>
+        
+    </Dialog>
+    
+</core:FragmentDefinition>

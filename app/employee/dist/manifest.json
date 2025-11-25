@@ -1,0 +1,163 @@
+{
+  "_version": "1.76.0",
+  "sap.app": {
+    "id": "employee",
+    "type": "application",
+    "i18n": {
+      "bundleUrl": "i18n/i18n.properties",
+      "supportedLocales": [
+        ""
+      ]
+    },
+    "applicationVersion": {
+      "version": "0.0.1"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:basic",
+      "version": "1.19.5",
+      "toolsId": "c27cd793-b698-444d-a1df-1ad5d4a8a0d5"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/odata/v4/employee/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "odataVersion": "4.0"
+        }
+      },
+      "timesheetServiceV2": {
+        "uri": "/odata/v2/employee/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0",
+          "annotations": []
+        }
+      },
+      "userAPIService": {
+        "uri": "/odata/v2/user-api/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0",
+          "annotations": []
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": false,
+    "dependencies": {
+      "minUI5Version": "1.142.0",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "employee.i18n.i18n",
+          "supportedLocales": [
+            ""
+          ]
+        }
+      },
+      "": {
+        "dataSource": "mainService",
+        "preload": true,
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "earlyRequests": true
+        }
+      },
+      "timesheetServiceV2": {
+        "dataSource": "timesheetServiceV2",
+        "type": "sap.ui.model.odata.v2.ODataModel",
+        "settings": {
+          "useBatch": false,
+          "defaultBindingMode": "TwoWay",
+          "defaultOperationMode": "Server",
+          "defaultUpdateMethod": "MERGE"
+        }
+      },
+      "userAPIService": {
+        "dataSource": "userAPIService"
+      }
+    },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "controlAggregation": "pages",
+        "controlId": "app",
+        "transition": "slide",
+        "type": "View",
+        "viewType": "XML",
+        "path": "employee.view",
+        "async": true,
+        "viewPath": "employee.view"
+      },
+      "routes": [
+        {
+          "pattern": "",
+          "name": "authCheck",
+          "target": "authCheck"
+        },
+        {
+          "pattern": "employee",
+          "name": "employee",
+          "target": "employee"
+        }
+      ],
+      "targets": {
+        "authCheck": {
+          "viewName": "AuthCheck",
+          "viewId": "authCheck",
+          "viewLevel": 1
+        },
+        "employee": {
+          "viewName": "Employee",
+          "viewId": "employee",
+          "viewLevel": 2
+        }
+      }
+    },
+    "rootView": {
+      "viewName": "employee.view.App",
+      "type": "XML",
+      "id": "App",
+      "async": true
+    }
+  }
+}

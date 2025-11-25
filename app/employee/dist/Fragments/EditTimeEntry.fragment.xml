@@ -1,0 +1,96 @@
+<!-- admin.com.admin.Fragments.EditTimeEntry.xml -->
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form">
+    <Dialog id="editTimeEntryDialog" title="Edit Time Entry" class="sapUiPopupWithPadding">
+        <content>
+            <f:SimpleForm id="editTimeEntryForm" editable="true" layout="ResponsiveGridLayout" columnsL="1" columnsM="1">
+                <f:content>
+                    <Label id="editProjectLabel" text="Project"/>
+                    <ComboBox id="editProjectComboBox"
+                        selectedKey="{/editEntry/projectId}"
+                        items="{/assignedProjects}"
+                        editable="false">
+                        <core:Item id="editProjectItem" key="{projectId}" text="{projectName}"/>
+                    </ComboBox>
+                    
+                    <Label id="editTaskLabel" text="Task"/>
+                    <ComboBox id="editTaskComboBox"
+                        selectedKey="{/editEntry/workType}"
+                        items="{/workTypes}"
+                        editable="false">
+                        <core:Item id="editTaskItem" key="{type}" text="{name}"/>
+                    </ComboBox>
+                    
+                    <Label id="editCommentLabel" text="Task Details"/>
+                    <TextArea id="editCommentTexetArea"
+                        value="{/editEntry/comment}"
+                        growing="true"
+                        growingMaxLines="5"
+                        liveChange="onTaskDetailsLiveChange"
+                        placeholder="Enter task details"/>
+                    
+                    <Label id="editHoursLabel" text="Hours"/>
+                    <HBox id="editHoursHBox">
+                        <VBox id="editMondayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editMondayLabel" text="Monday"/>
+                            <Input id="editMondayInput"
+                                value="{path: '/editEntry/monday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editTuesdayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editTuesdayLabel" text="Tuesday"/>
+                            <Input id="editTuesdayInput"
+                                value="{path: '/editEntry/tuesday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editWednesdayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editWednesdayLabel" text="Wednesday"/>
+                            <Input id="editWednesdayInput"
+                                value="{path: '/editEntry/wednesday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editThursdayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editThursdayLabel" text="Thursday"/>
+                            <Input id="editThursdayInput"
+                                value="{path: '/editEntry/thursday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editFridayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editFridayLabel" text="Friday"/>
+                            <Input id="editFridayInput"
+                                value="{path: '/editEntry/friday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editSaturdayVBox" class="sapUiSmallMarginEnd">
+                            <Label id="editSaturdayLabel" text="Saturday"/>
+                            <Input id="editSaturdayInput"
+                                value="{path: '/editEntry/saturday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                        <VBox id="editSundayVBox">
+                            <Label id="editSundayLabel" text="Sunday"/>
+                            <Input id="editSundayInput"
+                                value="{path: '/editEntry/sunday', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2}}"
+                                change="onFragmentHoursChange"
+                                width="60px"/>
+                        </VBox>
+                    </HBox>
+                </f:content>
+            </f:SimpleForm>
+        </content>
+        <beginButton>
+            <Button id="editCancelButton" text="Cancel" press="onCancelEditEntry"/>
+        </beginButton>
+        <endButton>
+            <Button id="editSaveButton" text="Save" type="Emphasized" press="onSaveEditedEntry"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

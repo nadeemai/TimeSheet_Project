@@ -1,4 +1,6 @@
 const cds = require('@sap/cds');
+console.log('🟢 Loaded admin-service.js VERSION 3');
+
 
 module.exports = cds.service.impl(async function() {
     const { Employees, UserRoles, Activities, NonProjectTypes, Projects, Timesheets, Notifications } = this.entities;
@@ -922,6 +924,158 @@ this.on('assignProjectToEmployee', async (req) => {
         } catch (error) {
             console.error('❌ Error deleting all timesheets:', error);
             return req.error(500, 'Failed to delete timesheets: ' + error.message);
+        }
+    });
+    // Action: Delete Employee (Permanent Deletion)
+    this.on('deleteEmployee', async (req) => {
+        const { employeeID } = req.data;
+        
+        console.log('🗑️ deleteEmployee called for:', employeeID);
+        
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
+        if (!employeeID) {
+            return req.error(400, 'Employee ID is required');
+        }
+
+        const employee = await SELECT.one.from(Employees).where({ employeeID });
+        if (!employee) {
+            return req.error(404, `Employee with ID ${employeeID} not found`);
+        }
+
+        try {
+            // Check if employee has any timesheets
+            const timesheets = await SELECT.from(Timesheets).where({ employee_ID: employee.ID });
+            if (timesheets.length > 0) {
+                return req.error(400, `Cannot delete employee with ${timesheets.length} existing timesheet(s). Please delete timesheets first or use deactivate instead.`);
+            }
+
+            // Check if employee is a manager with active employees
+            const managedEmployees = await SELECT.from(Employees)
+                .where({ managerID_ID: employee.ID, isActive: true });
+            if (managedEmployees.length > 0) {
+                return req.error(400, `Cannot delete employee who is managing ${managedEmployees.length} active employee(s). Please reassign them first.`);
+            }
+
+            // Check if employee owns any projects
+            const ownedProjects = await SELECT.from(Projects)
+                .where({ projectOwner_ID: employee.ID });
+            if (ownedProjects.length > 0) {
+                return req.error(400, `Cannot delete employee who owns ${ownedProjects.length} project(s). Please reassign project ownership first.`);
+            }
+
+            // Delete project assignments
+            await DELETE.from('my.timesheet.ProjectAssignments')
+                .where({ employee_ID: employee.ID });
+
+            // Delete notifications related to this employee
+            await DELETE.from(Notifications)
+                .where({ recipient_ID: employee.ID });
+
+            // Delete the employee
+            await DELETE.from(Employees).where({ ID: employee.ID });
+            
+            console.log(`✅ Employee ${employeeID} deleted successfully`);
+            return `Employee ${employee.firstName} ${employee.lastName} (${employeeID}) has been permanently deleted from the system`;
+        } catch (error) {
+            console.error('❌ Error deleting employee:', error);
+            return req.error(500, 'Failed to delete employee: ' + error.message);
+        }
+    });
+
+    // Action: Change Employee Role
+    this.on('changeEmployeeRole', async (req) => {
+        const { employeeID, newRoleID } = req.data;
+        
+        console.log('🔄 changeEmployeeRole called:', { employeeID, newRoleID });
+        
+        const admin = await getAuthenticatedAdmin(req);
+        if (!admin) return 'Admin authentication failed';
+
+        if (!employeeID || !newRoleID) {
+            return req.error(400, 'Employee ID and new role ID are required');
+        }
+
+        const employee = await SELECT.one.from(Employees).where({ employeeID });
+        if (!employee) {
+            return req.error(404, 'Employee not found');
+        }
+
+        const newRole = await SELECT.one.from(UserRoles).where({ ID: newRoleID });
+        if (!newRole) {
+            return req.error(404, 'New role not found');
+        }
+
+        // Get current role
+        const currentRole = employee.userRole_ID ? 
+            await SELECT.one.from(UserRoles).where({ ID: employee.userRole_ID }) : null;
+        
+        const currentRoleName = currentRole ? currentRole.roleName : 'None';
+
+        try {
+            // Special validation: If changing FROM Manager role
+            if (currentRoleName === 'Manager' && newRole.roleName !== 'Manager') {
+                // Check if manager has any employees assigned
+                const managedEmployees = await SELECT.from(Employees)
+                    .where({ managerID_ID: employee.ID, isActive: true });
+                
+                if (managedEmployees.length > 0) {
+                    return req.error(400, 
+                        `Cannot change role from Manager to ${newRole.roleName}. ` +
+                        `This employee is currently managing ${managedEmployees.length} active employee(s). ` +
+                        `Please reassign these employees to another manager first.`
+                    );
+                }
+
+                // Check if manager owns any active projects
+                const ownedProjects = await SELECT.from(Projects)
+                    .where({ projectOwner_ID: employee.ID, status: 'Active' });
+                
+                if (ownedProjects.length > 0) {
+                    return req.error(400, 
+                        `Cannot change role from Manager to ${newRole.roleName}. ` +
+                        `This employee owns ${ownedProjects.length} active project(s). ` +
+                        `Please reassign project ownership first.`
+                    );
+                }
+            }
+
+            // Special validation: If changing TO Employee role from Manager/Admin
+            if (newRole.roleName === 'Employee' && 
+                (currentRoleName === 'Manager' || currentRoleName === 'Admin')) {
+                
+                // Ensure they have a manager assigned
+                if (!employee.managerID_ID) {
+                    return req.error(400, 
+                        `Cannot change role to Employee without a manager assigned. ` +
+                        `Please assign a manager to this employee first using assignEmployeeToManager action.`
+                    );
+                }
+            }
+
+            // Update the role
+            await UPDATE(Employees)
+                .set({ userRole_ID: newRoleID })
+                .where({ ID: employee.ID });
+
+            // Create notification for the employee
+            const notificationCount = await SELECT.from(Notifications);
+            await INSERT.into(Notifications).entries({
+                notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
+                recipient_ID: employee.ID,
+                message: `Your role has been changed from ${currentRoleName} to ${newRole.roleName} by Admin`,
+                notificationType: 'Role Change',
+                isRead: false,
+                relatedEntity: 'Employee',
+                relatedEntityID: employee.ID
+            });
+
+            console.log(`✅ Role changed: ${employeeID} from ${currentRoleName} to ${newRole.roleName}`);
+            return `Successfully changed role for ${employee.firstName} ${employee.lastName} from ${currentRoleName} to ${newRole.roleName}`;
+        } catch (error) {
+            console.error('❌ Error changing employee role:', error);
+            return req.error(500, 'Failed to change employee role: ' + error.message);
         }
     });
 });

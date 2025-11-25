@@ -34,7 +34,9 @@
     color: orange; /* iMessage-Red vibes */
     
 }
-
+.sapMText {
+    margin: 0px 11px !important;
+}
 .tsHoursOrange {
     color: #ff3b30; /* Warm orange */
     
@@ -54,8 +56,8 @@
 .sapUiMediumMarginBottom{
     margin-bottom: 0px !important;
 }
-
+/* 
 .sapMBtnInner{
     color: black !important;
-}
+} */
 

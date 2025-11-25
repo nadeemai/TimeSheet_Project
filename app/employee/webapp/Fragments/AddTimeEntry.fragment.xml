@@ -94,10 +94,10 @@
                 type="Emphasized"
                 icon="sap-icon://save"
                 press="onSaveNewEntry" />
-            <!-- <Button
+            <Button
                 text="Save + New"
                 icon="sap-icon://add"
-                press="onSaveAndNewEntry" /> -->
+                press="onSaveAndNewEntry" />
             <Button
                 text="Cancel"
                 icon="sap-icon://decline"

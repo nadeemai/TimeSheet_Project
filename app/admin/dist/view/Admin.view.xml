@@ -1,0 +1,347 @@
+<mvc:View
+  controllerName="admin.controller.Admin"
+ 
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  xmlns:l="sap.ui.layout"
+  xmlns:f="sap.ui.layout.form"
+  xmlns:core="sap.ui.core"
+  xmlns:table="sap.ui.table"
+  height="100%">
+  <Page id="adminPage" title="Admin Dashboard">
+    <content>
+      <!-- Main Navigation -->
+      <IconTabBar id="mainTabBar" class="sapUiResponsiveContentPadding" expanded="true">
+        <items>
+          <!-- User Management Tab -->
+          <IconTabFilter id="userManagementTab" key="users" text="User Management" icon="sap-icon://employee">
+            <Panel id="userPanel" headerText="Employee &amp; Manager Management" expandable="true" expanded="true">
+              <headerToolbar>
+                <Toolbar id="_IDGenToolbar">
+                  <Title id="_IDGenTitle" text="User Management"/>
+                  <ToolbarSpacer id="_IDGenToolbarSpacer"/>
+                  <Button id="addUserBtn" text="Add User" type="Emphasized" icon="sap-icon://add" press="onAddUser"/>
+                  <Button id="refreshUsersBtn" text="Refresh" icon="sap-icon://refresh" press="onRefreshUsers"/>
+                </Toolbar>
+              </headerToolbar>
+              <content>
+                <table:Table 
+                  id="usersTable"
+                  rows="{/users}"
+                  selectionMode="Single"
+                  visibleRowCount="10"
+                  class="sapUiSmallMarginTopBottom">
+                  <table:columns>
+                    <table:Column id="_IDGenColumn1" width="8rem">
+                      <Label id="_IDGenLabel" text="User ID"/>
+                      <table:template>
+                        <Text id="_IDGenText" text="{userId}"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn2" width="12rem">
+                      <Label id="_IDGenLabel1" text="Full Name"/>
+                      <table:template>
+                        <Text id="_IDGenText1" text="{firstName} {lastName}"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn3" width="15rem">
+                      <Label id="_IDGenLabel2" text="Email"/>
+                      <table:template>
+                        <Text id="_IDGenText2" text="{email}"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn4" width="8rem">
+                      <Label id="_IDGenLabel3" text="Role"/>
+                      <table:template>
+                        <Text id="_IDGenText3" text="{role}"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn5" width="12rem">
+                      <Label id="_IDGenLabel4" text="Manager"/>
+                      <table:template>
+                        <Text id="_IDGenText4" text="{managerName}"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn6" width="8rem">
+                      <Label id="_IDGenLabel5" text="Status"/>
+                      <table:template>
+                        <ObjectStatus id="_IDGenObjectStatus" 
+                          text="{status}"
+                          state="{= ${status} === 'Active' ? 'Success' : 'Error' }"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn7" width="12rem">
+                      <Label id="_IDGenLabel6" text="Actions"/>
+                      <table:template>
+                        <HBox id="_IDGenHBox">
+                          <Button id="_IDGenButton" 
+                            text="Edit" 
+                            type="Transparent" 
+                            icon="sap-icon://edit"
+                            press="onEditUser"
+                            class="sapUiTinyMarginEnd"/>
+                          <Button id="_IDGenButton1" 
+                            text="{= ${status} === 'Active' ? 'Deactivate' : 'Activate' }" 
+                            type="Transparent"
+                            icon="{= ${status} === 'Active' ? 'sap-icon://inactive' : 'sap-icon://activate' }"
+                            press="onToggleUserStatus"/>
+                        </HBox>
+                      </table:template>
+                    </table:Column>
+                  </table:columns>
+                </table:Table>
+              </content>
+            </Panel>
+          </IconTabFilter>
+
+          <!-- Project Management Tab -->
+          <IconTabFilter id="projectManagementTab" key="projects" text="Project Management" icon="sap-icon://projector">
+            <Panel id="projectPanel" headerText="Project Management" expandable="true" expanded="true">
+              <headerToolbar>
+                <Toolbar id="_IDGenToolbar1">
+                  <Title id="_IDGenTitle1" text="Project Management"/>
+                  <ToolbarSpacer id="_IDGenToolbarSpacer1"/>
+                  <Button id="addProjectBtn" text="Create Project" type="Emphasized" icon="sap-icon://add" press="onAddProject"/>
+                  <Button id="refreshProjectsBtn" text="Refresh" icon="sap-icon://refresh" press="onRefreshProjects"/>
+                </Toolbar>
+              </headerToolbar>
+              <content>
+                <table:Table 
+                  id="projectsTable"
+                  rows="{/projects}"
+                  selectionMode="Single"
+                  visibleRowCount="10"
+                  class="sapUiSmallMarginTopBottom">
+                  <table:columns>
+                    <table:Column id="_IDGenColumn8" width="8rem">
+                      <Label id="_IDGenLabel7" text="Project ID"/>
+                      <table:template>
+                        <Text id="_IDGenText5" text="{projectId}"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn9" width="15rem">
+                      <Label id="_IDGenLabel8" text="Project Name"/>
+                      <table:template>
+                        <Text id="_IDGenText6" text="{name}"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn10" width="12rem">
+                      <Label id="_IDGenLabel9" text="Project Manager"/>
+                      <table:template>
+                        <Text id="_IDGenText7" text="{managerName}"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn11" width="10rem">
+                      <Label id="_IDGenLabel10" text="Budget"/>
+                      <table:template>
+                        <Text id="_IDGenText8" text="{path: 'budget', formatter: '.formatCurrency'}"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn12" width="8rem">
+                      <Label id="_IDGenLabel11" text="Allocated Hours"/>
+                      <table:template>
+                        <Text id="_IDGenText9" text="{allocatedHours}"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn13" width="8rem">
+                      <Label id="_IDGenLabel12" text="Used Hours"/>
+                      <table:template>
+                        <!-- <Text id="_IDGenText10" text="{usedHours}"/> -->
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn14" width="8rem">
+                      <Label id="_IDGenLabel13" text="Status"/>
+                      <table:template>
+                        <ObjectStatus id="_IDGenObjectStatus1" 
+                          text="{status}"
+                          state="{= ${status} === 'Active' ? 'Success' : ${status} === 'Completed' ? 'Success' : 'Warning' }"/>
+                      </table:template>
+                    </table:Column>
+                    <table:Column id="_IDGenColumn15" width="12rem">
+                      <Label id="_IDGenLabel14" text="Actions"/>
+                      <table:template>
+                        <HBox id="_IDGenHBox1">
+                          <Button id="_IDGenButton2" 
+                            text="Edit" 
+                            type="Transparent" 
+                            icon="sap-icon://edit"
+                            press="onEditProject"
+                            class="sapUiTinyMarginEnd"/>
+                          <Button id="_IDGenButton3" 
+                            text="Delete" 
+                            type="Transparent"
+                            icon="sap-icon://delete"
+                            press="onDeleteProject"/>
+                        </HBox>
+                      </table:template>
+                    </table:Column>
+                  </table:columns>
+                </table:Table>
+              </content>
+            </Panel>
+          </IconTabFilter>
+
+          <!-- Analytics Tab -->
+          <IconTabFilter id="analyticsTab" key="analytics" text="Analytics &amp; Reports" icon="sap-icon://business-objects-experience">
+            <Panel id="analyticsPanel" headerText="Project &amp; Team Analytics" expandable="true" expanded="true">
+              <headerToolbar>
+                <Toolbar id="_IDGenToolbar2">
+                  <Title id="_IDGenTitle2" text="Project Analytics"/>
+                  <ToolbarSpacer id="_IDGenToolbarSpacer2"/>
+                  <Button id="refreshAnalyticsBtn" text="Refresh Data" icon="sap-icon://refresh" press="onRefreshAnalytics"/>
+                </Toolbar>
+              </headerToolbar>
+              <content>
+                <l:Grid id="_IDGenGrid" defaultSpan="L6 M6 S12" class="sapUiSmallMarginTop">
+                  <l:content>
+                    <!-- Project Hours Overview -->
+                    <Panel id="_IDGenPanel" headerText="Project Hours Overview">
+                      <table:Table 
+                        id="projectHoursTable"
+                        rows="{/projectHours}"
+                        selectionMode="None"
+                        visibleRowCount="5">
+                        <table:columns>
+                          <table:Column id="_IDGenColumn16" width="15rem">
+                            <Label id="_IDGenLabel15" text="Project"/>
+                            <table:template>
+                              <Text id="_IDGenText11" text="{projectName}"/>
+                            </table:template>
+                          </table:Column>
+                          <table:Column id="_IDGenColumn17" width="10rem">
+                            <Label id="_IDGenLabel16" text="Allocated Hours"/>
+                            <table:template>
+                              <Text id="_IDGenText12" text="{allocatedHours}"/>
+                            </table:template>
+                          </table:Column>
+                          <table:Column id="_IDGenColumn18" width="10rem">
+                            <Label id="_IDGenLabel17" text="Booked Hours"/>
+                            <table:template>
+                              <Text id="_IDGenText13" text="{bookedHours}"/>
+                            </table:template>
+                          </table:Column>
+                          <table:Column id="_IDGenColumn19" width="10rem">
+                            <Label id="_IDGenLabel18" text="Remaining Hours"/>
+                            <table:template>
+                              <Text id="_IDGenText14" text="{remainingHours}"/>
+                            </table:template>
+                          </table:Column>
+                          <table:Column id="_IDGenColumn20" width="10rem">
+                            <Label id="_IDGenLabel19" text="Utilization %"/>
+                            <table:template>
+                              <ProgressIndicator id="_IDGenProgressIndicator" 
+                                displayValue="{utilization}%"
+                                percentValue="{utilization}"
+                                state="{= ${utilization} > 90 ? 'Error' : ${utilization} > 75 ? 'Warning' : 'Success' }"/>
+                            </table:template>
+                          </table:Column>
+                        </table:columns>
+                      </table:Table>
+                    </Panel>
+
+                    <!-- Manager Team Overview -->
+                    <Panel id="_IDGenPanel1" headerText="Manager Team Overview">
+                      <table:Table 
+                        id="managerTeamsTable"
+                        rows="{/managerTeams}"
+                        selectionMode="None"
+                        visibleRowCount="5">
+                        <table:columns>
+                          <table:Column id="_IDGenColumn21" width="12rem">
+                            <Label id="_IDGenLabel20" text="Manager"/>
+                            <table:template>
+                              <Text id="_IDGenText15" text="{managerName}"/>
+                            </table:template>
+                          </table:Column>
+                          <table:Column id="_IDGenColumn22" width="8rem">
+                            <Label id="_IDGenLabel21" text="Team Size"/>
+                            <table:template>
+                              <Text id="_IDGenText16" text="{teamSize}"/>
+                            </table:template>
+                          </table:Column>
+                          <table:Column id="_IDGenColumn23" width="10rem">
+                            <Label id="_IDGenLabel22" text="Total Projects"/>
+                            <table:template>
+                              <Text id="_IDGenText17" text="{totalProjects}"/>
+                            </table:template>
+                          </table:Column>
+                          <table:Column id="_IDGenColumn24" width="12rem">
+                            <Label id="_IDGenLabel23" text="Total Booked Hours"/>
+                            <table:template>
+                              <Text id="_IDGenText18" text="{totalBookedHours}"/>
+                            </table:template>
+                          </table:Column>
+                          <table:Column id="_IDGenColumn25" width="12rem">
+                            <Label id="_IDGenLabel24" text="Avg. Utilization"/>
+                            <table:template>
+                              <ProgressIndicator id="_IDGenProgressIndicator1" 
+                                displayValue="{avgUtilization}%"
+                                percentValue="{avgUtilization}"
+                                state="{= ${avgUtilization} > 90 ? 'Error' : ${avgUtilization} > 75 ? 'Warning' : 'Success' }"/>
+                            </table:template>
+                          </table:Column>
+                        </table:columns>
+                      </table:Table>
+                    </Panel>
+                  </l:content>
+                </l:Grid>
+
+                <!-- Project Engagement Duration -->
+                <Panel id="_IDGenPanel2" headerText="Project Engagement Duration" class="sapUiMediumMarginTop">
+                  <table:Table 
+                    id="projectDurationTable"
+                    rows="{/projectDurations}"
+                    selectionMode="None"
+                    visibleRowCount="5">
+                    <table:columns>
+                      <table:Column id="_IDGenColumn26" width="15rem">
+                        <Label id="_IDGenLabel25" text="Project"/>
+                        <table:template>
+                          <Text id="_IDGenText19" text="{projectName}"/>
+                        </table:template>
+                      </table:Column>
+                      <table:Column id="_IDGenColumn27" width="12rem">
+                        <Label id="_IDGenLabel26" text="Start Date"/>
+                        <table:template>
+                          <Text id="_IDGenText20" text="{path: 'startDate', type: 'sap.ui.model.type.Date', formatOptions: { pattern: 'MMM d, yyyy' }}"/>
+                        </table:template>
+                      </table:Column>
+                      <table:Column id="_IDGenColumn28" width="12rem">
+                        <Label id="_IDGenLabel27" text="End Date"/>
+                        <table:template>
+                          <Text id="_IDGenText21" text="{path: 'endDate', type: 'sap.ui.model.type.Date', formatOptions: { pattern: 'MMM d, yyyy' }}"/>
+                        </table:template>
+                      </table:Column>
+                      <table:Column id="_IDGenColumn29" width="10rem">
+                        <Label id="_IDGenLabel28" text="Duration (Days)"/>
+                        <table:template>
+                          <Text id="_IDGenText22" text="{durationDays}"/>
+                        </table:template>
+                      </table:Column>
+                      <table:Column id="_IDGenColumn30" width="10rem">
+                        <Label id="_IDGenLabel29" text="Days Remaining"/>
+                        <table:template>
+                          <ObjectStatus id="_IDGenObjectStatus2" 
+                            text="{daysRemaining}"
+                            />
+                        </table:template>
+                      </table:Column>
+                      <table:Column id="_IDGenColumn31" width="12rem">
+                        <Label id="_IDGenLabel30" text="Status"/>
+                        <table:template>
+                          <ObjectStatus id="_IDGenObjectStatus3" 
+                            text="{timelineStatus}"
+                            state="{= ${timelineStatus} === 'On Track' ? 'Success' : ${timelineStatus} === 'At Risk' ? 'Warning' : 'Error' }"/>
+                        </table:template>
+                      </table:Column>
+                    </table:columns>
+                  </table:Table>
+                </Panel>
+              </content>
+            </Panel>
+          </IconTabFilter>
+        </items>
+      </IconTabBar>
+    </content>
+  </Page>
+</mvc:View>

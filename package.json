@@ -9,8 +9,11 @@
     "@cap-js-community/odata-v2-adapter": "^1.15.5",
     "@cap-js/hana": "^2.3.4",
     "@sap/cds": "^9",
+    "@sap/xsenv": "^6.0.0",
     "@sap/xssec": "^4",
+    "approuter": "*",
     "express": "^4",
+    "nodemailer": "^7.0.10",
     "passport": "^0.7",
     "sap-cf-mailer": "^0.0.5"
   },
@@ -91,7 +94,7 @@
               ]
             },
             "pushpak.jha@sumodigitech.com": {
-              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d410",
+              "id": "b30256ef-3c6e-44f3-a70b-b39d9f61e25f",
               "password": "initial",
               "roles": [
                 "Admin"
@@ -102,7 +105,7 @@
       },
       "[production]": {
         "auth": {
-          "kind": "mocked"
+          "kind": "xsuaa"
         }
       }
     },

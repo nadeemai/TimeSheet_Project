@@ -54,23 +54,23 @@
 
                 <columns>
                     <!-- Project -->
-                    <Column width="10em" class="sapUiSmallMarginEnd">
-                        <Text text="Project" class="sapUiTinyMarginBottom"/>
+                    <Column width="10em" class="">
+                        <Text text="Project" class=""/>
                     </Column>
                     
                     <!-- Task -->
-                    <Column width="10em" class="sapUiSmallMarginEnd">
-                        <Text text="Task" class="sapUiTinyMarginBottom"/>
+                    <Column width="10em" class="">
+                        <Text text="Task" class=""/>
                     </Column>
                     
                     <!-- Task Details -->
-                    <Column width="7em" hAlign="Center" class="sapUiSmallMarginEnd">
-                        <Text text="Task Details" class="sapUiTinyMarginBottom"/>
+                    <Column width="10em" hAlign="Center" class="">
+                        <Text text="Task Details" class=""/>
                     </Column>
                     
                     <!-- Monday -->
-                    <Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
-    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+                    <Column width="8em" hAlign="Center" class="">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
         <Label text="Mon" design="Bold"/>
         <Text text="{timeEntryModel>/weekDates/mondayFormatted}" class="sapUiTinyMarginTop"/>
         <ObjectStatus 
@@ -81,8 +81,8 @@
     </VBox>
 </Column>
                  <!-- Tuesday -->
-<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
-    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
         <Label text="Tue" design="Bold"/>
         <Text text="{timeEntryModel>/weekDates/tuesdayFormatted}" class="sapUiTinyMarginTop"/>
         <ObjectStatus 
@@ -94,8 +94,8 @@
 </Column>
 
 <!-- Wednesday -->
-<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
-    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
         <Label text="Wed" design="Bold"/>
         <Text text="{timeEntryModel>/weekDates/wednesdayFormatted}" class="sapUiTinyMarginTop"/>
         <ObjectStatus 
@@ -107,8 +107,8 @@
 </Column>
 
 <!-- Thursday -->
-<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
-    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
         <Label text="Thu" design="Bold"/>
         <Text text="{timeEntryModel>/weekDates/thursdayFormatted}" class="sapUiTinyMarginTop"/>
         <ObjectStatus 
@@ -120,8 +120,8 @@
 </Column>
 
 <!-- Friday -->
-<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
-    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
         <Label text="Fri" design="Bold"/>
         <Text text="{timeEntryModel>/weekDates/fridayFormatted}" class="sapUiTinyMarginTop"/>
         <ObjectStatus 
@@ -133,8 +133,8 @@
 </Column>
 
 <!-- Saturday -->
-<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
-    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
         <Label text="Sat" design="Bold"/>
         <Text text="{timeEntryModel>/weekDates/saturdayFormatted}" class="sapUiTinyMarginTop"/>
         <ObjectStatus 
@@ -145,8 +145,8 @@
     </VBox>
 </Column>
 
-<Column width="8em" hAlign="Center" class="sapUiTinyMarginEnd">
-    <VBox alignItems="Center" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
         <Label text="Sun" design="Bold"/>
         <Text text="{timeEntryModel>/weekDates/sundayFormatted}" class="sapUiTinyMarginTop"/>
         <ObjectStatus 
@@ -157,10 +157,28 @@
     </VBox>
 </Column>
 
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
+        <Label text="" design="Bold"/>
+        <Text text="Total Hours" class="sapUiTinyMarginTop"/>
+       <ObjectStatus
+        class="sapUiSmallMarginTop"
+        text="{timeEntryModel>/totalWeekHours}"
+        state="Success"  />
+    </VBox>
+</Column>
+
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
+        <Label text="" design="Bold"/>
+        <Text text="" class="sapUiTinyMarginTop"/>
+    </VBox>
+</Column>
+
                 </columns>
 
                 <items>
-    <ColumnListItem class="sapUiSmallMarginTopBottom">
+    <ColumnListItem class="sapUiSmallMarginBegin">
         <cells>
 
             <!-- Project Name -->
@@ -183,7 +201,7 @@
             <!-- Monday -->
             <!-- Monday -->
 <!-- Monday -->
-<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
     <Button 
         text="{timeEntryModel>mondayHours}" 
         press="onEditDailyHours" 
@@ -198,7 +216,7 @@
 </HBox>
 
 <!-- Tuesday -->
-<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
     <Button 
         text="{timeEntryModel>tuesdayHours}" 
         press="onEditDailyHours" 
@@ -213,7 +231,7 @@
 </HBox>
 
 <!-- Wednesday -->
-<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
     <Button 
         text="{timeEntryModel>wednesdayHours}" 
         press="onEditDailyHours" 
@@ -228,7 +246,7 @@
 </HBox>
 
 <!-- Thursday -->
-<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
     <Button 
         text="{timeEntryModel>thursdayHours}" 
         press="onEditDailyHours" 
@@ -243,11 +261,11 @@
 </HBox>
 
 <!-- Friday -->
-<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
     <Button 
         text="{timeEntryModel>fridayHours}" 
         press="onEditDailyHours" 
-        width="55px" 
+        width="50px" 
         class="itemButton"
         textAlign="Center">
         <customData>
@@ -258,11 +276,12 @@
 </HBox>
 
 <!-- Saturday -->
-<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
     <Button 
         text="{timeEntryModel>saturdayHours}" 
         press="onEditDailyHours" 
-        width="55px" 
+        width="50px"
+        type="Unstyled"
         class="itemButton"
         textAlign="Center">
         <customData>
@@ -273,11 +292,12 @@
 </HBox>
 
 <!-- Sunday -->
-<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBegin sapUiTinyMarginEnd">
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
     <Button 
         text="{timeEntryModel>sundayHours}" 
         press="onEditDailyHours" 
         width="55px" 
+        type="Unstyled"
         class="itemButton"
         textAlign="Center">
         <customData>
@@ -286,7 +306,12 @@
         </customData>
     </Button>
 </HBox>
-
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin">
+    <Text text="{timeEntryModel>totalWeekHours}"></Text>
+</HBox>
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin">
+    <Button icon="sap-icon://delete" type="Reject" visible="true" press="onDeleteRows"></Button>
+</HBox>
 
         </cells>
     </ColumnListItem>
