@@ -24,7 +24,7 @@
           "odataVersion": "4.0"
         }
       },
-       "adminService": {
+      "adminService": {
         "uri": "/odata/v2/admin/",
         "type": "OData",
         "settings": {
@@ -32,8 +32,24 @@
           "annotations": []
         }
       }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "employee-display": {
+          "semanticObject": "admin",
+          "action": "display",
+          "title": "Admin Portal",
+          "icon": "sap-icon://employee",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
     }
   },
+
+
   "sap.ui": {
     "technology": "UI5",
     "icons": {
@@ -50,6 +66,7 @@
       "phone": true
     }
   },
+
   "sap.ui5": {
     "flexEnabled": true,
     "dependencies": {
@@ -79,7 +96,7 @@
           "earlyRequests": true
         }
       },
-       "adminService": {
+      "adminService": {
         "dataSource": "adminService",
         "type": "sap.ui.model.odata.v2.ODataModel",
         "settings": {
@@ -105,24 +122,23 @@
         "transition": "slide",
         "type": "View",
         "viewType": "XML",
-        "path": "admin.view",
-        "async": true,
-        "viewPath": "admin.view"
+        "viewPath": "admin.view",
+        "async": true
       },
       "routes": [
-    {
-      "pattern": "",
-      "name": "admin",
-      "target": "admin"
-    }
-  ],
-  "targets": {
-    "admin": {
-      "viewName": "Admin",
-      "viewId": "admin",
-      "viewLevel": 1
-    }
-  }
+        {
+          "pattern": "",
+          "name": "admin",
+          "target": "admin"
+        }
+      ],
+      "targets": {
+        "admin": {
+          "viewName": "Admin",
+          "viewId": "admin",
+          "viewLevel": 1
+        }
+      }
     },
     "rootView": {
       "viewName": "admin.view.App",
@@ -130,5 +146,10 @@
       "id": "App",
       "async": true
     }
+  },
+  
+  "sap.cloud": {
+    "public": true,
+    "service": "timesheet-application"
   }
 }

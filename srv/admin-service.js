@@ -1,73 +1,83 @@
 const cds = require('@sap/cds');
-console.log('🟢 Loaded admin-service.js VERSION 3');
-
 
 module.exports = cds.service.impl(async function() {
     const { Employees, UserRoles, Activities, NonProjectTypes, Projects, Timesheets, Notifications } = this.entities;
 
     //Helper to get and validate admin with better error handling
     const getAuthenticatedAdmin = async (req) => {
-        const userId = req.user.id;
+    const userId = req.user.id;
+    
+    console.log('🔍 Admin Auth - User ID from BTP:', userId);
+    console.log('🔍 Admin Auth - User roles:', req.user.attr);
+    
+    if (!userId) {
+        console.log('❌ No user ID found');
+        req.error(401, 'User not authenticated');
+        return null;
+    }
+
+    // Check if user has Admin role in authentication system
+    const hasAdminRole = req.user.is('Admin');
+    console.log('🔍 Admin Auth - Has Admin role in BTP:', hasAdminRole);
+    
+    if (!hasAdminRole) {
+        console.log('❌ User does not have Admin role in BTP');
+        req.error(403, 'Admin role required. Please ensure you are logged in with Admin credentials.');
+        return null;
+    }
+
+    // STRATEGY 1: Try to find by email directly
+    let admin = await SELECT.one.from('my.timesheet.Employees')
+        .where({ email: userId, isActive: true });
+
+    // STRATEGY 2: If userId is not a full email, try appending domain
+    if (!admin && !userId.includes('@')) {
+        console.log('⚠️ User ID is not an email, trying with @sumodigitech.com domain...');
+        const emailWithDomain = `${userId}@sumodigitech.com`;
+        admin = await SELECT.one.from('my.timesheet.Employees')
+            .where({ email: emailWithDomain, isActive: true });
+    }
+
+    // STRATEGY 3: Case-insensitive email search
+    if (!admin) {
+        console.log('⚠️ Trying case-insensitive email search...');
+        const allEmployees = await SELECT.from('my.timesheet.Employees')
+            .where({ isActive: true });
         
-        console.log('🔍 Debug Auth - User ID:', userId);
-        console.log('🔍 Debug Auth - User roles:', req.user.attr);
-        
-        if (!userId) {
-            console.log('❌ No user ID found');
-            req.error(401, 'User not authenticated');
-            return null;
-        }
+        const userEmail = userId.toLowerCase();
+        admin = allEmployees.find(emp => 
+            emp.email && emp.email.toLowerCase() === userEmail
+        );
+    }
 
-        //Check if user has Admin role in authentication system
-        const hasAdminRole = req.user.is('Admin');
-        console.log('🔍 Debug Auth - Has Admin role in auth system:', hasAdminRole);
-        
-        if (!hasAdminRole) {
-            console.log('❌ User does not have Admin role');
-            req.error(403, 'Admin role required. Please ensure you are logged in with Admin credentials.');
-            return null;
-        }
+    if (!admin) {
+        console.log('⚠️ Admin profile not found in database, but has Admin role in BTP');
+        // Return a minimal admin object to allow operation
+        return { 
+            ID: userId, 
+            isAdmin: true,
+            employeeID: 'SYSTEM_ADMIN',
+            email: userId
+        };
+    }
 
-        // Try to find employee by ID first
-        let admin = await SELECT.one.from(Employees)
-            .where({ ID: userId, isActive: true });
-
-        //If not found by ID, try to find by email
-        if (!admin) {
-            console.log('⚠️ Admin not found by ID, trying by email...');
-            const userEmail = userId.includes('@') ? userId : `${userId}@sumodigitech.com`;
-            admin = await SELECT.one.from(Employees)
-                .where({ email: userEmail, isActive: true });
-        }
-
-        if (!admin) {
-            console.log('⚠️ Admin profile not found in database, but has Admin role');
-            //Return a minimal admin object to allow operation
-            return { 
-                ID: userId, 
-                isAdmin: true,
-                employeeID: 'SYSTEM_ADMIN'
-            };
-        }
-
-        // Verify user has admin role in database
-        if (admin.userRole_ID) {
-            const role = await SELECT.one.from(UserRoles)
-                .where({ ID: admin.userRole_ID });
-                
-            console.log('🔍 Debug Auth - Database role:', role?.roleName);
+    // Verify user has admin role in database
+    if (admin.userRole_ID) {
+        const role = await SELECT.one.from('my.timesheet.UserRoles')
+            .where({ ID: admin.userRole_ID });
             
-            if (role && role.roleName !== 'Admin') {
-                console.log('❌ User role in database is not Admin');
-                req.error(403, 'Access denied. Admin role required.');
-                return null;
-            }
+        console.log('🔍 Admin Auth - Database role:', role?.roleName);
+        
+        if (role && role.roleName !== 'Admin') {
+            console.log('❌ User role in database is not Admin');
+            req.error(403, 'Access denied. Admin role required in database.');
+            return null;
         }
+    }
 
-        console.log('✅ Admin authenticated successfully:', admin.employeeID);
-        return admin; 
-    };
-
+    console.log('✅ Admin authenticated successfully:', admin.employeeID, 'Email:', admin.email);
+    return admin;
+};
     //Separate validation - more lenient for CREATE
     this.before('CREATE', 'Employees', async (req) => {
         console.log('🔍 Before CREATE Employee - Start validation');

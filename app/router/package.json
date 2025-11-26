@@ -1,5 +1,5 @@
 {
-  "name": "approuter",
+  "name": "timesheet-application-Router",
   "dependencies": {
     "@sap/approuter": "^20.0.0"
   },

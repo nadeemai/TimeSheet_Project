@@ -1,10 +1,36 @@
 {
+  "welcomeFile": "/index.html",
+  "authenticationMethod": "route",
+  "sessionTimeout": 30,
   "routes": [
     {
-      "source": "^/(.*)$",
-      "target": "$1",
+      "source": "^/odata/(.*)$",
+      "target": "/odata/$1",
       "destination": "srv-api",
+      "authenticationType": "xsuaa",
       "csrfProtection": true
+    },
+    {
+      "source": "^/admin/(.*)$",
+      "target": "/admin/$1",
+      "service": "html5-apps-repo-rt",
+      "authenticationType": "xsuaa"
+    },
+    {
+      "source": "^/employee/(.*)$",
+      "target": "/employee/$1",
+      "service": "html5-apps-repo-rt",
+      "authenticationType": "xsuaa"
+    },
+    {
+      "source": "^/(.*)$",
+      "target": "/index.html",
+      "service": "html5-apps-repo-rt",
+      "authenticationType": "xsuaa"
     }
-  ]
+  ],
+  "logout": {
+    "logoutEndpoint": "/do/logout",
+    "logoutPage": "/"
+  }
 }

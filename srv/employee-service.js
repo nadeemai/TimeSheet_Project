@@ -2,37 +2,50 @@ const cds = require('@sap/cds');
 
 module.exports = cds.service.impl(async function() {
     // Helper to get and validate user
-    const getAuthenticatedEmployee = async (req) => {
-        const userId = req.user.id;
+   const getAuthenticatedEmployee = async (req) => {
+    const userId = req.user.id;
+    
+    console.log('🔍 Employee Auth - User ID from BTP:', userId);
+    
+    if (!userId) {
+        req.error(401, 'User not authenticated');
+        return null;
+    }
+
+    // STRATEGY 1: Try to find by email directly (BTP uses email as user ID)
+    let employee = await SELECT.one.from('my.timesheet.Employees')
+        .where({ email: userId, isActive: true });
+
+    // STRATEGY 2: If userId is not a full email, try appending domain
+    if (!employee && !userId.includes('@')) {
+        console.log('⚠️ User ID is not an email, trying with @sumodigitech.com domain...');
+        const emailWithDomain = `${userId}@sumodigitech.com`;
+        employee = await SELECT.one.from('my.timesheet.Employees')
+            .where({ email: emailWithDomain, isActive: true });
+    }
+
+    // STRATEGY 3: Case-insensitive email search (fallback)
+    if (!employee) {
+        console.log('⚠️ Trying case-insensitive email search...');
+        const allEmployees = await SELECT.from('my.timesheet.Employees')
+            .where({ isActive: true });
         
-        console.log('🔍 Employee Auth - User ID:', userId);
-        
-        if (!userId) {
-            req.error(401, 'User not authenticated');
-            return null;
-        }
+        const userEmail = userId.toLowerCase();
+        employee = allEmployees.find(emp => 
+            emp.email && emp.email.toLowerCase() === userEmail
+        );
+    }
 
-        // Try to find by ID first
-        let employee = await SELECT.one.from('my.timesheet.Employees')
-            .where({ ID: userId, isActive: true });
+    if (!employee) {
+        console.log('❌ Employee not found for email:', userId);
+        req.error(404, 'Employee profile not found or inactive. Please contact administrator.');
+        return null;
+    }
 
-        // If not found by ID, try by email
-        if (!employee) {
-            console.log('⚠️ Employee not found by ID, trying by email...');
-            const userEmail = userId.includes('@') ? userId : `${userId}@company.com`;
-            employee = await SELECT.one.from('my.timesheet.Employees')
-                .where({ email: userEmail, isActive: true });
-        }
+    console.log('✅ Employee authenticated:', employee.employeeID, 'Email:', employee.email);
+    return employee;
+};
 
-        if (!employee) {
-            console.log('❌ Employee not found for user ID:', userId);
-            req.error(404, 'Employee profile not found or inactive. Please contact administrator.');
-            return null;
-        }
-
-        console.log('✅ Employee authenticated:', employee.employeeID);
-        return employee;
-    };
 
     // Helper to calculate date differences
     const calculateDateDiff = (startDate, endDate) => {

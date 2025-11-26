@@ -7,9 +7,9 @@ using from './user-api';
 @impl: './employee-service.js'
 service EmployeeService @(requires: 'authenticated-user') {
 
-  // Employee Profile
+  // ✅ CHANGED: email = $user.id instead of ID = $user.id
   @readonly
-  entity MyProfile                 as
+  entity MyProfile as
     select from timesheet.Employees {
       key ID,
           employeeID,
@@ -27,20 +27,20 @@ service EmployeeService @(requires: 'authenticated-user') {
           managerID.email                                  as managerEmail : String
     }
     where
-      ID = $user.id;
+      email = $user.id ;
+         // ✅ CHANGED
 
 
   @readonly
   @cds.redirection.target
-  entity MyProjects                as
+  entity MyProjects as
     select from timesheet.Projects {
       *,
       projectOwner.firstName || ' ' || projectOwner.lastName as projectOwnerName : String
     };
 
-  // Helper for UI - List of assigned projects
   @readonly
-  entity AssignedProjectsList      as
+  entity AssignedProjectsList as
     select from timesheet.Projects {
       key ID,
           projectID,
@@ -49,9 +49,8 @@ service EmployeeService @(requires: 'authenticated-user') {
           status
     };
 
-  // Available Activities - can be filtered by project
   @readonly
-  entity AvailableActivities       as
+  entity AvailableActivities as
     select from timesheet.Activities {
       *,
       project.projectName,
@@ -61,16 +60,14 @@ service EmployeeService @(requires: 'authenticated-user') {
     where
       status = 'Active';
 
-  // Available Non-Project Types
   @readonly
-  entity AvailableNonProjectTypes  as
+  entity AvailableNonProjectTypes as
     select from timesheet.NonProjectTypes {
       *
     }
     where
       isActive = true;
 
-  // Available Task Types for dropdown
   @readonly
   entity AvailableTaskTypes {
     key code          : String  @title: 'Task Code';
@@ -79,9 +76,9 @@ service EmployeeService @(requires: 'authenticated-user') {
         isProjectTask : Boolean @title: 'For Project Work';
   };
 
-  //  My Timesheets
+  // ✅ CHANGED: employee.email = $user.id
   @cds.redirection.target
-  entity MyTimesheets              as
+  entity MyTimesheets as
     projection on timesheet.Timesheets {
       key ID,
           timesheetID,
@@ -97,85 +94,64 @@ service EmployeeService @(requires: 'authenticated-user') {
           createdBy,
           modifiedBy,
 
-          // Employee info
           employee.ID                                        as employee_ID        : UUID,
           employee.firstName || ' ' || employee.lastName     as employeeName       : String,
 
-          // Project info
           project.ID                                         as project_ID         : UUID,
           project.projectName                                as projectName        : String,
           project.projectRole                                as projectRole        : String,
 
-          // Activity info
           activity.ID                                        as activity_ID        : UUID,
           activity.activity                                  as activityName       : String,
 
-          // Non-project type info
           nonProjectType.ID                                  as nonProjectType_ID  : UUID,
           nonProjectType.typeName                            as nonProjectTypeName : String,
 
-          // Approval info
           approvedBy.ID                                      as approvedBy_ID      : UUID,
           approvedBy.firstName || ' ' || approvedBy.lastName as approvedByName     : String,
           approvalDate,
 
-          //  Monday data
           mondayDate,
           mondayDay,
           mondayHours,
           mondayTaskDetails,
 
-          // Tuesday data
           tuesdayDate,
           tuesdayDay,
           tuesdayHours,
           tuesdayTaskDetails,
 
-          //  Wednesday data
           wednesdayDate,
           wednesdayDay,
           wednesdayHours,
           wednesdayTaskDetails,
 
-          // Thursday data
           thursdayDate,
           thursdayDay,
           thursdayHours,
           thursdayTaskDetails,
 
-          // Friday data
           fridayDate,
           fridayDay,
           fridayHours,
           fridayTaskDetails,
 
-          // Saturday data
           saturdayDate,
           saturdayDay,
           saturdayHours,
           saturdayTaskDetails,
 
-          //Sunday data
           sundayDate,
           sundayDay,
           sundayHours,
-          //
           sundayTaskDetails,
-
-    // // Associations for CREATE/UPDATE
-    // employee,
-    // project,
-    // activity,
-    // nonProjectType,
-    // approvedBy
-
     }
     where
-      employee.ID = $user.id;
+      employee.email = $user.id;  // ✅ CHANGED
 
-  // Progress summary for Reports view
+  // ✅ CHANGED: employee.email = $user.id
   @readonly
-  entity MyProgressSummary         as
+  entity MyProgressSummary as
     select from timesheet.Timesheets {
       key ID,
           employee.ID         as employeeID  : UUID,
@@ -197,19 +173,17 @@ service EmployeeService @(requires: 'authenticated-user') {
           isBillable
     }
     where
-      employee.ID = $user.id;
+      employee.email = $user.id;  // ✅ CHANGED
 
-  //Booked Hours Overview
   @readonly
-  entity BookedHoursOverview       as projection on timesheet.Projects;
+  entity BookedHoursOverview as projection on timesheet.Projects;
 
-  // Project Engagement Duration
   @readonly
   entity ProjectEngagementDuration as projection on timesheet.Projects;
 
-  // Daily summary with date filter capability
+  // ✅ CHANGED: employee.email = $user.id
   @readonly
-  entity MyDailySummary            as
+  entity MyDailySummary as
     select from timesheet.Timesheets {
       key ID,
           weekStartDate,
@@ -241,17 +215,12 @@ service EmployeeService @(requires: 'authenticated-user') {
           project.projectName as projectName : String
     }
     where
-      employee.ID = $user.id;
+      employee.email = $user.id;  // ✅ CHANGED
 
-  // Actions
-  action   submitTimesheet(timesheetID: String)                                                                                        returns String;
-  action   updateTimesheet(timesheetID: String, weekData: String)                                                                      returns String; //  accepts weekly data as JSON
-
-  //Function to validate daily hours for a specific date
-  function validateDailyHours(date: Date)                                                                                              returns Decimal;
-
-  //  Function to get week boundaries for a date
-  function getWeekBoundaries(date: Date)                                                                                               returns {
+  action   submitTimesheet(timesheetID: String) returns String;
+  action   updateTimesheet(timesheetID: String, weekData: String) returns String;
+  function validateDailyHours(date: Date) returns Decimal;
+  function getWeekBoundaries(date: Date) returns {
     weekStart : Date;
     weekEnd   : Date;
   };
@@ -264,36 +233,40 @@ service EmployeeService @(requires: 'authenticated-user') {
 @impl: './manager-service.js'
 service ManagerService {
 
+  // ✅ CHANGED: email = $user.id
   @readonly
   @cds.redirection.target
-  entity MyManagerProfile   as
+  entity MyManagerProfile as
     select from timesheet.Employees {
       *
     }
     where
-      ID = $user.id;
+      email = $user.id;  // ✅ CHANGED
 
+  // ✅ CHANGED: managerID.email = $user.id
   @readonly
-  entity MyTeam             as
+  entity MyTeam as
     select from timesheet.Employees {
       *,
       managerID.firstName || ' ' || managerID.lastName as managerName : String
     }
     where
-      managerID.ID = $user.id;
+      managerID.email = $user.id;  // ✅ CHANGED
 
+  // ✅ CHANGED: projectOwner.email = $user.id
   @cds.redirection.target
-  entity MyProjects         as
+  entity MyProjects as
     select from timesheet.Projects {
       *,
       projectOwner.firstName || ' ' || projectOwner.lastName as projectOwnerName : String
     }
     where
-      projectOwner.ID = $user.id;
+      projectOwner.email = $user.id;  // ✅ CHANGED
 
+  // ✅ CHANGED: employee.managerID.email = $user.id
   @readonly
   @cds.redirection.target
-  entity TeamTimesheets     as
+  entity TeamTimesheets as
     select from timesheet.Timesheets {
       *,
       employee.firstName || ' ' || employee.lastName as employeeName       : String,
@@ -304,17 +277,19 @@ service ManagerService {
       nonProjectType.typeName                        as nonProjectTypeName : String
     }
     where
-      employee.managerID.ID = $user.id;
+      employee.managerID.email = $user.id;  // ✅ CHANGED
 
+  // ✅ CHANGED: recipient.email = $user.id
   @readonly
-  entity MyNotifications    as
+  entity MyNotifications as
     select from timesheet.Notifications {
       *,
       recipient.firstName || ' ' || recipient.lastName as recipientName : String
     }
     where
-      recipient.ID = $user.id;
+      recipient.email = $user.id;  // ✅ CHANGED
 
+  // ✅ CHANGED: employee.managerID.email = $user.id
   @readonly
   entity TeamProgressReport as
     select from timesheet.Timesheets {
@@ -336,10 +311,11 @@ service ManagerService {
           status
     }
     where
-      employee.managerID.ID = $user.id;
+      employee.managerID.email = $user.id;  // ✅ CHANGED
 
+  // ✅ CHANGED: projectOwner.email = $user.id
   @readonly
-  entity ProjectSummary     as
+  entity ProjectSummary as
     select from timesheet.Projects {
       key ID        as projectID : UUID,
           projectID as projID    : String,
@@ -351,11 +327,10 @@ service ManagerService {
           status
     }
     where
-      projectOwner.ID = $user.id;
+      projectOwner.email = $user.id;  // ✅ CHANGED
 
-  //Get only employees who can be managers (for dropdown)
   @readonly
-  entity AvailableManagers  as
+  entity AvailableManagers as
     select from timesheet.Employees {
       *,
       userRole.roleName as roleName : String
@@ -365,7 +340,7 @@ service ManagerService {
       and userRole.roleName = 'Manager';
 
   @readonly
-  entity AllEmployees       as
+  entity AllEmployees as
     select from timesheet.Employees {
       *,
       userRole.roleName as roleName : String
@@ -374,17 +349,16 @@ service ManagerService {
       isActive = true;
 
   @readonly
-  entity AllProjects        as
+  entity AllProjects as
     select from timesheet.Projects {
       *
     }
     where
       status = 'Active';
 
-  // Manager Actions
-  action approveTimesheet(timesheetID: String)                                                                                         returns String;
-  action rejectTimesheet(timesheetID: String, reason: String)                                                                          returns String;
-  action assignProjectToEmployee(employeeID: String, projectID: String)                                                                returns String;
+  action approveTimesheet(timesheetID: String) returns String;
+  action rejectTimesheet(timesheetID: String, reason: String) returns String;
+  action assignProjectToEmployee(employeeID: String, projectID: String) returns String;
 }
 
 /**
@@ -395,15 +369,15 @@ service ManagerService {
 service AdminService {
 
   @cds.redirection.target
-  entity Employees             as
+  entity Employees as
     select from timesheet.Employees {
       *,
       managerID.firstName || ' ' || managerID.lastName as managerName : String,
       userRole.roleName                                as roleName    : String
-    };
+    } order by employeeID asc;
 
   @cds.redirection.target
-  entity ProjectAssignments    as
+  entity ProjectAssignments as
     select from timesheet.ProjectAssignments {
       *,
       employee.firstName || ' ' || employee.lastName     as employeeName   : String,
@@ -413,15 +387,14 @@ service AdminService {
       assignedBy.firstName || ' ' || assignedBy.lastName as assignedByName : String
     };
 
-
   @cds.redirection.target
-  entity UserRoles             as
+  entity UserRoles as
     select from timesheet.UserRoles {
       *
     };
 
   @cds.redirection.target
-  entity Activities            as
+  entity Activities as
     select from timesheet.Activities {
       *,
       project.projectName,
@@ -429,13 +402,13 @@ service AdminService {
     };
 
   @cds.redirection.target
-  entity NonProjectTypes       as
+  entity NonProjectTypes as
     select from timesheet.NonProjectTypes {
       *
     };
 
   @cds.redirection.target
-  entity Projects              as
+  entity Projects as
     select from timesheet.Projects {
       *,
       projectOwner.firstName || ' ' || projectOwner.lastName as projectOwnerName : String
@@ -443,7 +416,7 @@ service AdminService {
 
   @readonly
   @cds.redirection.target
-  entity Timesheets            as
+  entity Timesheets as
     select from timesheet.Timesheets {
       *,
       employee.firstName || ' ' || employee.lastName                     as employeeName       : String,
@@ -456,7 +429,7 @@ service AdminService {
     };
 
   @readonly
-  entity Notifications         as
+  entity Notifications as
     select from timesheet.Notifications {
       *,
       recipient.firstName || ' ' || recipient.lastName as recipientName : String
@@ -489,7 +462,7 @@ service AdminService {
     };
 
   @readonly
-  entity RoleSummary           as
+  entity RoleSummary as
     select from timesheet.UserRoles {
       ID,
       roleID,
@@ -498,7 +471,7 @@ service AdminService {
     };
 
   @readonly
-  entity AvailableManagers     as
+  entity AvailableManagers as
     select from timesheet.Employees {
       *,
       userRole.roleName as roleName : String
@@ -507,73 +480,28 @@ service AdminService {
           isActive          = true
       and userRole.roleName = 'Manager';
 
-  // Admin Actions
-  action createEmployee(employeeID: String,
-                        firstName: String,
-                        lastName: String,
-                        email: String,
-                        managerEmployeeID: String,
-                        roleID: String)                                                                                                returns String;
-
-  action createRole(roleID: String, roleName: String, description: String)                                                             returns String;
-
-  action createActivity(activityID: String,
-                        activity: String,
-                        activityType: String,
-                        projectID: String,
-                        isBillable: Boolean,
-                        plannedHours: Integer,
-                        startDate: Date,
-                        endDate: Date)                                                                                                 returns String;
-
-  action createNonProjectType(nonProjectTypeID: String, typeName: String, description: String, isBillable: Boolean)                    returns String;
-
-  action createProject(projectID: String,
-                       projectName: String,
-                       description: String,
-                       startDate: Date,
-                       endDate: Date,
-                       projectRole: String,
-                       budget: Decimal,
-                       allocatedHours: Integer,
-                       projectOwnerID: String,
-                       isBillable: Boolean)                                                                                            returns String;
-
-  action assignEmployeeToManager(employeeID: String, managerEmployeeID: String)                                                        returns String;
-  action assignProjectToEmployee(employeeID: String, projectID: String)                                                                returns String;
-  action deactivateEmployee(employeeID: String)                                                                                        returns String;
-  action deactivateManager(employeeID: String)                                                                                         returns String;
-  action updateEmployeeDetails(employeeID: String, firstName: String, lastName: String, email: String)                                 returns String;
-  action updateRoleDetails(roleID: String, roleName: String, description: String)                                                      returns String;
-
-  action updateActivity(activityID: String,
-                        activity: String,
-                        activityType: String,
-                        projectID: String,
-                        isBillable: Boolean,
-                        plannedHours: Integer,
-                        startDate: Date,
-                        endDate: Date,
-                        status: String)                                                                                                returns String;
-
+  action createEmployee(employeeID: String, firstName: String, lastName: String, email: String, managerEmployeeID: String, roleID: String) returns String;
+  action createRole(roleID: String, roleName: String, description: String) returns String;
+  action createActivity(activityID: String, activity: String, activityType: String, projectID: String, isBillable: Boolean, plannedHours: Integer, startDate: Date, endDate: Date) returns String;
+  action createNonProjectType(nonProjectTypeID: String, typeName: String, description: String, isBillable: Boolean) returns String;
+  action createProject(projectID: String, projectName: String, description: String, startDate: Date, endDate: Date, projectRole: String, budget: Decimal, allocatedHours: Integer, projectOwnerID: String, isBillable: Boolean) returns String;
+  action assignEmployeeToManager(employeeID: String, managerEmployeeID: String) returns String;
+  action assignProjectToEmployee(employeeID: String, projectID: String) returns String;
+  action deactivateEmployee(employeeID: String) returns String;
+  action deactivateManager(employeeID: String) returns String;
+  action updateEmployeeDetails(employeeID: String, firstName: String, lastName: String, email: String) returns String;
+  action updateRoleDetails(roleID: String, roleName: String, description: String) returns String;
+  action updateActivity(activityID: String, activity: String, activityType: String, projectID: String, isBillable: Boolean, plannedHours: Integer, startDate: Date, endDate: Date, status: String) returns String;
   action updateNonProjectType(nonProjectTypeID: String, typeName: String, description: String, isBillable: Boolean, isActive: Boolean) returns String;
-
-  action updateProject(projectID: String,
-                       projectName: String,
-                       description: String,
-                       projectRole: String,
-                       budget: Decimal,
-                       allocatedHours: Integer,
-                       status: String)                                                                                                 returns String;
-
-  action approveTimesheet(timesheetID: String)                                                                                         returns String;
-  action rejectTimesheet(timesheetID: String, reason: String)                                                                          returns String;
-  action deleteEmployeeTimesheets(employeeID: String)                                                                                  returns String;
-  action deleteEmployeeTimesheetsByStatus(employeeID: String, status: String)                                                          returns String;
-  action deleteTimesheet(timesheetID: String)                                                                                          returns String;
-  action deleteTimesheetsByWeek(employeeID: String, weekStartDate: Date)                                                               returns String;
-  action deleteAllTimesheets()                                                                                                         returns String;
-  action unassignProjectFromEmployee(employeeID: String, projectID: String)                                                            returns String;
-  action deleteEmployee(employeeID: String)                                                                                            returns String;
-  action changeEmployeeRole(employeeID: String, newRoleID: String)                                                                     returns String;
+  action updateProject(projectID: String, projectName: String, description: String, projectRole: String, budget: Decimal, allocatedHours: Integer, status: String) returns String;
+  action approveTimesheet(timesheetID: String) returns String;
+  action rejectTimesheet(timesheetID: String, reason: String) returns String;
+  action deleteEmployeeTimesheets(employeeID: String) returns String;
+  action deleteEmployeeTimesheetsByStatus(employeeID: String, status: String) returns String;
+  action deleteTimesheet(timesheetID: String) returns String;
+  action deleteTimesheetsByWeek(employeeID: String, weekStartDate: Date) returns String;
+  action deleteAllTimesheets() returns String;
+  action unassignProjectFromEmployee(employeeID: String, projectID: String) returns String;
+  action deleteEmployee(employeeID: String) returns String;
+  action changeEmployeeRole(employeeID: String, newRoleID: String) returns String;
 }

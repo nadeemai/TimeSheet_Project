@@ -1658,84 +1658,65 @@ _performLogout: function () {
 
     // Format employee data from OData to UI model
     _formatEmployeeData: function (aEmployees) {
-      // First pass: create user objects with comprehensive role mapping
-      var aFormattedUsers = aEmployees.map(function (employee) {
-        // Comprehensive role mapping from all possible OData field names with priority
-        var role = "";
 
-        // Priority 1: roleName (most common field for role)
-        if (employee.roleName && employee.roleName.trim() !== "") {
-          role = employee.roleName;
-        }
-        // Priority 2: Role (capitalized field)
-        else if (employee.Role && employee.Role.trim() !== "") {
-          role = employee.Role;
-        }
-        // Priority 3: role (lowercase field)
-        else if (employee.role && employee.role.trim() !== "") {
-          role = employee.role;
-        }
-        // Priority 4: accessLevel (fallback)
-        else if (employee.accessLevel && employee.accessLevel.trim() !== "") {
-          role = employee.accessLevel;
-        }
-        // Default value
-        else {
-          role = "Employee";
-        }
+    // First pass: Normalize all user records
+    let aFormattedUsers = aEmployees.map(function (employee) {
 
-        // Normalize role values to match UI expectations
-        if (role.toLowerCase().includes("admin")) {
-          role = "Admin";
-        } else if (role.toLowerCase().includes("manager")) {
-          role = "Manager";
-        } else {
-          role = "Employee";
-        }
+        // ----- ROLE MAPPING -----
+        let role =
+            employee.roleName ||
+            employee.Role ||
+            employee.role ||
+            employee.accessLevel ||
+            "Employee";
 
-        console.log("Formatting employee - ID: " + (employee.employeeID || employee.EmployeeID || employee.ID) +
-          ", Final normalized role: '" + role + "'" +
-          " [Source: roleName='" + employee.roleName +
-          "', Role='" + employee.Role +
-          "', role='" + employee.role +
-          "', accessLevel='" + employee.accessLevel + "']");
+        // Normalize role text
+        role = role.toLowerCase().includes("admin")
+            ? "Admin"
+            : role.toLowerCase().includes("manager")
+                ? "Manager"
+                : "Employee";
 
-        var formattedUser = {
-          userId: employee.employeeID || employee.EmployeeID || employee.ID,
-          firstName: employee.firstName || employee.FirstName || "",
-          lastName: employee.lastName || employee.LastName || "",
-          email: employee.email || employee.Email || "",
-          role: role, // Use the properly mapped and normalized role
-          roleName: role, // Add roleName field for backend compatibility
-          managerId: employee.managerID_ID || employee.ManagerID || "",
-          managerName: employee.managerName || employee.ManagerName || "",
-          status: employee.isActive ? "Active" : "Inactive",
-          // Store the original backend ID for updates
-          backendId: employee.ID || employee.id || ""
+        return {
+            // IDs
+            userId: employee.employeeID || employee.EmployeeID || employee.ID,
+            backendId: employee.ID || employee.id || "",
+
+            // Basic Info
+            firstName: employee.firstName || employee.FirstName || "",
+            lastName: employee.lastName || employee.LastName || "",
+            email: employee.email || employee.Email || "",
+
+            // Role
+            role: role,
+            roleName: role,
+
+            // Manager Relations
+            managerId: employee.managerID_ID || employee.ManagerID || employee.managerId || "",
+            managerName: employee.managerName || employee.ManagerName || "",
+
+            // Status
+            status: employee.isActive ? "Active" : "Inactive"
         };
+    });
 
-        console.log("Formatted user:", formattedUser);
-        return formattedUser;
-      });
-
-      // Second pass: set manager names by looking up in the same list
-      aFormattedUsers.forEach(function (user) {
+    // ----- SECOND PASS: FIX MANAGER NAMES -----
+    aFormattedUsers.forEach(function (user) {
         if (user.managerId) {
-          var manager = aFormattedUsers.find(function (m) {
-            return m.userId === user.managerId;
-          });
-          if (manager) {
-            user.managerName = manager.firstName + " " + manager.lastName;
-          } else if (!user.managerName) {
-            user.managerName = "Unknown Manager";
-          }
-        } else if (!user.managerName) {
-          user.managerName = "";
-        }
-      });
+            const mgr = aFormattedUsers.find(m => m.userId === user.managerId);
 
-      return aFormattedUsers;
-    },
+            if (mgr) {
+                user.managerName = mgr.firstName + " " + mgr.lastName;
+            } else if (!user.managerName) {
+                user.managerName = "Unknown Manager";
+            }
+        } else {
+            user.managerName = ""; // No manager
+        }
+    });
+
+    return aFormattedUsers;
+},
 
 
     // Format project data from OData to UI model
@@ -1813,112 +1794,141 @@ _performLogout: function () {
       }
     },
 
-    _loadUserDialog: function (sMode, oUserData) {
-      if (!this._oUserDialog) {
+   _loadUserDialog: async function (sMode, oUserData) {
+
+    const managerList = await this._loadAvailableManagers();
+
+    const oViewModel = new JSONModel({
+        mode: sMode,
+        userData: oUserData ? JSON.parse(JSON.stringify(oUserData)) : {
+            firstName: "",
+            lastName: "",
+            email: "",
+            role: "",
+            managerId: "",
+            managerName: "",
+            status: "Active"
+        },
+        availableManagers: managerList
+    });
+
+    if (!this._oUserDialog) {
         this._oUserDialog = new Dialog({
-          title: sMode === "create" ? "Create New User" : "Edit User",
-          contentWidth: "500px",
-          content: [
-            new SimpleForm({
-              layout: "ResponsiveGridLayout",
-              editable: true,
-              content: [
-                new Label({ text: "First Name" }),
-                new Input({
-                  value: "{/userData/firstName}",
-                  required: true,
-                  valueStateText: "First Name is required"
-                }),
+            title: sMode === "create" ? "Create New User" : "Edit User",
+            contentWidth: "500px",
+            content: [
+                new SimpleForm({
+                    layout: "ResponsiveGridLayout",
+                    editable: true,
+                    content: [
+                        new Label({ text: "First Name" }),
+                        new Input({ value: "{/userData/firstName}", required: true, placeholder: "Enter First Name" }),
 
-                new Label({ text: "Last Name" }),
-                new Input({
-                  value: "{/userData/lastName}",
-                  required: true,
-                  valueStateText: "Last Name is required"
-                }),
+                        new Label({ text: "Last Name" }),
+                        new Input({ value: "{/userData/lastName}", required: true, placeholder: "Enter Last Name" }),
 
-                new Label({ text: "Email" }),
-                new Input({
-                  value: "{/userData/email}",
-                  type: "Email",
-                  required: true,
-                  valueStateText: "Valid Email is required"
-                }),
+                        new Label({ text: "Email" }),
+                        new Input({ value: "{/userData/email}", type: "Email", required: true, placeholder: "Enter Email" }),
 
-                new Label({ text: "Role" }),
-                new Select({
-                  selectedKey: "{/userData/role}",
-                  items: [
-                    new Item({ key: "Employee", text: "Employee" }),
-                    new Item({ key: "Manager", text: "Manager" }),
-                    new Item({ key: "Admin", text: "Admin" })
-                  ],
-                  required: true
-                }),
+                        new Label({ text: "Role" }),
+                        new Select({
+                            selectedKey: "{/userData/role}",
+                            placeholder: "Select Role",
+                            items: [
+                                new Item({ key: "Employee", text: "Employee" }),
+                                new Item({ key: "Manager", text: "Manager" }),
+                                new Item({ key: "Admin", text: "Admin" })
+                            ]
+                        }),
 
-                new Label({ text: "Manager" }),
-                new Select({
-                  selectedKey: "{/userData/managerId}",
-                  items: {
-                    path: "/managers",
-                    template: new Item({
-                      key: "{managerId}",
-                      text: "{firstName} {lastName}"
-                    })
-                  },
-                  forceSelection: false
-                }),
+                        new Label({ text: "Manager" }),
+                        new Select({
+                            selectedKey: "{/userData/managerId}",
+                            forceSelection: false,
+                            items: {
+                                path: "/availableManagers",
+                                template: new Item({
+                                    key: "{ID}",
+                                    text: "{firstName} {lastName}"
+                                })
+                            },
+                            showSecondaryValues: true,
+                            change: function (oEvent) {
+                               const oItem = oEvent.getSource().getSelectedItem();
+        if (!oItem) return; // chill if nothing selected
 
-                new Label({ text: "Status" }),
-                new Select({
-                  selectedKey: "{/userData/status}",
-                  items: [
-                    new Item({ key: "Active", text: "Active" }),
-                    new Item({ key: "Inactive", text: "Inactive" })
-                  ],
-                  required: true
+        const oDialog = this.getParent().getParent().getParent();
+        const oVM = oDialog.getModel();
+
+        const data = oItem.getBindingContext().getObject();
+
+        oVM.setProperty("/userData/managerId", data.ID);
+        oVM.setProperty("/userData/managerName",
+            data.firstName + " " + data.lastName
+        );
+                            }
+                        }),
+
+                        new Label({ text: "Status" }),
+                        new Select({
+                            selectedKey: "{/userData/status}",
+                            items: [
+                                new Item({ key: "Active", text: "Active" }),
+                                new Item({ key: "Inactive", text: "Inactive" })
+                            ]
+                        })
+                    ]
                 })
-              ]
+            ],
+            beginButton: new Button({
+                text: "Save",
+                press: this.onSaveUser.bind(this)
+            }),
+            endButton: new Button({
+                text: "Cancel",
+                press: this.onCancelUser.bind(this)
             })
-          ],
-          beginButton: new Button({
-            text: "Save",
-            type: "Emphasized",
-            press: this.onSaveUser.bind(this)
-          }),
-          endButton: new Button({
-            text: "Cancel",
-            press: this.onCancelUser.bind(this)
-          })
         });
 
         this.getView().addDependent(this._oUserDialog);
-      }
+    }
 
-      // Set up the model for the dialog
-      var oViewModel = new JSONModel({
-        mode: sMode,
-        userData: oUserData ? JSON.parse(JSON.stringify(oUserData)) : {
-          firstName: "",
-          lastName: "",
-          email: "",
-          role: "",
-          managerId: "",
-          managerName: "",
-          status: "Active"
-        },
-        managers: this._getManagersList()
-      });
+    this._oUserDialog.setModel(oViewModel);
+    this._oUserDialog.open();
+},
+_loadAvailableManagers: function () {
+    return new Promise((resolve, reject) => {
+        const oModel = this.getOwnerComponent().getModel("adminService");
 
-      this._oUserDialog.setModel(oViewModel);
-      this._oUserDialog.open();
-    },
+        oModel.read("/AvailableManagers", {
+            success: function (oData) {
+                // Handle both OData V2 and CAP response formats
+                const list = 
+                    oData.results ||   // V2
+                    oData.value   ||   // CAP
+                    [];
 
-    _getManagersList: function () {
-      var oModel = this.getView().getModel();
-      var aUsers = oModel.getProperty("/users");
-      return aUsers.filter(user => user.role === "Manager" && user.status === "Active");
-    },
+                resolve(list);
+            },
+            error: function (err) {
+                console.error("Failed loading managers", err);
+                reject(err);
+            }
+        });
+    });
+},
+_getManagersList: function () {
+  var oModel = this.getView().getModel();
+  var aUsers = oModel.getProperty("/users");
+
+  return aUsers
+    .filter(user => user.role === "Manager" && user.status === "Active")
+    .map(m => ({
+        ID: m.backendId,     // GUID (match managerId)
+        firstName: m.firstName,
+        lastName: m.lastName
+    }));
+},
 
     // Update local model immediately with correct role and manager name
    onSaveUser: function () {
@@ -1970,16 +1980,17 @@ _performLogout: function () {
           };
 
           // Update manager name if managerId changed or is set
-          if (oUserData.managerId) {
-            var manager = aUsers.find(user => user.userId === oUserData.managerId);
-            if (manager) {
-              aUsers[iIndex].managerName = manager.firstName + " " + manager.lastName;
-            } else {
-              aUsers[iIndex].managerName = "Unknown Manager";
-            }
-          } else {
-            aUsers[iIndex].managerName = ""; // Clear manager name if no manager selected
-          }
+         let managerList = oViewModel.getProperty("/availableManagers");
+
+if (!oUserData.managerId && oUserData.managerName) {
+    let manager = managerList.find(m =>
+        (m.firstName + " " + m.lastName).trim() === oUserData.managerName.trim()
+    );
+
+    if (manager) {
+        oUserData.managerId = manager.ID; 
+    }
+}
 
           oModel.setProperty("/users", aUsers);
           oModel.refresh(true); // Force refresh to update table
@@ -1987,32 +1998,8 @@ _performLogout: function () {
         }
       } else if (sMode === "create") {
         // For new users, add to local model temporarily
-        var newUserId = "EMP" + Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
-        var newUser = {
-          userId: newUserId,
-          firstName: oUserData.firstName,
-          lastName: oUserData.lastName,
-          email: oUserData.email,
-          role: oUserData.role,
-          roleName: oUserData.roleName, // Add roleName field for backend compatibility
-          managerId: oUserData.managerId,
-          managerName: "",
-          status: oUserData.status
-        };
-
         // Set manager name for new user
-        if (oUserData.managerId) {
-          var manager = aUsers.find(user => user.userId === oUserData.managerId);
-          if (manager) {
-            newUser.managerName = manager.firstName + " " + manager.lastName;
-          } else {
-            newUser.managerName = "Unknown Manager";
-          }
-        }
-
-        aUsers.push(newUser);
-        oModel.setProperty("/users", aUsers);
-        oModel.refresh(true);
+       // Get full manager object from availableManagers
         MessageToast.show("User added successfully in UI");
       }
 
@@ -2029,38 +2016,63 @@ _performLogout: function () {
 
     // Create employee in OData service
     _createEmployeeInOData: function (oUserData, bRefresh = true) {
-      var oModel = this.getOwnerComponent().getModel("adminService");
-      var that = this;
+    var oModel = this.getOwnerComponent().getModel("adminService");
+    var that = this;
 
-      var oEmployeeData = {
+    var oEmployeeData = {
         firstName: oUserData.firstName,
         lastName: oUserData.lastName,
         email: oUserData.email,
-        roleName: oUserData.role, // Ensure role is saved as roleName
+        roleName: oUserData.role,
         managerID_ID: oUserData.managerId || null,
         isActive: oUserData.status === "Active"
-      };
+    };
 
-      console.log("Creating employee with payload:", oEmployeeData);
+    console.log("Creating employee with payload:", oEmployeeData);
 
-      oModel.create("/Employees", oEmployeeData, {
+    oModel.create("/Employees", oEmployeeData, {
         success: function (oData) {
-          MessageToast.show("User created successfully in backend");
-          // Only refresh if explicitly requested
-          if (bRefresh) {
-            that._loadEmployees();
-          }
+            MessageToast.show("User created successfully");
+
+            // 🧠 Add new employee instantly in UI without refresh
+            let oViewModel = that.getView().getModel();
+            let aUsers = oViewModel.getProperty("/users") || [];
+
+            // Backend returns new ID
+            const backendId = oData.ID;
+
+            // 🔍 Find manager for name resolution
+            const manager = aUsers.find(u => u.backendId === oEmployeeData.managerID_ID);
+
+            // New UI entry
+            const newUser = {
+                backendId: backendId,
+                userId: oData.employeeID || backendId, // fallback
+                firstName: oEmployeeData.firstName,
+                lastName: oEmployeeData.lastName,
+                email: oEmployeeData.email,
+                role: oEmployeeData.roleName,
+                roleName: oEmployeeData.roleName,
+                managerId: oEmployeeData.managerID_ID,
+                managerName: manager ? manager.firstName + " " + manager.lastName : "",
+                status: oEmployeeData.isActive ? "Active" : "Inactive"
+            };
+
+            // 💥 Push only ONCE into UI model
+            aUsers.push(newUser);
+            oViewModel.setProperty("/users", aUsers);
+
+            // Optional backend reload
+            // if (bRefresh) {
+            //     that._loadEmployees();
+            // }
         },
-        error: function (oError) {
-          console.error("Error creating employee:", oError);
-          MessageToast.show("Error creating user in backend");
-          // Only refresh if explicitly requested
-          if (bRefresh) {
-            that._loadEmployees();
-          }
+        error: function (error) {
+            console.error("Create failed:", error);
+            MessageToast.show("Error creating user");
         }
-      });
-    },
+    });
+},
 
 
     // Update employee in OData service with comprehensive field mapping and optional refresh
@@ -2094,6 +2106,7 @@ _performLogout: function () {
                 email: oUserData.email,
                 userRole_ID: roleGuid,
                 managerID_ID: managerEmployeeId,   // <-- EMPLOYEE ID from AvailableManagers
+                managerName: oUserData.managerName,
                 isActive: oUserData.status === "Active"
               };
 
@@ -2103,23 +2116,35 @@ _performLogout: function () {
               oModel.update(sPath, oEmployeePayload, {
                 success: function () {
 
-                  MessageToast.show("User updated successfully.");
+  MessageToast.show("User updated successfully.");
 
-                  // Update UI instantly
-                  var oViewModel = that.getView().getModel();
-                  var aUsers = oViewModel.getProperty("/users");
+  // Update UI instantly (NO REFRESH)
+  var oViewModel = that.getView().getModel();
+  var aUsers = oViewModel.getProperty("/users");
 
-                  let idx = aUsers.findIndex(u => u.userId === oUserData.userId);
-                  if (idx !== -1) {
-                    aUsers[idx].role = oUserData.role;
-                    aUsers[idx].roleName = oUserData.role;
-                    aUsers[idx].userRole_ID = roleGuid;
-                    aUsers[idx].managerID_ID = managerEmployeeId;
-                    oViewModel.setProperty("/users", aUsers);
-                  }
+  let idx = aUsers.findIndex(u => u.userId === oUserData.userId);
+  if (idx !== -1) {
 
-                  if (bRefresh) that._loadEmployees();
-                }
+    aUsers[idx].firstName = oUserData.firstName;
+    aUsers[idx].lastName = oUserData.lastName;
+    aUsers[idx].email = oUserData.email;
+
+    aUsers[idx].role = oUserData.role;
+    aUsers[idx].roleName = oUserData.role;
+
+    // Update manager details
+    aUsers[idx].managerId = oUserData.managerId;
+    aUsers[idx].managerName = oUserData.managerName;
+
+    aUsers[idx].status = oUserData.status;
+
+    aUsers[idx].backendId = backendId;
+  }
+
+  oViewModel.setProperty("/users", aUsers);
+
+}
+
               });
             }
           });
@@ -2154,13 +2179,13 @@ _getManagerEmployeeId: function (managerGuid) {
       success: function (oData) {
         let list = oData.results || [];
 
-        let match = list.find(m => m.employeeID === managerGuid);
+        let match = list.find(m => m.ID === managerGuid);
         if (!match) {
           resolve(null);
           return;
         }
 
-        resolve(match.employeeID);  // <-- THIS is what you must send
+        resolve(match.ID);  // <-- THIS is what you must send
       },
       error: reject
     });

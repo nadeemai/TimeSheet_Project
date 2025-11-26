@@ -2,9 +2,7 @@ namespace my.timesheet;
 
 using { cuid, managed } from '@sap/cds/common';
 
-/**
- * Employee Master Entity
- */
+
 entity Employees : cuid, managed {
     employeeID      : String(10) @title: 'Employee ID';
     firstName       : String(50) @title: 'First Name' @mandatory;
@@ -16,9 +14,7 @@ entity Employees : cuid, managed {
     timesheets      : Association to many Timesheets on timesheets.employee = $self;
 }
 
-/**
- * User Roles Entity
- */
+
 entity UserRoles : cuid, managed {
     roleID          : String(10) @title: 'Role ID';
     roleName        : String(20) @title: 'Role Name' @mandatory; // Employee, Manager, Admin
@@ -26,9 +22,7 @@ entity UserRoles : cuid, managed {
     employees       : Association to many Employees on employees.userRole = $self;
 }
 
-/**
- * Project Master Entity
- */
+
 entity Projects : cuid, managed {
     projectID       : String(10) @title: 'Project ID';
     projectName     : String(100) @title: 'Project Name' @mandatory;
@@ -52,9 +46,7 @@ entity ProjectAssignments : cuid, managed {
     assignedDate    : DateTime @title: 'Assignment Date' default $now;
     isActive        : Boolean @title: 'Active Assignment' default true;
 }
-/**
- * Non-Project Types Master Entity
- */
+
 entity NonProjectTypes : cuid, managed {
     nonProjectTypeID : String(10) @title: 'Non-Project Type ID';
     typeName        : String(50) @title: 'Type Name' @mandatory; // Training, Soft Skills, Leave, etc.
@@ -63,9 +55,6 @@ entity NonProjectTypes : cuid, managed {
     isActive        : Boolean @title: 'Active Status' default true;
 }
 
-/**
- * Activity Master Entity 
- */
 entity Activities : cuid, managed {
     activityID      : String(10) @title: 'Activity ID';
     activity        : String(100) @title: 'Activity Name' @mandatory;
@@ -78,9 +67,6 @@ entity Activities : cuid, managed {
     status          : String(20) @title: 'Status' default 'Active'; // Active, Inactive, Completed
 }
 
-/**
- *Timesheet now includes daily task details for each day
- */
 entity Timesheets : cuid, managed {
     timesheetID     : String(10) @title: 'Timesheet ID';
     employee        : Association to Employees @title: 'Employee' @mandatory;
@@ -88,56 +74,56 @@ entity Timesheets : cuid, managed {
     project         : Association to Projects @title: 'Project';
     nonProjectType  : Association to NonProjectTypes @title: 'Non-Project Type';
     
-    // Week identification
+ 
     weekStartDate   : Date @title: 'Week Start Date' @mandatory; // Monday of the week
     weekEndDate     : Date @title: 'Week End Date' @mandatory;   // Sunday of the week
     
     task            : String(50) @title: 'Task'; // Designing, Testing, Leave, etc.
     taskDetails     : String(500) @title: 'General Task Details'; // Overall description for the week
     
-    //Monday - hours and daily task details
+
     mondayHours     : Decimal(4,2) @title: 'Monday Hours' default 0;
     mondayDate      : Date @title: 'Monday Date';
     mondayDay       : String(10) @title: 'Monday Day' default 'Monday';
     mondayTaskDetails : String(500) @title: 'Monday Task Details';
     
-    //Tuesday - hours and daily task details
+
     tuesdayHours    : Decimal(4,2) @title: 'Tuesday Hours' default 0;
     tuesdayDate     : Date @title: 'Tuesday Date';
     tuesdayDay      : String(10) @title: 'Tuesday Day' default 'Tuesday';
     tuesdayTaskDetails : String(500) @title: 'Tuesday Task Details';
     
-    //Wednesday - hours and daily task details
+
     wednesdayHours  : Decimal(4,2) @title: 'Wednesday Hours' default 0;
     wednesdayDate   : Date @title: 'Wednesday Date';
     wednesdayDay    : String(10) @title: 'Wednesday Day' default 'Wednesday';
     wednesdayTaskDetails : String(500) @title: 'Wednesday Task Details';
     
-    //Thursday - hours and daily task details
+
     thursdayHours   : Decimal(4,2) @title: 'Thursday Hours' default 0;
     thursdayDate    : Date @title: 'Thursday Date';
     thursdayDay     : String(10) @title: 'Thursday Day' default 'Thursday';
     thursdayTaskDetails : String(500) @title: 'Thursday Task Details';
     
-    //Friday - hours and daily task details
+
     fridayHours     : Decimal(4,2) @title: 'Friday Hours' default 0;
     fridayDate      : Date @title: 'Friday Date';
     fridayDay       : String(10) @title: 'Friday Day' default 'Friday';
     fridayTaskDetails : String(500) @title: 'Friday Task Details'; 
     
-    //Saturday - hours and daily task details
+
     saturdayHours   : Decimal(4,2) @title: 'Saturday Hours' default 0;
     saturdayDate    : Date @title: 'Saturday Date';
     saturdayDay     : String(10) @title: 'Saturday Day' default 'Saturday';
     saturdayTaskDetails : String(500) @title: 'Saturday Task Details'; 
     
-    //Sunday - hours and daily task details
+
     sundayHours     : Decimal(4,2) @title: 'Sunday Hours' default 0;
     sundayDate      : Date @title: 'Sunday Date';
     sundayDay       : String(10) @title: 'Sunday Day' default 'Sunday';
     sundayTaskDetails : String(500) @title: 'Sunday Task Details'; 
     
-    // Total hours for the week
+
     totalWeekHours  : Decimal(5,2) @title: 'Total Week Hours' default 0;
     
     status          : String(20) @title: 'Status' default 'Draft'; // Draft, Submitted, Approved, Rejected
@@ -146,9 +132,6 @@ entity Timesheets : cuid, managed {
     isBillable      : Boolean @title: 'Billable' default true;
 }
 
-/**
- * Notification Entity
- */
 entity Notifications : cuid, managed {
     notificationID  : String(10) @title: 'Notification ID';
     recipient       : Association to Employees @title: 'Recipient';
@@ -158,10 +141,6 @@ entity Notifications : cuid, managed {
     relatedEntity   : String(50) @title: 'Related Entity';
     relatedEntityID : String(36) @title: 'Related Entity ID';
 }
-
-/**
- * View for Employee Progress Report
- */
 entity EmployeeProgressView as projection on Timesheets {
     key ID,
     employee,
@@ -174,10 +153,6 @@ entity EmployeeProgressView as projection on Timesheets {
     taskDetails,
     status
 };
-
-/**
- * View for Manager Dashboard
- */
 entity ManagerDashboardView as projection on Timesheets {
     key ID,
     employee.firstName || ' ' || employee.lastName as employeeName : String,

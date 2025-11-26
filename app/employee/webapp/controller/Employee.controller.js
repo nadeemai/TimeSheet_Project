@@ -7,7 +7,7 @@ sap.ui.define([
     "sap/m/MenuItem",
     "sap/m/Menu",
     "sap/m/Dialog",
-    "sap/m/MessageBox"
+    "sap/m/MessageBox",
 
 
 ], (Controller, JSONModel, BusyIndicator, Fragment, MenuItem, Dialog, Menu, MessageToast, MessageBox) => {
@@ -75,7 +75,7 @@ sap.ui.define([
         },
 
 
-
+        
 
 
         _getCurrentWeekMonday: function () {
@@ -138,6 +138,22 @@ sap.ui.define([
 
             return oWeekDates;
         },
+
+      _hasZeroHourEntry: function (dailyTotals) {
+    if (!dailyTotals) return false;
+
+    const totals = [
+        dailyTotals.monday,
+        dailyTotals.tuesday,
+        dailyTotals.wednesday,
+        dailyTotals.thursday,
+        dailyTotals.friday,
+        dailyTotals.saturday,
+        dailyTotals.sunday
+    ];
+
+    return totals.every(t => Number(t) === 0);
+},
 
 
         _loadTimeEntriesFromBackend: function () {
@@ -248,6 +264,10 @@ sap.ui.define([
                             let dailyTotals = this._calculateDailyTotals(formatted);
                             oModel.setProperty("/dailyTotals", dailyTotals);
 
+                            // NEW: Check delete button visibility
+// let showDelete = this._hasZeroHourEntry(dailyTotals);
+// oModel.setProperty("/showDeleteButton", showDelete);
+
                             let totalWeekHours = Object.values(dailyTotals).reduce((a, b) => a + b, 0);
                             oModel.setProperty("/totalWeekHours", totalWeekHours.toFixed(2));
 
@@ -352,107 +372,125 @@ sap.ui.define([
 
 
         onEntryDatePickerChange: function (oEvent) {
-            var that = this;
-            var oModel = this.getView().getModel("timeEntryModel");
-            var oServiceModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+    var that = this;
+    var oModel = this.getView().getModel("timeEntryModel");
+    var oServiceModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+    var value = oEvent.getParameter("value");
+    if (!value) return;
 
-            var value = oEvent.getParameter("value"); // dd/MM/yyyy
-            if (!value) return;
+    var day = this._dayPropertyFromDate(value); // "monday", "saturday", etc.
+    var newEntry = oModel.getProperty("/newEntry") || {};
+    newEntry.selectedDate = value;
+    newEntry.day = day;
+    oModel.setProperty("/newEntry", newEntry);
 
-            var day = this._dayPropertyFromDate(value);
+    // Load data
+    var loadProjects = new Promise(resolve => {
+        oServiceModel.read("/MyProjects", {
+            success: oData => {
+                let projects = (oData.results || []).map(p => ({
+                    id: p.ID,
+                    name: p.projectName,
+                    isNonProject: false
+                }));
+                oModel.setProperty("/projects", projects);
+                resolve();
+            },
+            error: () => { oModel.setProperty("/projects", []); resolve(); }
+        });
+    });
 
-            var newEntry = oModel.getProperty("/newEntry") || {};
-            newEntry.selectedDate = value;
-            newEntry.day = day;
+    var loadNonProjects = new Promise(resolve => {
+        oServiceModel.read("/AvailableNonProjectTypes", {
+            success: oData => {
+                let nonProjects = (oData.results || []).map(np => ({
+                    id: np.ID,
+                    name: np.typeName,
+                    isNonProject: true,
+                    isLeave: np.typeName.toLowerCase().includes("leave") || np.typeName === "Sick Leave"
+                }));
+                oModel.setProperty("/nonProjects", nonProjects);
+                resolve();
+            },
+            error: () => { oModel.setProperty("/nonProjects", []); resolve(); }
+        });
+    });
+
+    var loadTasks = new Promise(resolve => {
+        oServiceModel.read("/AvailableTaskTypes", {
+            success: oData => {
+                let tasks = (oData.results || []).map(t => ({
+                    type: t.code,
+                    name: t.name
+                }));
+                oModel.setProperty("/workTypes", tasks);
+                resolve();
+            },
+            error: () => { oModel.setProperty("/workTypes", []); resolve(); }
+        });
+    });
+
+    Promise.all([loadProjects, loadNonProjects, loadTasks]).then(() => {
+        let allProjects = oModel.getProperty("/projects") || [];
+        let allNonProjects = oModel.getProperty("/nonProjects") || [];
+        let allTasks = oModel.getProperty("/workTypes") || [];
+
+        let isWeekend = day === "saturday" || day === "sunday";
+        let weekInfo = that._getCurrentWeekDates();
+        let isFuture = that._isFutureDate(value, weekInfo.weekStart, weekInfo.weekEnd);
+
+        let projectsToShow = [];
+
+        if (isWeekend) {
+            // Weekend: Show all real projects + Non-Leave non-projects (e.g., Training, On-Call)
+            let allowedNonProjects = allNonProjects.filter(np => !np.isLeave);
+
+            projectsToShow = [
+                ...allProjects.map(p => ({ id: p.id, name: p.name, isNonProject: false })),
+                ...allowedNonProjects.map(np => ({ id: np.id, name: np.name, isNonProject: true }))
+            ];
+
+            // Task field: enabled only if real project selected later
+            oModel.setProperty("/isTaskDisabled", true);
+            oModel.setProperty("/tasksToShow", []);
+        }
+        else if (isFuture) {
+            // Future date (any day): Only Non-Projects (including Leave)
+            projectsToShow = allNonProjects.map(np => ({
+                id: np.id,
+                name: np.name,
+                isNonProject: true
+            }));
+            oModel.setProperty("/tasksToShow", []);
+            oModel.setProperty("/isTaskDisabled", true);
+        }
+        else {
+            // Normal weekday: Show everything
+            projectsToShow = [
+                ...allProjects.map(p => ({ id: p.id, name: p.name, isNonProject: false })),
+                ...allNonProjects.map(np => ({ id: np.id, name: np.name, isNonProject: true }))
+            ];
+            oModel.setProperty("/isTaskDisabled", true); // enabled only on real project select
+            oModel.setProperty("/tasksToShow", []);
+        }
+
+        oModel.setProperty("/projectsToShow", projectsToShow);
+
+        // Reset selection if current choice is no longer valid
+        let currentId = newEntry.projectId || newEntry.nonProjectTypeID;
+        let valid = projectsToShow.some(p => p.id === currentId);
+        if (!valid) {
+            newEntry.projectId = "";
+            newEntry.projectName = "";
+            newEntry.nonProjectTypeID = "";
+            newEntry.nonProjectTypeName = "";
+            newEntry.workType = "";
             oModel.setProperty("/newEntry", newEntry);
-
-            // Load all endpoints
-            var loadProjects = new Promise(function (resolve) {
-                oServiceModel.read("/MyProjects", {
-                    success: function (oData) {
-                        let aProjects = (oData.results || []).map(p => ({
-                            id: p.ID,
-                            name: p.projectName,
-                            isNonProject: false
-                        }));
-                        oModel.setProperty("/projects", aProjects);
-                        resolve();
-                    },
-                    error: () => { oModel.setProperty("/projects", []); resolve(); }
-                });
-            });
-
-            var loadNonProjects = new Promise(function (resolve) {
-                oServiceModel.read("/AvailableNonProjectTypes", {
-                    success: function (oData) {
-                        let aNP = (oData.results || []).map(np => ({
-                            id: np.ID,
-                            name: np.typeName,
-                            isNonProject: true
-                        }));
-                        oModel.setProperty("/nonProjects", aNP);
-                        resolve();
-                    },
-                    error: () => { oModel.setProperty("/nonProjects", []); resolve(); }
-                });
-            });
-
-            var loadTasks = new Promise(function (resolve) {
-                oServiceModel.read("/AvailableTaskTypes", {
-                    success: function (oData) {
-                        let aTasks = (oData.results || []).map(t => ({
-                            type: t.code,
-                            name: t.name
-                        }));
-                        oModel.setProperty("/workTypes", aTasks);
-                        resolve();
-                    },
-                    error: () => { oModel.setProperty("/workTypes", []); resolve(); }
-                });
-            });
-
-            Promise.all([loadProjects, loadNonProjects, loadTasks]).then(function () {
-
-                let weekInfo = that._getCurrentWeekDates();
-                let isFuture = that._isFutureDate(value, weekInfo.weekStart, weekInfo.weekEnd);
-
-                let allProjects = oModel.getProperty("/projects") || [];
-                let allNonProjects = oModel.getProperty("/nonProjects") || [];
-                let allTasks = oModel.getProperty("/workTypes") || [];
-
-                if (isFuture) {
-                    // SHOW ONLY NON PROJECTS
-                    oModel.setProperty("/projectsToShow", allNonProjects);
-                    oModel.setProperty("/tasksToShow", []); // always disabled
-                    oModel.setProperty("/isTaskDisabled", true);
-
-                    // remove previously selected project if any
-                    if (newEntry.projectId) {
-                        newEntry.projectId = "";
-                        newEntry.projectName = "";
-                        oModel.setProperty("/newEntry", newEntry);
-                    }
-
-                } else {
-                    // CURRENT WEEK → SHOW BOTH
-                    var projectsToShow = [
-                        ...allProjects.map(p => ({ id: p.id, name: p.name, isNonProject: false })),
-                        ...allNonProjects.map(np => ({ id: np.id, name: np.name, isNonProject: true }))
-                    ];
-                    oModel.setProperty("/projectsToShow", projectsToShow);
-
-                    // enable only if project selected
-                    // if (newEntry.projectId && !newEntry.nonProjectTypeID) {
-                    //     oModel.setProperty("/tasksToShow", allTasks);
-                    //     oModel.setProperty("/isTaskDisabled", false);
-                    // } else {
-                    //     // non-project selected OR nothing selected yet
-                    //     oModel.setProperty("/tasksToShow", []);
-                    //     oModel.setProperty("/isTaskDisabled", true);
-                    // }
-                }
-            });
-        },
+            oModel.setProperty("/isTaskDisabled", true);
+            oModel.setProperty("/tasksToShow", []);
+        }
+    });
+},
 
         _fetchWeekBoundaries: function (selectedDateStr) {
             var oModel = this.getOwnerComponent().getModel("timesheetServiceV2");
@@ -603,31 +641,41 @@ sap.ui.define([
 
         // Handler for project/non-project selection
         onProjectChange: function (oEvent) {
-            var oModel = this.getView().getModel("timeEntryModel");
-            var selectedItem = oEvent.getSource().getSelectedItem();
-            if (!selectedItem) return;
+    var oModel = this.getView().getModel("timeEntryModel");
+    var oSelectedItem = oEvent.getSource().getSelectedItem();
+    if (!oSelectedItem) return;
 
-            var key = selectedItem.getKey();
-            var text = selectedItem.getText();
-            var list = oModel.getProperty("/projectsToShow") || [];
-            var selected = list.find(p => p.id === key);
+    var key = oSelectedItem.getKey();
+    var text = oSelectedItem.getText();
+    var projectsToShow = oModel.getProperty("/projectsToShow") || [];
+    var selected = projectsToShow.find(p => p.id === key);
+    if (!selected) return;
 
-            if (selected.isNonProject) {
-                oModel.setProperty("/newEntry/nonProjectTypeID", key);
-                oModel.setProperty("/newEntry/nonProjectTypeName", text);
-                oModel.setProperty("/newEntry/projectId", "");
-                oModel.setProperty("/newEntry/projectName", "");
-                oModel.setProperty("/tasksToShow", []);
-                oModel.setProperty("/isTaskDisabled", true);
-            } else {
-                oModel.setProperty("/newEntry/projectId", key);
-                oModel.setProperty("/newEntry/projectName", text);
-                oModel.setProperty("/newEntry/nonProjectTypeID", "");
-                oModel.setProperty("/newEntry/nonProjectTypeName", "");
-                oModel.setProperty("/tasksToShow", oModel.getProperty("/workTypes"));
-                oModel.setProperty("/isTaskDisabled", false);
-            }
-        },
+    var newEntry = oModel.getProperty("/newEntry") || {};
+
+    if (selected.isNonProject) {
+        // Non-project selected → disable task
+        oModel.setProperty("/newEntry/nonProjectTypeID", key);
+        oModel.setProperty("/newEntry/nonProjectTypeName", text);
+        oModel.setProperty("/newEntry/projectId", "");
+        oModel.setProperty("/newEntry/projectName", "");
+        oModel.setProperty("/newEntry/workType", "");
+        oModel.setProperty("/tasksToShow", []);
+        oModel.setProperty("/isTaskDisabled", true);
+    } else {
+        // Real project selected → enable task dropdown
+        oModel.setProperty("/newEntry/projectId", key);
+        oModel.setProperty("/newEntry/projectName", text);
+        oModel.setProperty("/newEntry/nonProjectTypeID", "");
+        oModel.setProperty("/newEntry/nonProjectTypeName", "");
+        oModel.setProperty("/newEntry/workType", "");
+
+        oModel.setProperty("/tasksToShow", oModel.getProperty("/workTypes") || []);
+        oModel.setProperty("/isTaskDisabled", false);
+    }
+
+    oModel.setProperty("/newEntry", newEntry);
+},
         onSaveNewEntry: function () {
             var oModel = this.getView().getModel("timeEntryModel");
             var oNewEntry = oModel.getProperty("/newEntry") || {};

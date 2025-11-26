@@ -33,13 +33,28 @@
         }
       },
       "userAPIService": {
-  "uri": "/odata/v2/user-api/",
-  "type": "OData",
-  "settings": {
-    "odataVersion": "2.0",
-    "annotations": []
-  }
-}
+        "uri": "/odata/v2/user-api/",
+        "type": "OData",
+        "settings": {
+          "odataVersion": "2.0",
+          "annotations": []
+        }
+      }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "employee-display": {
+          "semanticObject": "employee",
+          "action": "display",
+          "title": "Employee Portal",
+          "subTitle": "Employee Dashboard",
+          "icon": "sap-icon://employee",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
     }
   },
   "sap.ui": {
@@ -93,14 +108,14 @@
         "settings": {
           "useBatch": false,
           "defaultBindingMode": "TwoWay",
-            "defaultOperationMode": "Server",
+          "defaultOperationMode": "Server",
           "defaultUpdateMethod": "MERGE"
         }
       },
       "userAPIService": {
-  "dataSource": "userAPIService"
-}
-
+        "dataSource": "userAPIService",
+        "type": "sap.ui.model.odata.v2.ODataModel"
+      }
     },
     "resources": {
       "css": [
@@ -117,25 +132,23 @@
         "transition": "slide",
         "type": "View",
         "viewType": "XML",
-        "path": "employee.view",
-        "async": true,
-        "viewPath": "employee.view"
+        "viewPath": "employee.view",
+        "async": true
       },
-   "routes": [
-  {
-    "pattern": "",
-    "name": "employee",
-    "target": "employee"
-  }
-],
-"targets": {
-  "employee": {
-    "viewName": "Employee",
-    "viewId": "employee",
-    "viewLevel": 1
-  }
-}
-
+      "routes": [
+        {
+          "pattern": "",
+          "name": "employee",
+          "target": "employee"
+        }
+      ],
+      "targets": {
+        "employee": {
+          "viewName": "Employee",
+          "viewId": "employee",
+          "viewLevel": 1
+        }
+      }
     },
     "rootView": {
       "viewName": "employee.view.App",
@@ -143,5 +156,9 @@
       "id": "App",
       "async": true
     }
+  },
+  "sap.cloud": {
+    "public": true,
+    "service": "timesheet-application"
   }
 }

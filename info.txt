@@ -1,0 +1,11 @@
+build our app
+
+delete fle   => mta_archives
+mbt build
+
+
+cf login 
+
+cf deploy mta_<tab><tab>
+
+yes/ no => yes 

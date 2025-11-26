@@ -164,13 +164,13 @@ Authorization: Basic pushpak.jha:initial
 ###
 
 ### 16. POST - Assign Employee to Manager
-POST http://localhost:4008/odata/v4/admin/assignEmployeeToManager
+POST http://localhost:4005/odata/v4/admin/assignEmployeeToManager
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "employeeID": "EMP004",
-  "managerEmployeeID": "EMP006"
+  "employeeID": "EMP0013",
+  "managerEmployeeID": "EMP005"
 }
 
 ###
@@ -409,12 +409,12 @@ Authorization: Basic pushpak.jha:initial
 
 ###
 ### 1. Delete Employee
-POST http://localhost:4004/odata/v4/admin/deleteEmployee
+POST http://localhost:4006/odata/v4/admin/deleteEmployee
 Content-Type: application/json
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 
 {
-  "employeeID": "EMP007"
+  "employeeID": "EMP0013"
 }
 
 ### 2. Change Employee Role - Employee to Manager

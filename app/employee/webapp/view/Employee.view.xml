@@ -40,6 +40,7 @@
                     <Button text="Next Week" press="onNextWeekTS" type="Default" class="sapUiTinyMarginEnd"/>
                     <DatePicker id="datePicker" value="{timeEntryModel>/selectedDate}" change="onDatePickerChange" placeholder="Select any date" width="150px" class="sapUiTinyMarginEnd"/>
                     <Button icon="sap-icon://add" text="Record Time" press="onAddEntry" type="Emphasized"/>
+                    <Button icon="sap-icon://download" text="Download PDF" press="onDownloadPDF" type="Default"/>
                 </HBox>
             </HBox>
 
@@ -281,7 +282,7 @@
         text="{timeEntryModel>saturdayHours}" 
         press="onEditDailyHours" 
         width="50px"
-        type="Unstyled"
+        type="Reject"
         class="itemButton"
         textAlign="Center">
         <customData>
@@ -297,7 +298,7 @@
         text="{timeEntryModel>sundayHours}" 
         press="onEditDailyHours" 
         width="55px" 
-        type="Unstyled"
+        type="Reject"
         class="itemButton"
         textAlign="Center">
         <customData>

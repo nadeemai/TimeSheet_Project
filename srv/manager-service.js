@@ -5,34 +5,66 @@ module.exports = cds.service.impl(async function() {
 
     //  Helper to get and validate manager
     const getAuthenticatedManager = async (req) => {
-        const userId = req.user.id;
+    const userId = req.user.id;
+    
+    console.log('🔍 Manager Auth - User ID from BTP:', userId);
+    
+    if (!userId) {
+        req.error(401, 'User not authenticated');
+        return null;
+    }
+
+    // STRATEGY 1: Try to find by email directly
+    let manager = await SELECT.one.from('my.timesheet.Employees')
+        .where({ email: userId, isActive: true });
+
+    // STRATEGY 2: If userId is not a full email, try appending domain
+    if (!manager && !userId.includes('@')) {
+        console.log('⚠️ User ID is not an email, trying with @sumodigitech.com domain...');
+        const emailWithDomain = `${userId}@sumodigitech.com`;
+        manager = await SELECT.one.from('my.timesheet.Employees')
+            .where({ email: emailWithDomain, isActive: true });
+    }
+
+    // STRATEGY 3: Case-insensitive email search
+    if (!manager) {
+        console.log('⚠️ Trying case-insensitive email search...');
+        const allEmployees = await SELECT.from('my.timesheet.Employees')
+            .where({ isActive: true });
         
-        if (!userId) {
-            req.error(401, 'User not authenticated');
+        const userEmail = userId.toLowerCase();
+        manager = allEmployees.find(emp => 
+            emp.email && emp.email.toLowerCase() === userEmail
+        );
+    }
+
+    if (!manager) {
+        console.log('❌ Manager profile not found for email:', userId);
+        req.error(404, 'Manager profile not found or inactive. Please contact administrator.');
+        return null;
+    }
+
+    // Verify user has manager role
+    if (manager.userRole_ID) {
+        const role = await SELECT.one.from('my.timesheet.UserRoles')
+            .where({ ID: manager.userRole_ID });
+        
+        console.log('🎭 User role:', role ? role.roleName : 'None');
+        
+        if (role && role.roleName !== 'Manager') {
+            console.log('❌ User does not have Manager role');
+            req.error(403, 'Access denied. Manager role required.');
             return null;
         }
+    } else {
+        console.log('❌ User has no role assigned');
+        req.error(403, 'Access denied. No role assigned.');
+        return null;
+    }
 
-        const manager = await SELECT.one.from(Employees)
-            .where({ ID: userId, isActive: true });
-
-        if (!manager) {
-            req.error(404, 'Manager profile not found or inactive. Please contact administrator.');
-            return null;
-        }
-
-        // Verify user has manager role
-        if (manager.userRole_ID) {
-            const role = await SELECT.one.from('my.timesheet.UserRoles')
-                .where({ ID: manager.userRole_ID });
-            
-            if (role && role.roleName !== 'Manager') {
-                req.error(403, 'Access denied. Manager role required.');
-                return null;
-            }
-        }
-
-        return manager;
-    };
+    console.log('✅ Manager authenticated:', manager.employeeID, 'Email:', manager.email);
+    return manager;
+};
 
     // Validate manager access before READ operations
     this.before('READ', ['MyManagerProfile', 'MyTeam', 'MyProjects', 'TeamTimesheets'], async (req) => {

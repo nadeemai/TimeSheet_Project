@@ -54,22 +54,22 @@
 
                 <columns>
                     <!-- Project -->
-                    <Column width="7em" class="sapUiSmallMarginBegin">
+                    <Column width="10em" class="">
                         <Text text="Project" class=""/>
                     </Column>
                     
                     <!-- Task -->
-                    <Column width="8em" class="sapUiSmallMarginBegin">
+                    <Column width="10em" class="">
                         <Text text="Task" class=""/>
                     </Column>
                     
                     <!-- Task Details -->
-                    <Column width="5em" hAlign="Center" class="">
+                    <Column width="10em" hAlign="Center" class="">
                         <Text text="Task Details" class=""/>
                     </Column>
                     
                     <!-- Monday -->
-                    <Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+                    <Column width="8em" hAlign="Center" class="">
     <VBox alignItems="Center" class="sapUiSmallMarginTop">
         <Label text="Mon" design="Bold"/>
         <Text text="{timeEntryModel>/weekDates/mondayFormatted}" class="sapUiTinyMarginTop"/>
@@ -168,6 +168,13 @@
     </VBox>
 </Column>
 
+<Column width="8em" hAlign="Center" class="sapUiSmallMarginTop">
+    <VBox alignItems="Center" class="sapUiSmallMarginTop">
+        <Label text="" design="Bold"/>
+        <Text text="" class="sapUiTinyMarginTop"/>
+    </VBox>
+</Column>
+
                 </columns>
 
                 <items>
@@ -258,7 +265,7 @@
     <Button 
         text="{timeEntryModel>fridayHours}" 
         press="onEditDailyHours" 
-        width="55px" 
+        width="50px" 
         class="itemButton"
         textAlign="Center">
         <customData>
@@ -273,7 +280,8 @@
     <Button 
         text="{timeEntryModel>saturdayHours}" 
         press="onEditDailyHours" 
-        width="55px" 
+        width="50px"
+        type="Reject"
         class="itemButton"
         textAlign="Center">
         <customData>
@@ -289,6 +297,7 @@
         text="{timeEntryModel>sundayHours}" 
         press="onEditDailyHours" 
         width="55px" 
+        type="Reject"
         class="itemButton"
         textAlign="Center">
         <customData>
@@ -297,10 +306,12 @@
         </customData>
     </Button>
 </HBox>
-<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin sapUiTinyMarginEnd">
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin">
     <Text text="{timeEntryModel>totalWeekHours}"></Text>
 </HBox>
-
+<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBegin">
+    <Button icon="sap-icon://delete" type="Reject" visible="true" press="onDeleteRows"></Button>
+</HBox>
 
         </cells>
     </ColumnListItem>
