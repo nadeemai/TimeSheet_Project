@@ -1,7 +1,6 @@
 const cds = require('@sap/cds');
 
 module.exports = cds.service.impl(async function() {
-    // Helper to get and validate user
    const getAuthenticatedEmployee = async (req) => {
     const userId = req.user.id;
     
@@ -12,7 +11,7 @@ module.exports = cds.service.impl(async function() {
         return null;
     }
 
-    // STRATEGY 1: Try to find by email directly (BTP uses email as user ID)
+   
     let employee = await SELECT.one.from('my.timesheet.Employees')
         .where({ email: userId, isActive: true });
 
@@ -458,7 +457,7 @@ this.on('READ', 'MyProjects', async (req) => {
 
     const employeeID = employee.ID;
 
-    // ✅ NEW: Get ALL active projects from the system
+    //Get ALL active projects from the system
     const allProjects = await SELECT.from('my.timesheet.Projects')
         .where({ status: 'Active' });
 

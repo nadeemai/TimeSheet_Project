@@ -1,13 +1,9 @@
 using {my.timesheet as timesheet} from '../db/schema';
 using from './user-api';
 
-/**
- * Employee Service - For Employees to manage their timesheets
- */
 @impl: './employee-service.js'
 service EmployeeService @(requires: 'authenticated-user') {
 
-  // ✅ CHANGED: email = $user.id instead of ID = $user.id
   @readonly
   entity MyProfile as
     select from timesheet.Employees {
@@ -24,11 +20,14 @@ service EmployeeService @(requires: 'authenticated-user') {
           createdBy,
           modifiedBy,
           managerID.firstName || ' ' || managerID.lastName as managerName  : String,
-          managerID.email                                  as managerEmail : String
+          managerID.email                                  as managerEmail : String,
+           userRole.roleName                                as roleName        : String,
+          userRole.roleID                                  as roleID          : String,
+          userRole.description                             as roleDescription : String
+    
     }
     where
       email = $user.id ;
-         // ✅ CHANGED
 
 
   @readonly
@@ -76,7 +75,6 @@ service EmployeeService @(requires: 'authenticated-user') {
         isProjectTask : Boolean @title: 'For Project Work';
   };
 
-  // ✅ CHANGED: employee.email = $user.id
   @cds.redirection.target
   entity MyTimesheets as
     projection on timesheet.Timesheets {
@@ -147,9 +145,8 @@ service EmployeeService @(requires: 'authenticated-user') {
           sundayTaskDetails,
     }
     where
-      employee.email = $user.id;  // ✅ CHANGED
+      employee.email = $user.id;  
 
-  // ✅ CHANGED: employee.email = $user.id
   @readonly
   entity MyProgressSummary as
     select from timesheet.Timesheets {
@@ -173,7 +170,7 @@ service EmployeeService @(requires: 'authenticated-user') {
           isBillable
     }
     where
-      employee.email = $user.id;  // ✅ CHANGED
+      employee.email = $user.id; 
 
   @readonly
   entity BookedHoursOverview as projection on timesheet.Projects;
@@ -181,7 +178,6 @@ service EmployeeService @(requires: 'authenticated-user') {
   @readonly
   entity ProjectEngagementDuration as projection on timesheet.Projects;
 
-  // ✅ CHANGED: employee.email = $user.id
   @readonly
   entity MyDailySummary as
     select from timesheet.Timesheets {
@@ -215,7 +211,7 @@ service EmployeeService @(requires: 'authenticated-user') {
           project.projectName as projectName : String
     }
     where
-      employee.email = $user.id;  // ✅ CHANGED
+      employee.email = $user.id; 
 
   action   submitTimesheet(timesheetID: String) returns String;
   action   updateTimesheet(timesheetID: String, weekData: String) returns String;
@@ -226,14 +222,10 @@ service EmployeeService @(requires: 'authenticated-user') {
   };
 }
 
-/**
- * Manager Service - For Managers to assign projects and monitor team
- */
+
 @(requires: 'Manager')
 @impl: './manager-service.js'
 service ManagerService {
-
-  // ✅ CHANGED: email = $user.id
   @readonly
   @cds.redirection.target
   entity MyManagerProfile as
@@ -241,9 +233,9 @@ service ManagerService {
       *
     }
     where
-      email = $user.id;  // ✅ CHANGED
+      email = $user.id; 
 
-  // ✅ CHANGED: managerID.email = $user.id
+
   @readonly
   entity MyTeam as
     select from timesheet.Employees {
@@ -251,9 +243,9 @@ service ManagerService {
       managerID.firstName || ' ' || managerID.lastName as managerName : String
     }
     where
-      managerID.email = $user.id;  // ✅ CHANGED
+      managerID.email = $user.id; 
 
-  // ✅ CHANGED: projectOwner.email = $user.id
+ 
   @cds.redirection.target
   entity MyProjects as
     select from timesheet.Projects {
@@ -261,9 +253,9 @@ service ManagerService {
       projectOwner.firstName || ' ' || projectOwner.lastName as projectOwnerName : String
     }
     where
-      projectOwner.email = $user.id;  // ✅ CHANGED
+      projectOwner.email = $user.id;
 
-  // ✅ CHANGED: employee.managerID.email = $user.id
+
   @readonly
   @cds.redirection.target
   entity TeamTimesheets as
@@ -277,9 +269,8 @@ service ManagerService {
       nonProjectType.typeName                        as nonProjectTypeName : String
     }
     where
-      employee.managerID.email = $user.id;  // ✅ CHANGED
+      employee.managerID.email = $user.id;  
 
-  // ✅ CHANGED: recipient.email = $user.id
   @readonly
   entity MyNotifications as
     select from timesheet.Notifications {
@@ -287,9 +278,9 @@ service ManagerService {
       recipient.firstName || ' ' || recipient.lastName as recipientName : String
     }
     where
-      recipient.email = $user.id;  // ✅ CHANGED
+      recipient.email = $user.id; 
 
-  // ✅ CHANGED: employee.managerID.email = $user.id
+
   @readonly
   entity TeamProgressReport as
     select from timesheet.Timesheets {
@@ -311,9 +302,9 @@ service ManagerService {
           status
     }
     where
-      employee.managerID.email = $user.id;  // ✅ CHANGED
+      employee.managerID.email = $user.id; 
 
-  // ✅ CHANGED: projectOwner.email = $user.id
+
   @readonly
   entity ProjectSummary as
     select from timesheet.Projects {
@@ -327,7 +318,7 @@ service ManagerService {
           status
     }
     where
-      projectOwner.email = $user.id;  // ✅ CHANGED
+      projectOwner.email = $user.id;  
 
   @readonly
   entity AvailableManagers as
@@ -361,9 +352,7 @@ service ManagerService {
   action assignProjectToEmployee(employeeID: String, projectID: String) returns String;
 }
 
-/**
- * Admin Service - For Administrators to manage system
- */
+
 @(requires: 'Admin')
 @impl: './admin-service.js'
 service AdminService {

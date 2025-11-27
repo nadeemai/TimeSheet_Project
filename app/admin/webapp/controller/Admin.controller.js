@@ -26,50 +26,134 @@ sap.ui.define([
 
   return Controller.extend("admin.controller.Admin", {
 
-    onInit: function () {
-      // Initialize main model for UI data
-      var oModel = new JSONModel({
-        users: [],
-        projects: [],
-        projectHours: [],
-        managerTeams: [],
-        projectDurations: [],
-        selectedEmployee: "",
-        selectedDate: new Date(), // Add selectedDate property for DatePicker
-        // Timesheet data
-        currentWeekStart: this._getWeekStart(new Date()),
-        weekDays: [],
-        timesheetEntries: [],
-        employeeProjects: [], // Store projects for selected employee
-        weekDates: {}, // Add weekDates property for the new onTaskDetailPress function
-        // Add overall progress data
-        overallProgress: {
-          totalBookedHours: 0,
-          totalAllocatedHours: 0,
-          totalRemainingHours: 0,
-          averageUtilization: 0
+onInit: function () {
+  // Initialize main model for UI data
+  var oModel = new JSONModel({
+    users: [],
+    projects: [],
+    projectHours: [],
+    managerTeams: [],
+    projectDurations: [],
+    selectedEmployee: "",
+    selectedEmployeeName: "", // Add this property
+    selectedDate: new Date(), // Add selectedDate property for DatePicker
+    // Timesheet data
+    currentWeekStart: this._getWeekStart(new Date()),
+    weekDays: [],
+    timesheetEntries: [],
+    employeeProjects: [], // Store projects for selected employee
+    weekDates: {}, // Add weekDates property for the new onTaskDetailPress function
+    // Add overall progress data
+    overallProgress: {
+      totalBookedHours: 0,
+      totalAllocatedHours: 0,
+      totalRemainingHours: 0,
+      averageUtilization: 0
+    }
+  });
+  this.getView().setModel(oModel);
+  
+  // Load initial data from OData services
+  this._loadEmployees();
+  this._loadProjects();
+  this._loadOverallProgress(); // Load overall progress data
+
+  // Initialize timesheet
+  this._initializeTimesheet();
+
+  // Restore selected employee from localStorage if available
+  var storedEmployeeId = localStorage.getItem("selectedEmployeeId");
+  if (storedEmployeeId) {
+    oModel.setProperty("/selectedEmployee", storedEmployeeId);
+    // Load timesheet for the stored employee immediately
+    var weekStart = oModel.getProperty("/currentWeekStart");
+    var weekEnd = this._getWeekEnd(weekStart);
+    this._loadAdminTimesheetData(storedEmployeeId, weekStart, weekEnd);
+  }
+  
+  // Add a handler to synchronize the employee list with the dropdown
+  this.getView().attachModelContextChange(function() {
+    var oModel = this.getView().getModel();
+    var selectedEmployee = oModel.getProperty("/selectedEmployee");
+    var oEmployeeList = this.byId("employeeList");
+    
+    if (oEmployeeList && selectedEmployee) {
+      // Find the item with the matching employee ID
+      var aItems = oEmployeeList.getItems();
+      for (var i = 0; i < aItems.length; i++) {
+        var oItem = aItems[i];
+        var oContext = oItem.getBindingContext();
+        if (oContext && oContext.getProperty("userId") === selectedEmployee) {
+          oEmployeeList.setSelectedItem(oItem);
+          // Update the selected employee name
+          var firstName = oContext.getProperty("firstName");
+          var lastName = oContext.getProperty("lastName");
+          oModel.setProperty("/selectedEmployeeName", firstName + " " + lastName);
+          break;
         }
-      });
-      this.getView().setModel(oModel);
-
-      // Load initial data from OData services
-      this._loadEmployees();
-      this._loadProjects();
-      this._loadOverallProgress(); // Load overall progress data
-
-      // Initialize timesheet
-      this._initializeTimesheet();
-
-      // Restore selected employee from localStorage if available
-      var storedEmployeeId = localStorage.getItem("selectedEmployeeId");
-      if (storedEmployeeId) {
-        oModel.setProperty("/selectedEmployee", storedEmployeeId);
-        // Load timesheet for the stored employee immediately
-        var weekStart = oModel.getProperty("/currentWeekStart");
-        var weekEnd = this._getWeekEnd(weekStart);
-        this._loadAdminTimesheetData(storedEmployeeId, weekStart, weekEnd);
       }
-    },
+    }
+  }.bind(this));
+},
+
+onSearchEmployee: function (oEvent) {
+    const sQuery = oEvent.getParameter("newValue")?.toLowerCase() || "";
+    const oList = this.byId("employeeList");
+    const oBinding = oList.getBinding("items");
+
+    if (!oBinding) return;
+
+    // Multi-field filter (firstName + lastName)
+    const oFilter = new sap.ui.model.Filter({
+        filters: [
+            new sap.ui.model.Filter("firstName", sap.ui.model.FilterOperator.Contains, sQuery),
+            new sap.ui.model.Filter("lastName", sap.ui.model.FilterOperator.Contains, sQuery)
+        ],
+        and: false // OR logic — match either
+    });
+
+    if (sQuery) {
+        oBinding.filter([oFilter]);
+    } else {
+        oBinding.filter([]); // reset filter
+    }
+},
+
+
+  onEmployeeListSelect: function(oEvent) {
+  var oItem = oEvent.getParameter("listItem");
+  var oContext = oItem.getBindingContext();
+  var employeeId = oContext.getProperty("userId");
+  var employeeName = oContext.getProperty("firstName") + " " + oContext.getProperty("lastName");
+ 
+  var oModel = this.getView().getModel();
+  oModel.setProperty("/selectedEmployee", employeeId);
+  oModel.setProperty("/selectedEmployeeName", employeeName); // Add this line
+ 
+  // Store selected employee in localStorage
+  localStorage.setItem("selectedEmployeeId", employeeId);
+ 
+  // Load timesheet for the selected employee
+  var weekStart = oModel.getProperty("/currentWeekStart");
+  var weekEnd = this._getWeekEnd(weekStart);
+  this._loadAdminTimesheetData(employeeId, weekStart, weekEnd);
+},
+
+// Add this new function to handle "See More" button click
+onSeeMoreEmployees: function() {
+  var oModel = this.getView().getModel();
+  var visibleItems = oModel.getProperty("/visibleItems") || 10;
+  var totalItems = oModel.getProperty("/totalUsers");
+  
+  // Increase visible items by 10
+  visibleItems = Math.min(visibleItems + 10, totalItems);
+  oModel.setProperty("/visibleItems", visibleItems);
+  
+  // Hide "See More" button if all items are visible
+  oModel.setProperty("/showSeeMore", visibleItems < totalItems);
+},
+
+
 
     onLogoutPress: function () {
   var that = this;
@@ -966,27 +1050,41 @@ _performLogout: function () {
 
     // Handle employee selection change - Updated to handle Enter key
     onEmployeeChange: function (oEvent) {
-      let oViewModel = this.getView().getModel();
+  let oViewModel = this.getView().getModel();
 
-      // 1️ get selected employee id
-      let employeeId = oEvent.getParameter("selectedItem") ?
-        oEvent.getParameter("selectedItem").getKey() :
-        oEvent.getSource().getSelectedKey();
+  // 1️ get selected employee id
+  let employeeId = oEvent.getParameter("selectedItem") ?
+    oEvent.getParameter("selectedItem").getKey() :
+    oEvent.getSource().getSelectedKey();
 
-      // 2️store selected employee in model and localStorage
-      oViewModel.setProperty("/selectedEmployee", employeeId);
-      localStorage.setItem("selectedEmployeeId", employeeId); // Store for persistence
+  // 2️store selected employee in model and localStorage
+  oViewModel.setProperty("/selectedEmployee", employeeId);
+  localStorage.setItem("selectedEmployeeId", employeeId); // Store for persistence
 
-      let weekStart = oViewModel.getProperty("/currentWeekStart");
+  // 3️⃣ Update the employee list selection
+  var oEmployeeList = this.byId("employeeList");
+  if (oEmployeeList) {
+    var aItems = oEmployeeList.getItems();
+    for (var i = 0; i < aItems.length; i++) {
+      var oItem = aItems[i];
+      var oContext = oItem.getBindingContext();
+      if (oContext && oContext.getProperty("userId") === employeeId) {
+        oEmployeeList.setSelectedItem(oItem);
+        break;
+      }
+    }
+  }
 
-      // 5️⃣ Compute week end (weekStart + 6 days)
-      let weekEnd = this._getWeekEnd(weekStart);
-      // 3️⃣ clear old rows
-      oViewModel.setProperty("/timesheetEntries", []);
-      oViewModel.setProperty("/totalWeekHours", 0);
+  let weekStart = oViewModel.getProperty("/currentWeekStart");
 
-      this._loadAdminTimesheetData(employeeId, weekStart, weekEnd);
-    },
+  // 5️⃣ Compute week end (weekStart + 6 days)
+  let weekEnd = this._getWeekEnd(weekStart);
+  // 3️⃣ clear old rows
+  oViewModel.setProperty("/timesheetEntries", []);
+  oViewModel.setProperty("/totalWeekHours", 0);
+
+  this._loadAdminTimesheetData(employeeId, weekStart, weekEnd);
+},
 
     _getWeekEnd: function (weekStart) {
       let end = new Date(weekStart);
@@ -1722,51 +1820,46 @@ _performLogout: function () {
     // Format project data from OData to UI model
     // Update the _formatProjectData function in Admin.controller.js:
 
-    _formatProjectData: function (aProjects) {
-      var that = this;
-      var aUsers = this.getView().getModel().getProperty("/users") || [];
+   _formatProjectData: function (aProjects) {
+    var oViewModel = this.getView().getModel();
+    var aUsers = oViewModel.getProperty("/users") || [];
 
-      return aProjects.map(function (project) {
+    return aProjects.map(project => {
         console.log("Processing project:", project);
 
-        // Extract and parse numeric values properly
-        var budget = parseFloat(project.budget) || 0;
-        var allocatedHours = parseFloat(project.allocatedHours) || 0;
-        var usedHours = parseFloat(project.usedHours) || 0;
+        // Extract numeric values safely
+        var budget = Number(project.budget) || 0;
+        var allocatedHours = Number(project.allocatedHours) || 0;
+        var usedHours = Number(project.usedHours) || 0;
 
-        // Get manager name
-        var managerName = "Unknown Manager";
-        var managerId = project.projectOwner_ID || "";
-
-        // Try to find manager in users list
-        if (managerId) {
-          var manager = aUsers.find(user => user.userId === managerId);
-          if (manager) {
-            managerName = manager.firstName + " " + manager.lastName;
-          }
-        }
-
+        // Backend CUID field
+        var managerId = project.projectOwner_ID || project.managerId || ""
+        var managerName = project.projectOwnerName || null
         var formattedProject = {
-          projectId: project.projectID || project.ID,
-          name: project.projectName || "Unknown Project",
-          description: project.description || "",
-          managerId: managerId,
-          managerName: managerName,
-          budget: budget,
-          allocatedHours: allocatedHours,
-          usedHours: usedHours,
-          startDate: project.startDate ? new Date(project.startDate).toISOString().split('T')[0] : "2025-01-01",
-          endDate: project.endDate ? new Date(project.endDate).toISOString().split('T')[0] : "2025-12-31",
-          status: project.status || "Active",
-          client: project.client || "Internal",
-          isBillable: project.isBillable !== undefined ? project.isBillable : true,
-          teamMembers: [] // Initialize empty team members array
+            projectId: project.projectID || project.ID,
+            name: project.projectName || project.name || "Unknown Project",
+            description: project.description || "",
+            managerId,
+            managerName,
+            budget,
+            allocatedHours,
+            usedHours,
+            startDate: project.startDate
+                ? new Date(project.startDate).toISOString().split("T")[0]
+                : null,
+            endDate: project.endDate
+                ? new Date(project.endDate).toISOString().split("T")[0]
+                : null,
+            status: project.status || "Active",
+            client: project.client || "Internal",
+            isBillable: project.isBillable !== undefined ? project.isBillable : true,
+            teamMembers: []
         };
 
         console.log("Formatted project:", formattedProject);
         return formattedProject;
-      });
-    },
+    });
+},
 
     // User Management Functions
     onAddUser: function () {
@@ -1834,6 +1927,7 @@ _performLogout: function () {
                         new Select({
                             selectedKey: "{/userData/role}",
                             placeholder: "Select Role",
+                            forceSelection: false,
                             items: [
                                 new Item({ key: "Employee", text: "Employee" }),
                                 new Item({ key: "Manager", text: "Manager" }),
@@ -1938,7 +2032,7 @@ _getManagersList: function () {
       var sMode = oViewModel.getProperty("/mode");
 
       // Validate required fields
-      if (!oUserData.firstName || !oUserData.lastName || !oUserData.email || !oUserData.role) {
+      if (!oUserData.firstName || !oUserData.lastName || !oUserData.email) {
         MessageToast.show("Please fill in all required fields");
         return;
       }
@@ -2224,130 +2318,245 @@ _getManagerEmployeeId: function (managerGuid) {
       );
     },
 
-    _loadProjectDialog: function (sMode, oProjectData) {
-      if (!this._oProjectDialog) {
+    // _loadProjectDialog: async function (sMode, oProjectData) {
+    //   const managerList = await this._loadAvailableManagers();
+
+    //   var oViewModel = new JSONModel({
+    //     mode: sMode,
+    //     projectData: oProjectData ? JSON.parse(JSON.stringify(oProjectData)) : {
+    //       ID: "",
+    //       name: "",
+    //       projectID: "",
+    //       description: "",
+    //       managerId: "",
+    //       budget: 0,
+    //       allocatedHours: 0,
+    //       usedHours: 0,
+    //       startDate: new Date().toISOString().split('T')[0],
+    //       endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+    //       client: "",
+    //       status: "Planning"
+    //     },
+    //     availableManagers: managerList
+    //   });
+    //   if (!this._oProjectDialog) {
+    //     this._oProjectDialog = new Dialog({
+    //       title: sMode === "create" ? "Create New Project" : "Edit Project",
+    //       contentWidth: "600px",
+    //       content: [
+    //         new SimpleForm({
+    //           layout: "ResponsiveGridLayout",
+    //           editable: true,
+    //           content: [
+    //             new Label({ text: "Project Name" }),
+    //             new Input({
+    //               value: "{/projectData/name}",
+    //               required: true,
+    //               valueStateText: "Project Name is required"
+    //             }),
+
+    //             // new Label({ text: "Description" }),
+    //             // new Input({ value: "{/projectData/description}" }),
+
+    //             new Label({ text: "Project Manager" }),
+    //             new Select({
+    //               selectedKey: "{/projectData/managerId}",
+    //               items: {
+    //                 path: "/managers",
+    //                 template: new Item({
+    //                   key: "{userId}",
+    //                   text: "{firstName} {lastName}"
+    //                 })
+    //               },
+    //               required: true
+    //             }),
+
+    //             new Label({ text: "Budget ($)" }),
+    //             new Input({
+    //               value: "{/projectData/budget}",
+    //               type: "Number",
+    //               valueStateText: "Budget must be a number"
+    //             }),
+
+    //             new Label({ text: "Allocated Hours" }),
+    //             new Input({
+    //               value: "{/projectData/allocatedHours}",
+    //               type: "Number",
+    //               required: true,
+    //               valueStateText: "Allocated Hours is required"
+    //             }),
+
+    //             // new Label({ text: "Used Hours" }),
+    //             // new Input({
+    //             //   value: "{/projectData/usedHours}",
+    //             //   type: "Number",
+    //             //   valueStateText: "Used Hours must be a number"
+    //             // }),
+
+    //             new Label({ text: "Start Date" }),
+    //             new DatePicker({
+    //               value: "{/projectData/startDate}",
+    //               valueFormat: "yyyy-MM-dd",
+    //               required: true
+    //             }),
+
+    //             new Label({ text: "End Date" }),
+    //             new DatePicker({
+    //               value: "{/projectData/endDate}",
+    //               valueFormat: "yyyy-MM-dd",
+    //               required: true
+    //             }),
+
+    //             // new Label({ text: "Client" }),
+    //             // new Input({ value: "{/projectData/client}" }),
+
+    //             new Label({ text: "Status" }),
+    //             new Select({
+    //               selectedKey: "{/projectData/status}",
+    //               items: [
+    //                 new Item({ key: "Planning", text: "Planning" }),
+    //                 new Item({ key: "Active", text: "Active" }),
+    //                 new Item({ key: "On Hold", text: "On Hold" }),
+    //                 new Item({ key: "Completed", text: "Completed" }),
+    //                 new Item({ key: "Cancelled", text: "Cancelled" })
+    //               ],
+    //               required: true
+    //             })
+    //           ]
+    //         })
+    //       ],
+    //       beginButton: new Button({
+    //         text: "Save",
+    //         type: "Emphasized",
+    //         press: this.onSaveProject.bind(this)
+    //       }),
+    //       endButton: new Button({
+    //         text: "Cancel",
+    //         press: this.onCancelProject.bind(this)
+    //       })
+    //     });
+
+    //     this.getView().addDependent(this._oProjectDialog);
+    //   }
+
+    //   // Set up the model for the dialog
+      
+
+    //   this._oProjectDialog.setModel(oViewModel);
+    //   this._oProjectDialog.open();
+    // },
+_loadProjectDialog: async function (sMode, oProjectData) {
+    const managerList = await this._loadAvailableManagers();
+
+    var oViewModel = new JSONModel({
+        mode: sMode,
+        projectData: oProjectData ? JSON.parse(JSON.stringify(oProjectData)) : {
+            ID: "",
+            projectId: "",
+            name: "",
+            description: "",
+            managerId: "",
+            managerName: "",
+            budget: 0,
+            allocatedHours: 0,
+            usedHours: 0,
+            startDate: new Date().toISOString().split('T')[0],
+            endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+            status: "Planning"
+        },
+        availableManagers: managerList // <-- RIGHT binding
+    });
+
+    if (!this._oProjectDialog) {
         this._oProjectDialog = new Dialog({
-          title: sMode === "create" ? "Create New Project" : "Edit Project",
-          contentWidth: "600px",
-          content: [
-            new SimpleForm({
-              layout: "ResponsiveGridLayout",
-              editable: true,
-              content: [
-                new Label({ text: "Project Name" }),
-                new Input({
-                  value: "{/projectData/name}",
-                  required: true,
-                  valueStateText: "Project Name is required"
-                }),
+            title: sMode === "create" ? "Create Project" : "Edit Project",
+            contentWidth: "600px",
+            content: [
+                new SimpleForm({
+                    editable: true,
+                    content: [
+                        new Label({ text: "Project Name" }),
+                        new Input({
+                            value: "{/projectData/name}",
+                            required: true
+                        }),
 
-                // new Label({ text: "Description" }),
-                // new Input({ value: "{/projectData/description}" }),
+                        new Label({ text: "Project Manager" }),
+                        new Select({
+                            selectedKey: "{/projectData/managerId}",
+                            items: {
+                                path: "/availableManagers",
+                                template: new sap.ui.core.Item({
+                                    key: "{ID}", // <-- Use Backend CUID
+                                    text: "{firstName} {lastName}"
+                                })
+                            },
+                            change: function (oEvent) {
+                                const selectedItem = oEvent.getSource().getSelectedItem();
+                                const selectedKey = oEvent.getSource().getSelectedKey();
+                                const managerName = selectedItem ? selectedItem.getText() : "";
 
-                new Label({ text: "Project Manager" }),
-                new Select({
-                  selectedKey: "{/projectData/managerId}",
-                  items: {
-                    path: "/managers",
-                    template: new Item({
-                      key: "{userId}",
-                      text: "{firstName} {lastName}"
-                    })
-                  },
-                  required: true
-                }),
+                                let data = oViewModel.getProperty("/projectData");
+                                data.managerId = selectedKey;
+                                data.managerName = managerName;
+                                oViewModel.setProperty("/projectData", data);
+                            }
+                        }),
 
-                new Label({ text: "Budget ($)" }),
-                new Input({
-                  value: "{/projectData/budget}",
-                  type: "Number",
-                  valueStateText: "Budget must be a number"
-                }),
+                        new Label({ text: "Budget ($)" }),
+                        new Input({
+                            value: "{/projectData/budget}",
+                            type: "Number"
+                        }),
 
-                new Label({ text: "Allocated Hours" }),
-                new Input({
-                  value: "{/projectData/allocatedHours}",
-                  type: "Number",
-                  required: true,
-                  valueStateText: "Allocated Hours is required"
-                }),
+                        new Label({ text: "Allocated Hours" }),
+                        new Input({
+                            value: "{/projectData/allocatedHours}",
+                            type: "Number"
+                        }),
 
-                // new Label({ text: "Used Hours" }),
-                // new Input({
-                //   value: "{/projectData/usedHours}",
-                //   type: "Number",
-                //   valueStateText: "Used Hours must be a number"
-                // }),
+                        new Label({ text: "Start Date" }),
+                        new DatePicker({
+                            value: "{/projectData/startDate}",
+                            valueFormat: "yyyy-MM-dd"
+                        }),
 
-                new Label({ text: "Start Date" }),
-                new DatePicker({
-                  value: "{/projectData/startDate}",
-                  valueFormat: "yyyy-MM-dd",
-                  required: true
-                }),
+                        new Label({ text: "End Date" }),
+                        new DatePicker({
+                            value: "{/projectData/endDate}",
+                            valueFormat: "yyyy-MM-dd"
+                        }),
 
-                new Label({ text: "End Date" }),
-                new DatePicker({
-                  value: "{/projectData/endDate}",
-                  valueFormat: "yyyy-MM-dd",
-                  required: true
-                }),
-
-                // new Label({ text: "Client" }),
-                // new Input({ value: "{/projectData/client}" }),
-
-                new Label({ text: "Status" }),
-                new Select({
-                  selectedKey: "{/projectData/status}",
-                  items: [
-                    new Item({ key: "Planning", text: "Planning" }),
-                    new Item({ key: "Active", text: "Active" }),
-                    new Item({ key: "On Hold", text: "On Hold" }),
-                    new Item({ key: "Completed", text: "Completed" }),
-                    new Item({ key: "Cancelled", text: "Cancelled" })
-                  ],
-                  required: true
+                        new Label({ text: "Status" }),
+                        new Select({
+                            selectedKey: "{/projectData/status}",
+                            items: [
+                                new Item({ key: "Planning", text: "Planning" }),
+                                new Item({ key: "Active", text: "Active" }),
+                                new Item({ key: "On Hold", text: "On Hold" }),
+                                new Item({ key: "Completed", text: "Completed" })
+                            ]
+                        })
+                    ]
                 })
-              ]
+            ],
+            beginButton: new Button({
+                text: "Save",
+                type: "Emphasized",
+                press: this.onSaveProject.bind(this)
+            }),
+            endButton: new Button({
+                text: "Cancel",
+                press: this.onCancelProject.bind(this)
             })
-          ],
-          beginButton: new Button({
-            text: "Save",
-            type: "Emphasized",
-            press: this.onSaveProject.bind(this)
-          }),
-          endButton: new Button({
-            text: "Cancel",
-            press: this.onCancelProject.bind(this)
-          })
         });
 
         this.getView().addDependent(this._oProjectDialog);
-      }
+    }
 
-      // Set up the model for the dialog
-      var oViewModel = new JSONModel({
-        mode: sMode,
-        projectData: oProjectData ? JSON.parse(JSON.stringify(oProjectData)) : {
-          ID: "",
-          name: "",
-          projectID: "",
-          description: "",
-          managerId: "",
-          budget: 0,
-          allocatedHours: 0,
-          usedHours: 0,
-          startDate: new Date().toISOString().split('T')[0],
-          endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
-          client: "",
-          status: "Planning"
-        },
-        managers: this._getManagersList()
-      });
-
-      this._oProjectDialog.setModel(oViewModel);
-      this._oProjectDialog.open();
-    },
+    this._oProjectDialog.setModel(oViewModel);
+    this._oProjectDialog.open();
+},
 
     // Save project with immediate UI update for manager name
     onSaveProject: function () {
@@ -2357,7 +2566,7 @@ _getManagerEmployeeId: function (managerGuid) {
       var sMode = oViewModel.getProperty("/mode");
 
       // Validate required fields
-      if (!oProjectData.name || !oProjectData.managerId || !oProjectData.startDate || !oProjectData.endDate || !oProjectData.allocatedHours) {
+      if (!oProjectData.name || !oProjectData.startDate || !oProjectData.endDate || !oProjectData.allocatedHours) {
         MessageToast.show("Please fill in all required fields");
         return;
       }
@@ -2388,23 +2597,30 @@ _getManagerEmployeeId: function (managerGuid) {
 
       // Update local model immediately with manager name
       if (sMode === "edit") {
-        var oModel = this.getView().getModel();
-        var aProjects = oModel.getProperty("/projects");
-        var iIndex = aProjects.findIndex(project => project.projectId === oProjectData.projectId);
+    var oModel = this.getView().getModel();
+    var aProjects = oModel.getProperty("/projects");
+    var iIndex = aProjects.findIndex(project => project.projectId === oProjectData.projectId);
 
-        if (iIndex !== -1) {
-          // Get manager name from managers list
-          var managers = this._getManagersList();
-          var selectedManager = managers.find(manager => manager.userId === oProjectData.managerId);
-          var managerName = selectedManager ? selectedManager.firstName + " " + selectedManager.lastName : "Unknown Manager";
+    if (iIndex !== -1) {
+        // Get selected manager from dialog model
+        let aManagerList = oViewModel.getProperty("/availableManagers");
+        let selectedManager = aManagerList.find(m => m.ID === oProjectData.managerId);
 
-          // Update project in local model
-          aProjects[iIndex] = {
+        // If manager found: update manager name + backend fields
+        let managerName = "Unknown Manager";
+        if (selectedManager) {
+            managerName = selectedManager.firstName + " " + selectedManager.lastName;
+            oProjectData.projectOwnerName = managerName;
+            oProjectData.projectOwnerId = selectedManager.ID;  // CUID for backend
+        }
+
+        // Update UI model instantly
+        aProjects[iIndex] = {
             ...aProjects[iIndex],
             name: oProjectData.name,
             description: oProjectData.description,
             managerId: oProjectData.managerId,
-            managerName: managerName, // Set the manager name immediately
+            managerName: managerName,
             budget: oProjectData.budget,
             allocatedHours: oProjectData.allocatedHours,
             usedHours: oProjectData.usedHours,
@@ -2412,43 +2628,45 @@ _getManagerEmployeeId: function (managerGuid) {
             endDate: oProjectData.endDate,
             client: oProjectData.client,
             status: oProjectData.status
-          };
-
-          oModel.setProperty("/projects", aProjects);
-          oModel.refresh(true);
-          MessageToast.show("Project updated successfully in UI");
-        }
-      } else if (sMode === "create") {
-        // For new projects, add to local model temporarily
-        var oModel = this.getView().getModel();
-        var aProjects = oModel.getProperty("/projects");
-
-        // Get manager name from managers list
-        var managers = this._getManagersList();
-        var selectedManager = managers.find(manager => manager.userId === oProjectData.managerId);
-        var managerName = selectedManager ? selectedManager.firstName + " " + selectedManager.lastName : "Unknown Manager";
-
-        var newProjectId = "PRJ" + Math.floor(Math.random() * 100000).toString().padStart(5, "0");
-        var newProject = {
-          projectId: newProjectId,
-          name: oProjectData.name,
-          description: oProjectData.description,
-          managerId: oProjectData.managerId,
-          managerName: managerName, // Set the manager name immediately
-          budget: oProjectData.budget,
-          allocatedHours: oProjectData.allocatedHours,
-          usedHours: oProjectData.usedHours,
-          startDate: oProjectData.startDate,
-          endDate: oProjectData.endDate,
-          client: oProjectData.client,
-          status: oProjectData.status,
-          isBillable: true,
-          teamMembers: []
         };
 
-        aProjects.push(newProject);
         oModel.setProperty("/projects", aProjects);
         oModel.refresh(true);
+
+        MessageToast.show("Project updated successfully in UI");
+    }
+}
+ else if (sMode === "create") {
+        // For new projects, add to local model temporarily
+        // var oModel = this.getView().getModel();
+        // var aProjects = oModel.getProperty("/projects");
+
+        // // Get manager name from managers list
+        // var managers = this._getManagersList();
+        // var selectedManager = managers.find(manager => manager.userId === oProjectData.managerId);
+        // var managerName = selectedManager ? selectedManager.firstName + " " + selectedManager.lastName : "Unknown Manager";
+
+        // var newProjectId = "PRJ" + Math.floor(Math.random() * 100000).toString().padStart(5, "0");
+        // var newProject = {
+        //   projectId: newProjectId,
+        //   name: oProjectData.name,
+        //   description: oProjectData.description,
+        //   managerId: oProjectData.managerId,
+        //   managerName: managerName, // Set the manager name immediately
+        //   budget: oProjectData.budget,
+        //   allocatedHours: oProjectData.allocatedHours,
+        //   usedHours: oProjectData.usedHours,
+        //   startDate: oProjectData.startDate,
+        //   endDate: oProjectData.endDate,
+        //   client: oProjectData.client,
+        //   status: oProjectData.status,
+        //   isBillable: true,
+        //   teamMembers: []
+        // };
+
+        // aProjects.push(newProject);
+        // oModel.setProperty("/projects", aProjects);
+        // oModel.refresh(true);
         MessageToast.show("Project added successfully in UI");
       }
 
@@ -2464,41 +2682,72 @@ _getManagerEmployeeId: function (managerGuid) {
 
     // Create project in OData service
     _createProjectInOData: function (oProjectData, bRefresh = true) {
-      var oModel = this.getOwnerComponent().getModel("adminService");
-      var that = this;
+    var oModel = this.getOwnerComponent().getModel("adminService");
+    var that = this;
 
-      var oProjectPayload = {
+    var oProjectPayload = {
         projectName: oProjectData.name,
         description: oProjectData.description || "",
-        projectOwner_ID: oProjectData.managerId,
-        budget: parseFloat(oProjectData.budget) || 0,
-        allocatedHours: parseFloat(oProjectData.allocatedHours) || 0,
+        projectOwner_ID: oProjectData.managerId, // ✅ Backend CUID
+        budget: Number(oProjectData.budget) || 0,
+        allocatedHours: Number(oProjectData.allocatedHours) || 0,
         startDate: oProjectData.startDate,
         endDate: oProjectData.endDate,
         status: oProjectData.status,
         isBillable: true
-      };
+    };
 
-      console.log("Creating project with payload:", oProjectPayload);
+    console.log("Creating project with payload:", oProjectPayload);
 
-      oModel.create("/Projects", oProjectPayload, {
+    oModel.create("/Projects", oProjectPayload, {
         success: function (oData) {
-          MessageToast.show("Project created successfully");
-          // Only refresh if explicitly requested
-          if (bRefresh) {
-            that._loadProjects();
-          }
+            MessageToast.show("Project created successfully");
+
+            // Update UI with backend ID + proper manager name
+            var managers = that._getManagersList();
+            var selected = managers.find(m => m.userId === oProjectData.managerId);
+            var managerName = selected
+                ? (selected.firstName + " " + selected.lastName).trim()
+                : "Unknown Manager";
+
+            var oViewModel = that.getView().getModel();
+            var aProjects = oViewModel.getProperty("/projects") || [];
+
+            aProjects.push({
+                projectId: oData.projectID,  // ✔ Backend returned display ID
+                name: oProjectData.name,
+                description: oProjectData.description,
+                managerId: oProjectData.managerId, // CUID
+                managerName: managerName, // ✔ Always correct
+                budget: oProjectData.budget,
+                allocatedHours: oProjectData.allocatedHours,
+                usedHours: oProjectData.usedHours || 0,
+                startDate: oProjectData.startDate,
+                endDate: oProjectData.endDate,
+                client: oProjectData.client,
+                status: oProjectData.status,
+                isBillable: true,
+                teamMembers: []
+            });
+
+            oViewModel.setProperty("/projects", aProjects);
+            oViewModel.refresh(true);
+
+            if (bRefresh) {
+                that._loadProjects();
+            }
         },
+
         error: function (oError) {
-          console.error("Error creating project:", oError);
-          MessageToast.show("Error creating project");
-          // Only refresh if explicitly requested
-          if (bRefresh) {
-            that._loadProjects();
-          }
+            console.error("Error creating project:", oError);
+            MessageToast.show("Error creating project");
+
+            if (bRefresh) {
+                that._loadProjects();
+            }
         }
-      });
-    },
+    });
+},
 
     // Update project in OData service
     _updateProjectInOData: function (oProjectData, bRefresh = true) {
@@ -2542,6 +2791,7 @@ _getManagerEmployeeId: function (managerGuid) {
             projectName: oProjectData.name,
             description: oProjectData.description || "",
             projectOwner_ID: oProjectData.managerId,
+            projectOwnerName: oProjectData.managerName,
             budget: parseFloat(oProjectData.budget) || 0,
             allocatedHours: parseFloat(oProjectData.allocatedHours) || 0,
             startDate: oProjectData.startDate,

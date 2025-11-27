@@ -7,7 +7,7 @@ sap.ui.define([
     "sap/m/MenuItem",
     "sap/m/Menu",
     "sap/m/Dialog",
-    "sap/m/MessageBox"
+    "sap/m/MessageBox",
 
 
 ], (Controller, JSONModel, BusyIndicator, Fragment, MenuItem, Dialog, Menu, MessageToast, MessageBox) => {
@@ -57,7 +57,7 @@ sap.ui.define([
                         return {
                             projectName: item.projectName,
                             status: item.status,
-                            managerName: item.projectOwner && item.projectOwner.Name ? item.projectOwner.Name : "N/A"
+                            managerName: item.projectOwnerName
                         };
                     });
 
@@ -74,8 +74,8 @@ sap.ui.define([
 
         },
 
-
-
+        
+        
 
 
         _getCurrentWeekMonday: function () {
@@ -87,6 +87,41 @@ sap.ui.define([
             monday.setHours(0, 0, 0, 0);
             return monday;
         },
+        onRefreshAnalytics: function () {
+    console.log("Refreshing Reports…");
+
+    var oModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+    var oView = this.getView();
+
+    sap.ui.core.BusyIndicator.show();
+    
+    this._loadReportData(oModel, oView);
+
+    setTimeout(() => {
+        sap.ui.core.BusyIndicator.hide();
+        sap.m.MessageToast.show("Report data updated ✨");
+    }, 1000);
+},
+
+onTabSelect: function (oEvent) {
+    var selectedKey = oEvent.getParameter("key");
+
+    if (selectedKey === "reportsTab") {
+        console.log("Reports tab activated → refreshing data");
+
+        var oModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+        var oView = this.getView();
+
+        sap.ui.core.BusyIndicator.show();
+
+        this._loadReportData(oModel, oView);
+
+        setTimeout(() => {
+            sap.ui.core.BusyIndicator.hide();
+        }, 800);
+    }
+},
+
         _loadReportData: function (oModel, oView) {
 
             oModel.read("/BookedHoursOverview", {
@@ -139,20 +174,16 @@ sap.ui.define([
             return oWeekDates;
         },
 
-      _hasZeroHourEntry: function (dailyTotals) {
-    if (!dailyTotals) return false;
-
-    const totals = [
-        dailyTotals.monday,
-        dailyTotals.tuesday,
-        dailyTotals.wednesday,
-        dailyTotals.thursday,
-        dailyTotals.friday,
-        dailyTotals.saturday,
-        dailyTotals.sunday
-    ];
-
-    return totals.every(t => Number(t) === 0);
+    _checkRowDeleteEligibility: function (row) {
+    return (
+        (parseFloat(row.mondayHours) || 0) === 0 &&
+        (parseFloat(row.tuesdayHours) || 0) === 0 &&
+        (parseFloat(row.wednesdayHours) || 0) === 0 &&
+        (parseFloat(row.thursdayHours) || 0) === 0 &&
+        (parseFloat(row.fridayHours) || 0) === 0 &&
+        (parseFloat(row.saturdayHours) || 0) === 0 &&
+        (parseFloat(row.sundayHours) || 0) === 0
+    );
 },
 
 
@@ -259,6 +290,9 @@ sap.ui.define([
                             });
 
 
+                            formatted.forEach(row => {
+                                row.canDelete = this._checkRowDeleteEligibility(row);
+                            });
                             oModel.setProperty("/timeEntries", formatted);
 
                             let dailyTotals = this._calculateDailyTotals(formatted);
@@ -372,107 +406,145 @@ sap.ui.define([
 
 
         onEntryDatePickerChange: function (oEvent) {
-            var that = this;
-            var oModel = this.getView().getModel("timeEntryModel");
-            var oServiceModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+    var that = this;
+    var oModel = this.getView().getModel("timeEntryModel");
+    var oServiceModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+    var value = oEvent.getParameter("value");
+    if (!value) return;
 
-            var value = oEvent.getParameter("value"); // dd/MM/yyyy
-            if (!value) return;
+    var day = this._dayPropertyFromDate(value); // "monday", "saturday", etc.
+    var newEntry = oModel.getProperty("/newEntry") || {};
+    newEntry.selectedDate = value;
+    newEntry.day = day;
+    oModel.setProperty("/newEntry", newEntry);
 
-            var day = this._dayPropertyFromDate(value);
+    // Load data
+    var loadProjects = new Promise(resolve => {
+        oServiceModel.read("/MyProjects", {
+            success: oData => {
+                let projects = (oData.results || []).map(p => ({
+                    id: p.ID,
+                    name: p.projectName,
+                    isNonProject: false
+                }));
+                oModel.setProperty("/projects", projects);
+                resolve();
+            },
+            error: () => { oModel.setProperty("/projects", []); resolve(); }
+        });
+    });
 
-            var newEntry = oModel.getProperty("/newEntry") || {};
-            newEntry.selectedDate = value;
-            newEntry.day = day;
-            oModel.setProperty("/newEntry", newEntry);
+    var loadNonProjects = new Promise(resolve => {
+        oServiceModel.read("/AvailableNonProjectTypes", {
+            success: oData => {
+                let nonProjects = (oData.results || []).map(np => ({
+                    id: np.ID,
+                    name: np.typeName,
+                    isNonProject: true,
+                    isLeave: np.typeName.toLowerCase().includes("leave") || np.typeName === "Sick Leave"
+                }));
+                oModel.setProperty("/nonProjects", nonProjects);
+                resolve();
+            },
+            error: () => { oModel.setProperty("/nonProjects", []); resolve(); }
+        });
+    });
 
-            // Load all endpoints
-            var loadProjects = new Promise(function (resolve) {
-                oServiceModel.read("/MyProjects", {
-                    success: function (oData) {
-                        let aProjects = (oData.results || []).map(p => ({
-                            id: p.ID,
-                            name: p.projectName,
-                            isNonProject: false
-                        }));
-                        oModel.setProperty("/projects", aProjects);
-                        resolve();
-                    },
-                    error: () => { oModel.setProperty("/projects", []); resolve(); }
-                });
-            });
+    var loadTasks = new Promise(resolve => {
+        oServiceModel.read("/AvailableTaskTypes", {
+            success: oData => {
+                let tasks = (oData.results || []).map(t => ({
+                    type: t.code,
+                    name: t.name
+                }));
+                oModel.setProperty("/workTypes", tasks);
+                resolve();
+            },
+            error: () => { oModel.setProperty("/workTypes", []); resolve(); }
+        });
+    });
 
-            var loadNonProjects = new Promise(function (resolve) {
-                oServiceModel.read("/AvailableNonProjectTypes", {
-                    success: function (oData) {
-                        let aNP = (oData.results || []).map(np => ({
-                            id: np.ID,
-                            name: np.typeName,
-                            isNonProject: true
-                        }));
-                        oModel.setProperty("/nonProjects", aNP);
-                        resolve();
-                    },
-                    error: () => { oModel.setProperty("/nonProjects", []); resolve(); }
-                });
-            });
+  Promise.all([loadProjects, loadNonProjects, loadTasks]).then(() => {
+    let allProjects = oModel.getProperty("/projects") || [];
+    let allNonProjects = oModel.getProperty("/nonProjects") || [];
+    let allTasks = oModel.getProperty("/workTypes") || [];
 
-            var loadTasks = new Promise(function (resolve) {
-                oServiceModel.read("/AvailableTaskTypes", {
-                    success: function (oData) {
-                        let aTasks = (oData.results || []).map(t => ({
-                            type: t.code,
-                            name: t.name
-                        }));
-                        oModel.setProperty("/workTypes", aTasks);
-                        resolve();
-                    },
-                    error: () => { oModel.setProperty("/workTypes", []); resolve(); }
-                });
-            });
+    let selectedDay = newEntry.day; // 👈 use stored value (no undefined surprise)
+    let weekInfo = that._getCurrentWeekDates();
+    let isFuture = that._isFutureDate(value, weekInfo.weekStart, weekInfo.weekEnd);
+    let isWeekend = selectedDay === "saturday" || selectedDay === "sunday";
 
-            Promise.all([loadProjects, loadNonProjects, loadTasks]).then(function () {
+    let projectsToShow = [];
 
-                let weekInfo = that._getCurrentWeekDates();
-                let isFuture = that._isFutureDate(value, weekInfo.weekStart, weekInfo.weekEnd);
+    let allowedNonProjects = allNonProjects.filter(np => !np.isLeave); 
+    // 👆 always exclude leave initially; we add later only where allowed
 
-                let allProjects = oModel.getProperty("/projects") || [];
-                let allNonProjects = oModel.getProperty("/nonProjects") || [];
-                let allTasks = oModel.getProperty("/workTypes") || [];
+    if (isFuture) {
+        if (isWeekend) {
+            // Future Weekend → only NON-LEAVE non-projects
+            projectsToShow = allowedNonProjects.map(np => ({
+                id: np.id,
+                name: np.name,
+                isNonProject: true
+            }));
+        } else {
+            // Future Weekday → All non-projects allowed (leave included)
+            projectsToShow = allNonProjects.map(np => ({
+                id: np.id,
+                name: np.name,
+                isNonProject: true
+            }));
+        }
 
-                if (isFuture) {
-                    // SHOW ONLY NON PROJECTS
-                    oModel.setProperty("/projectsToShow", allNonProjects);
-                    oModel.setProperty("/tasksToShow", []); // always disabled
-                    oModel.setProperty("/isTaskDisabled", true);
+        oModel.setProperty("/isTaskDisabled", true);
+        oModel.setProperty("/tasksToShow", []);
+    }
+    else if (isWeekend) {
+        // Current/past Weekend → Projects + NON-LEAVE non-projects
+        projectsToShow = [
+            ...allProjects.map(p => ({
+                id: p.id,
+                name: p.name,
+                isNonProject: false
+            })),
+            ...allowedNonProjects.map(np => ({
+                id: np.id,
+                name: np.name,
+                isNonProject: true
+            }))
+        ];
 
-                    // remove previously selected project if any
-                    if (newEntry.projectId) {
-                        newEntry.projectId = "";
-                        newEntry.projectName = "";
-                        oModel.setProperty("/newEntry", newEntry);
-                    }
+        oModel.setProperty("/isTaskDisabled", true);
+        oModel.setProperty("/tasksToShow", []);
+    }
+    else {
+        // Normal current/past Weekday → All allowed
+        projectsToShow = [
+            ...allProjects,
+            ...allNonProjects
+        ];
+        oModel.setProperty("/isTaskDisabled", true);
+        oModel.setProperty("/tasksToShow", []);
+    }
 
-                } else {
-                    // CURRENT WEEK → SHOW BOTH
-                    var projectsToShow = [
-                        ...allProjects.map(p => ({ id: p.id, name: p.name, isNonProject: false })),
-                        ...allNonProjects.map(np => ({ id: np.id, name: np.name, isNonProject: true }))
-                    ];
-                    oModel.setProperty("/projectsToShow", projectsToShow);
+    oModel.setProperty("/projectsToShow", projectsToShow);
 
-                    // enable only if project selected
-                    // if (newEntry.projectId && !newEntry.nonProjectTypeID) {
-                    //     oModel.setProperty("/tasksToShow", allTasks);
-                    //     oModel.setProperty("/isTaskDisabled", false);
-                    // } else {
-                    //     // non-project selected OR nothing selected yet
-                    //     oModel.setProperty("/tasksToShow", []);
-                    //     oModel.setProperty("/isTaskDisabled", true);
-                    // }
-                }
-            });
-        },
+    // Validate selection still exists
+    let valid = projectsToShow.some(p => p.id === (newEntry.projectId || newEntry.nonProjectTypeID));
+    if (!valid) {
+        newEntry.projectId = "";
+        newEntry.projectName = "";
+        newEntry.nonProjectTypeID = "";
+        newEntry.nonProjectTypeName = "";
+        newEntry.workType = "";
+        oModel.setProperty("/newEntry", newEntry);
+        oModel.setProperty("/isTaskDisabled", true);
+        oModel.setProperty("/tasksToShow", []);
+    }
+});
+
+
+},
 
         _fetchWeekBoundaries: function (selectedDateStr) {
             var oModel = this.getOwnerComponent().getModel("timesheetServiceV2");
@@ -488,7 +560,7 @@ sap.ui.define([
             });
         },
 
-        onAddEntry: function () {
+      onAddEntry: function () {
             var that = this;
             var oModel = this.getView().getModel("timeEntryModel");
             var oServiceModel = this.getOwnerComponent().getModel("timesheetServiceV2");
@@ -623,31 +695,41 @@ sap.ui.define([
 
         // Handler for project/non-project selection
         onProjectChange: function (oEvent) {
-            var oModel = this.getView().getModel("timeEntryModel");
-            var selectedItem = oEvent.getSource().getSelectedItem();
-            if (!selectedItem) return;
+    var oModel = this.getView().getModel("timeEntryModel");
+    var oSelectedItem = oEvent.getSource().getSelectedItem();
+    if (!oSelectedItem) return;
 
-            var key = selectedItem.getKey();
-            var text = selectedItem.getText();
-            var list = oModel.getProperty("/projectsToShow") || [];
-            var selected = list.find(p => p.id === key);
+    var key = oSelectedItem.getKey();
+    var text = oSelectedItem.getText();
+    var projectsToShow = oModel.getProperty("/projectsToShow") || [];
+    var selected = projectsToShow.find(p => p.id === key);
+    if (!selected) return;
 
-            if (selected.isNonProject) {
-                oModel.setProperty("/newEntry/nonProjectTypeID", key);
-                oModel.setProperty("/newEntry/nonProjectTypeName", text);
-                oModel.setProperty("/newEntry/projectId", "");
-                oModel.setProperty("/newEntry/projectName", "");
-                oModel.setProperty("/tasksToShow", []);
-                oModel.setProperty("/isTaskDisabled", true);
-            } else {
-                oModel.setProperty("/newEntry/projectId", key);
-                oModel.setProperty("/newEntry/projectName", text);
-                oModel.setProperty("/newEntry/nonProjectTypeID", "");
-                oModel.setProperty("/newEntry/nonProjectTypeName", "");
-                oModel.setProperty("/tasksToShow", oModel.getProperty("/workTypes"));
-                oModel.setProperty("/isTaskDisabled", false);
-            }
-        },
+    var newEntry = oModel.getProperty("/newEntry") || {};
+
+    if (selected.isNonProject) {
+        // Non-project selected → disable task
+        oModel.setProperty("/newEntry/nonProjectTypeID", key);
+        oModel.setProperty("/newEntry/nonProjectTypeName", text);
+        oModel.setProperty("/newEntry/projectId", "");
+        oModel.setProperty("/newEntry/projectName", "");
+        oModel.setProperty("/newEntry/workType", "");
+        oModel.setProperty("/tasksToShow", []);
+        oModel.setProperty("/isTaskDisabled", true);
+    } else {
+        // Real project selected → enable task dropdown
+        oModel.setProperty("/newEntry/projectId", key);
+        oModel.setProperty("/newEntry/projectName", text);
+        oModel.setProperty("/newEntry/nonProjectTypeID", "");
+        oModel.setProperty("/newEntry/nonProjectTypeName", "");
+        oModel.setProperty("/newEntry/workType", "");
+
+        oModel.setProperty("/tasksToShow", oModel.getProperty("/workTypes") || []);
+        oModel.setProperty("/isTaskDisabled", false);
+    }
+
+    oModel.setProperty("/newEntry", newEntry);
+},
         onSaveNewEntry: function () {
             var oModel = this.getView().getModel("timeEntryModel");
             var oNewEntry = oModel.getProperty("/newEntry") || {};
@@ -2083,47 +2165,47 @@ _deleteEntryIfZero: function (entry) {
 
                     let weekData;
 
-                    if (weekDataFromBackend.length > 0) {
+                   if (weekDataFromBackend.length > 0) {
+    weekData = weekDataFromBackend.map(item => {
+        let finalProjectName = item.projectName
+            ? item.projectName
+            : item.nonProjectTypeName || "";
 
-                        weekData = weekDataFromBackend.map(item => {
+        return {
+            id: item.ID,
+            totalWeekHours: item.totalWeekHours,
+            projectId: item.project_ID,
+            projectName: finalProjectName,
+            nonProjectType_ID: item.nonProjectType_ID,
+            nonProjectTypeName: item.nonProjectTypeName,
+            workType: item.task || "",
+            status: item.status || "",
+            weekStart: this._parseODataDate(item.weekStartDate),
+            weekEnd: this._parseODataDate(item.weekEndDate),
+            mondayHours: item.mondayHours || 0,
+            tuesdayHours: item.tuesdayHours || 0,
+            wednesdayHours: item.wednesdayHours || 0,
+            thursdayHours: item.thursdayHours || 0,
+            fridayHours: item.fridayHours || 0,
+            saturdayHours: item.saturdayHours || 0,
+            sundayHours: item.sundayHours || 0,
+            mondayTaskDetails: item.mondayTaskDetails || "",
+            tuesdayTaskDetails: item.tuesdayTaskDetails || "",
+            wednesdayTaskDetails: item.wednesdayTaskDetails || "",
+            thursdayTaskDetails: item.thursdayTaskDetails || "",
+            fridayTaskDetails: item.fridayTaskDetails || "",
+            saturdayTaskDetails: item.saturdayTaskDetails || "",
+            sundayTaskDetails: item.sundayTaskDetails || "",
+            dates: oModel.getProperty("/weekDates")
+        };
+    });
 
-                            // If projectName is empty → use nonProjectTypeName instead
-                            let finalProjectName = item.projectName
-                                ? item.projectName
-                                : item.nonProjectTypeName || "";
-
-                            return {
-                                id: item.ID,
-                                totalWeekHours: item.totalWeekHours,
-                                projectId: item.project_ID,
-                                projectName: finalProjectName,   // 🔥 THIS IS THE FIX
-                                nonProjectType_ID: item.nonProjectType_ID,
-                                nonProjectTypeName: item.nonProjectTypeName,
-                                workType: item.task || "",
-                                status: item.status || "",
-                                weekStart: this._parseODataDate(item.weekStartDate),
-                                weekEnd: this._parseODataDate(item.weekEndDate),
-                                mondayHours: item.mondayHours || 0,
-                                tuesdayHours: item.tuesdayHours || 0,
-                                wednesdayHours: item.wednesdayHours || 0,
-                                thursdayHours: item.thursdayHours || 0,
-                                fridayHours: item.fridayHours || 0,
-                                saturdayHours: item.saturdayHours || 0,
-                                sundayHours: item.sundayHours || 0,
-                                mondayTaskDetails: item.mondayTaskDetails || "",
-                                tuesdayTaskDetails: item.tuesdayTaskDetails || "",
-                                wednesdayTaskDetails: item.wednesdayTaskDetails || "",
-                                thursdayTaskDetails: item.thursdayTaskDetails || "",
-                                fridayTaskDetails: item.fridayTaskDetails || "",
-                                saturdayTaskDetails: item.saturdayTaskDetails || "",
-                                sundayTaskDetails: item.sundayTaskDetails || "",
-                                dates: oModel.getProperty("/weekDates")
-                            };
-
-
-                        });
-
-                    } else {
+    // 🧨 New delete eligibility check!!
+    weekData.forEach(row => {
+        row.canDelete = this._checkRowDeleteEligibility(row);
+    });
+}
+ else {
                         // No matching week → show nothing
                         weekData = [];
                         oModel.setProperty("/timeEntries", weekData);
@@ -2438,7 +2520,7 @@ _deleteEntryIfZero: function (entry) {
                         managerEmail: oRawProfile.managerEmail || "",
                         activeStatus: oRawProfile.isActive ? "Yes" : "No",
                         changedBy: oRawProfile.modifiedBy || "",
-                        userRole: oRawProfile.userRole && oRawProfile.userRole.__deferred ? "N/A" : (oRawProfile.userRole || "")
+                        userRole: oRawProfile.roleName
                     };
 
                     // Create JSONModel for fragment
@@ -2537,69 +2619,50 @@ _deleteEntryIfZero: function (entry) {
             MessageBox.information("Timesheet Settings:\n\n- Working hours: 8 hours/day\n- Future bookings allowed for Leave/Training only\n- Manager notifications for approved entry changes");
         },
 
-        onViewReports: function () {
-            var oDataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
-            var oView = this.getView();
+       onViewReports: function () {
+    var oDataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
 
-            if (!oDataModel) {
-                sap.m.MessageBox.error("OData model not found. Please check your manifest configuration.");
+    if (!oDataModel) {
+        sap.m.MessageBox.error("OData model not found. Fix your manifest my dude.");
+        return;
+    }
+
+    sap.ui.core.BusyIndicator.show(0);
+
+    oDataModel.read("/BookedHoursOverview", {
+        success: function (oData) {
+            sap.ui.core.BusyIndicator.hide();
+
+            if (!oData || !oData.results || !oData.results.length) {
+                sap.m.MessageBox.warning("Bro, no booked hours data found.");
                 return;
             }
 
-            sap.ui.core.BusyIndicator.show(0);
+            let aResults = oData.results;
 
-            oDataModel.read("/MyProgressSummary", {
-                success: function (oData) {
-                    sap.ui.core.BusyIndicator.hide();
+            // Build clean report UI text
+            let sReport = "📊 Project Booked Hours Report\n\n";
 
-                    if (!oData || !oData.results || !oData.results.length) {
-                        sap.m.MessageBox.warning("No profile data found.");
-                        return;
-                    }
+            aResults.forEach(function (oProject) {
+                sReport += "📌 Project: " + oProject.Project + "\n";
+                sReport += "🕒 Allocated Hours: " + oProject.AllocatedHours + "\n";
+                sReport += "⏱️ Booked Hours: " + oProject.BookedHours + "\n";
+                sReport += "💡 Remaining Hours: " + oProject.RemainingHours + "\n";
+                sReport += "📈 Utilization: " + oProject.Utilization + "\n";
+                sReport += "──────────────────────────────\n";
+            });
 
-                    // Take the first element from results
-                    var aResults = oData.results;
-
-                    // Group data by projectID
-                    var oProjects = {};
-                    aResults.forEach(function (oEntry) {
-                        if (!oProjects[oEntry.projectID]) {
-                            oProjects[oEntry.projectID] = {
-                                projectName: oEntry.projectName,
-                                managerName: "N/A", // you can map from another source if available
-                                totalHours: 0,
-                                startDate: oEntry.startDate,
-                                endDate: oEntry.endDate,
-                                status: oEntry.status
-                            };
-                        }
-                        // Sum up hoursWorked
-                        oProjects[oEntry.projectID].totalHours += parseFloat(oEntry.hoursWorked || 0);
-                        // Optionally, update status if you want the latest or worst status
-                        oProjects[oEntry.projectID].status = oEntry.status;
-                    });
-
-                    // Build report string
-                    var sReport = "Progress Reports:\n\n";
-                    Object.values(oProjects).forEach(function (oProject) {
-                        sReport += "Project: " + oProject.projectName + "\n";
-                        sReport += "Total Hours Worked: " + oProject.totalHours + "\n";
-                        sReport += "Start Date: " + this._formatODataDate(oProject.startDate) + "\n";
-                        sReport += "End Date: " + this._formatODataDate(oProject.endDate) + "\n";
-                        sReport += "Status: " + oProject.status + "\n\n";
-                    }.bind(this));
-
-                    // Show MessageBox
-                    sap.m.MessageBox.information(sReport, { title: "Project Progress Summary" });
-
-                }.bind(this),
-                error: function (oError) {
-                    sap.ui.core.BusyIndicator.hide();
-                    sap.m.MessageBox.error("Failed to load progress summary.");
-                    console.error(oError);
-                }
+            sap.m.MessageBox.information(sReport, {
+                title: "Booked Hours Overview"
             });
         },
+        error: function (oError) {
+            sap.ui.core.BusyIndicator.hide();
+            sap.m.MessageBox.error("Failed to load Booked Hours Overview.");
+            console.error("OData Error: ", oError);
+        }
+    });
+},
 
         // Helper function to format OData /Date(…) format to dd-mm-yyyy
         _formatODataDate: function (oDate) {

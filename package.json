@@ -2,18 +2,22 @@
   "name": "timesheet-application",
   "version": "1.0.0",
   "description": "SAP CAPM Timesheet Application with Role-Based Access",
+  "main": "server.js",
   "repository": "<Add your repository here>",
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
     "@cap-js-community/odata-v2-adapter": "^1.15.5",
     "@cap-js/hana": "^2.3.4",
+    "@sap-cloud-sdk/mail-client": "^3.24.0",
     "@sap/cds": "^9.4.4",
     "@sap/xsenv": "^6.0.0",
     "@sap/xssec": "^4",
     "approuter": "*",
+    "dotenv": "^17.2.3",
     "express": "^4",
-    "nodemailer": "^7.0.10",
+    "moment-timezone": "^0.6.0",
+    "nodemailer": "^7.0.11",
     "passport": "^0.7",
     "sap-cf-mailer": "^0.0.5"
   },
@@ -52,49 +56,49 @@
           "kind": "mocked",
           "users": {
             "aditya.mishra@sumodigitech.com": {
-              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d490",
+              "id": "aditya.mishra@sumodigitech.com",
               "password": "initial",
               "roles": [
                 "Employee"
               ]
             },
             "nadeem.abbas@sumodigitech.com": {
-              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
+              "id": "nadeem.abbas@sumodigitech.com",
               "password": "initial",
               "roles": [
                 "Employee"
               ]
             },
             "yugal.kishore@sumodigitech.com": {
-              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d492",
+              "id": "yugal.kishore@sumodigitech.com",
               "password": "initial",
               "roles": [
                 "Employee"
               ]
             },
             "sumit.jhaldiyal@sumodigitech.com": {
-              "id": "a47ac10b-58cc-4372-a567-0e02b2c3d493",
+              "id": "sumit.jhaldiyal@sumodigitech.com",
               "password": "initial",
               "roles": [
                 "Employee"
               ]
             },
             "jayant.kumar@sumodigitech.com": {
-              "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+              "id": "jayant.kumar@sumodigitech.com",
               "password": "initial",
               "roles": [
                 "Manager"
               ]
             },
             "vikrant.raj@sumodigitech.com": {
-              "id": "f47ac10b-58cc-4372-a567-0e02b2c3d480",
+              "id": "vikrant.raj@sumodigitech.com",
               "password": "initial",
               "roles": [
                 "Manager"
               ]
             },
             "pushpak.jha@sumodigitech.com": {
-              "id": "b30256ef-3c6e-44f3-a70b-b39d9f61e25f",
+              "id": "pushpak.jha@sumodigitech.com",
               "password": "initial",
               "roles": [
                 "Admin"

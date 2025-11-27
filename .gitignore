@@ -32,3 +32,10 @@ mta_archives/
 
 # @cap-js/cds-typer
 @cds-models
+
+# Do NOT track backup/archives
+*.zip
+*.mtar
+mta_archives/
+dist/
+gen/

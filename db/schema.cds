@@ -14,6 +14,29 @@ entity Employees : cuid, managed {
     timesheets      : Association to many Timesheets on timesheets.employee = $self;
 }
 
+// @cds.server.body_parser.limit: '10mb'
+// entity ReqAttachment : cuid, managed {
+// @Core.ContentDisposition.Filename: fileName
+// // @Core.MediaType                  : mediaType
+// content        : LargeBinary;
+
+// @Core.IsMediaType                : true
+// mediaType      : String;
+// fileName       : String;
+
+// @Core.IsURL  @Core.MediaType: mediaType
+// fileUrl        : String;
+// reqID          : String;
+// docCategory    : String; //TODO : camelCase   //doc_Category
+// uploadedByName : String; // These fields added to track uploader info
+// uploadedByID   : String; // These fields added to track uploader info
+// remarks        : String;
+// status         : String;
+// };
+
+
+ 
+
 
 entity UserRoles : cuid, managed {
     roleID          : String(10) @title: 'Role ID';
