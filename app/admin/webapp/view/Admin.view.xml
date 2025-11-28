@@ -219,7 +219,12 @@
                 <Button text="Previous Week" icon="sap-icon://navigation-left-arrow" press="onPreviousWeek"/>
                 <Button text="Current Week" type="Emphasized" press="onCurrentWeek"/>
                 <Button text="Next Week" press="onNextWeek"/>
-                <DatePicker value="{timeEntryModel>/selectedDate}" change="onDatePickerChange" width="150px"/>
+                <DatePicker 
+    id="datePicker" 
+     
+    change="onDatePickerChange" 
+    width="150px"
+    />
             </Toolbar>
         </headerToolbar>
 
@@ -227,29 +232,27 @@
             <HBox width="100%" height="600px" class="sapUiTinyMargin">
 
                 <!-- Employee List -->
-                <VBox width="25%">
-                    <Label text="Employees" class="sapUiSmallMarginBottom sapUiTinyMarginStart"/>
-
-                    <ScrollContainer height="400px" vertical="true">
-                     <SearchField id="employeeSearchField"
+                <!-- Employee List -->
+<!-- Employee List inside Timesheet Tab -->
+<VBox width="25%">
+    <Label text="Employees" class="sapUiSmallMarginBottom sapUiTinyMarginStart"/>
+    <ScrollContainer height="400px" vertical="true">
+        <SearchField id="employeeSearchField"
             placeholder="Search Employee..."
             liveChange="onSearchEmployee"/>
-                        <List id="employeeList"
-                            items="{path: '/users'}"
-                            mode="SingleSelectMaster"
-                            selectionChange="onEmployeeListSelect"
-                            includeItemInSelection="true">
-                            <StandardListItem
-                                title="{firstName} {lastName}"
-                                type="Active"
-                                icon="{= ${role} === 'Manager' ? 'sap-icon://manager' : 'sap-icon://employee'}"/>
-                        </List>
-                    </ScrollContainer>
-
-                    <!-- <HBox justifyContent="Center" class="sapUiTinyMarginTop" visible="{= ${/showSeeMore}}">
-                        <Button text="See More" press="onSeeMoreEmployees" type="Transparent"/>
-                    </HBox> -->
-                </VBox>
+        <List id="employeeList"
+            items="{path: '/users'}"
+            mode="SingleSelectMaster"
+            selectionChange="onEmployeeListSelect"
+            includeItemInSelection="true">
+            <StandardListItem
+                title="{firstName} {lastName}"
+    type="Active"
+    icon="{= ${role} === 'Manager' ? 'sap-icon://manager' : 'sap-icon://employee'}"
+   class="{= ${user>/hasNoTimesheetData} ? 'highlightRed' : ''}"/>
+        </List>
+    </ScrollContainer>
+</VBox>
 
 
                 <!-- Timesheet Table -->
@@ -257,6 +260,7 @@
                     <Label 
                         text="{= ${/selectedEmployeeName} ? ${/selectedEmployeeName} : 'Select an Employee'}"
                         class="sapUiSmallMarginStart sapUiSmallMarginBottom"/>
+                        
 
                     <ScrollContainer id="timesheetScroll" horizontal="true" vertical="true">
                         <table:Table
@@ -284,11 +288,16 @@
                                 <table:Column width="15rem">
                                     <Label text="Task Details"/>
                                     <table:template>
-                                        <HBox alignItems="Center" justifyContent="SpaceBetween">
+                                        <HBox alignItems="Center" justifyContent="left">
                                             <Text text="{taskDetails}"/>
                                             <Button icon="sap-icon://list" type="Transparent" press="onTaskDetailPress"/>
                                         </HBox>
                                     </table:template>
+                                </table:Column>
+
+                                <table:Column width="8rem">
+                                    <Label text="Total Hours"/>
+                                    <table:template><Text text="{totalHours}"/></table:template>
                                 </table:Column>
 
                                 <!-- Day Columns -->
@@ -327,10 +336,7 @@
                                     <table:template><Button text="{sunday}" press="onHourButtonPress"/></table:template>
                                 </table:Column>
 
-                                <table:Column width="8rem">
-                                    <Label text="Total Hours"/>
-                                    <table:template><Text text="{totalHours}"/></table:template>
-                                </table:Column>
+                                
 
                             </table:columns>
 

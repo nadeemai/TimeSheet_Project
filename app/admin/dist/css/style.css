@@ -1,1 +1,16 @@
-/* Enter your custom styles here */
+/* .redEmployeeName {
+    background-color: #fdf2f2 !important;
+}
+.redEmployeeName .sapMText {
+    color: #e74c3c !important;
+    font-weight: bold;
+} */
+
+.redEmployeeName {
+    color: red !important;
+    font-weight: bold;
+}
+.highlightRed {
+    color: red;
+    font-weight: bold;
+}

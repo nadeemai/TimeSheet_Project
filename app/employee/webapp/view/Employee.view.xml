@@ -11,8 +11,8 @@
     <Page id="mainPage" title="Weekly Timesheet" showHeader="true">
         <headerContent>
             <Button id="profileButton" icon="sap-icon://person-placeholder" tooltip="My Profile" press="onProfilePress" class="sapUiTinyMarginEnd"/>
-            <Button id="infoButton" icon="sap-icon://information" tooltip="Add Comments" press="onInfoPress" class="sapUiTinyMarginEnd"/>
-            <Button id="settingsBtn" icon="sap-icon://action-settings" tooltip="Settings" press="onSettingsPress"/>
+            <Button id="infoButton" icon="sap-icon://action-settings" tooltip="Add Comments" press="onInfoPress" class="sapUiTinyMarginEnd"/>
+            <Button id="settingsBtn" icon="sap-icon://information" tooltip="Settings" press="onSettingsPress"/>
             <Button id="reportsBtn" icon="sap-icon://business-objects-experience" tooltip="View Reports" press="onViewReports"/>
             <!-- <Button id="logoutBtn" icon="sap-icon://log" tooltip="Logout" press="onLogoutPress"/> -->
         </headerContent>
@@ -38,7 +38,7 @@
                     class="sapUiTinyMarginEnd"/>
 
             <Button text="Current Week" tooltip="Current Week"
-                    press="onCurrentWeekTS" type="Emphasized"
+                    press="onCurrentWeekTS" type="Default"
                     class="sapUiTinyMarginEnd"/>
 
             <Button icon="sap-icon://navigation-right-arrow" tooltip="Next Week"
@@ -300,7 +300,7 @@
             }" selectionChange="onProjectSelect">
             <StandardListItem
                 title="{assignedProjects>projectName}"      
-                description="{assignedProjects>managerName}" 
+                description="Project Manager - {assignedProjects>managerName}" 
                 info="{assignedProjects>status}"
                 infoState="{= ${assignedProjects>status} === 'Approved' ? 'Success' : ${assignedProjects>status} === 'On Hold' ? 'Warning' : 'Error' }"
                 type="Active"/>
@@ -338,6 +338,7 @@
     </items>
 </Table>
                         </Panel>
+                         <ToolbarSpacer id="_IDGenToolbarSpacer4"/>
                         <Panel id="durationPanel" headerText="Project Engagement Duration" expandable="true" expanded="true">
                            <Table id="durationTable" items="{durationModel>/employeeProjectDurations}">
     <columns>

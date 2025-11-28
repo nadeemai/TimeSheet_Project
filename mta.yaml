@@ -2,6 +2,7 @@ _schema-version: 3.3.0
 ID: timesheet-application
 description: SAP CAPM Timesheet Application with Role-Based Access
 version: 1.0.0
+
 modules:
 - name: timesheet-application-srv
   type: nodejs
@@ -9,7 +10,7 @@ modules:
   requires:
   - name: timesheet-application-db
   - name: timesheet-application-auth
-  - name: timesheet-application-destination
+  - name: timesheet-application-destination 
   provides:
   - name: srv-api
     properties:
@@ -21,6 +22,7 @@ modules:
     memory: 512M
   build-parameters:
     builder: npm-ci
+
 - name: timesheet-application-db-deployer
   type: hdb
   path: gen/db
@@ -28,6 +30,7 @@ modules:
   - name: timesheet-application-db
   parameters:
     buildpack: nodejs_buildpack
+
 - name: timesheet-application
   type: approuter.nodejs
   path: app/router
@@ -55,6 +58,7 @@ modules:
     disk-quota: 512M
     keep-existing-routes: true
     memory: 512M
+
 - name: timesheet-application-app-content
   type: com.sap.application.content
   path: .
@@ -73,6 +77,7 @@ modules:
       - employee.zip
       name: employee
       target-path: resources/
+
 - name: admin
   type: html5
   path: app/admin
@@ -83,6 +88,7 @@ modules:
     - npm install
     - npm run build:cf
     supported-platforms: []
+
 - name: employee
   type: html5
   path: app/employee
@@ -93,6 +99,7 @@ modules:
     - npm install
     - npm run build:cf
     supported-platforms: []
+
 - name: timesheet-application-destination-content
   type: com.sap.application.content
   requires:
@@ -123,12 +130,14 @@ modules:
         existing_destinations_policy: update
   build-parameters:
     no-source: true
+
 resources:
 - name: timesheet-application-db
   type: com.sap.xs.hdi-container
   parameters:
     service: hana
     service-plan: hdi-shared
+
 - name: timesheet-application-auth
   type: org.cloudfoundry.managed-service
   parameters:
@@ -138,6 +147,7 @@ resources:
     path: ./xs-security.json
     service: xsuaa
     service-plan: application
+
 - name: timesheet-application-destination
   type: org.cloudfoundry.managed-service
   parameters:
@@ -163,20 +173,24 @@ resources:
     service-plan: lite
   requires:
   - name: srv-api
+
 - name: timesheet-application-html5-repo-host
   type: org.cloudfoundry.managed-service
   parameters:
     service: html5-apps-repo
     service-name: timesheet-application-html5-app-host-service
     service-plan: app-host
+
 - name: timesheet-application-html5-repo-runtime
   type: org.cloudfoundry.managed-service
   parameters:
     service: html5-apps-repo
     service-plan: app-runtime
+
 parameters:
   deploy_mode: html5-repo
   enable-parallel-deployments: true
+
 build-parameters:
   before-all:
   - builder: custom

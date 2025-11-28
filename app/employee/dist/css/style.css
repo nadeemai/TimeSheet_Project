@@ -61,3 +61,54 @@
     color: black !important;
 } */
 
+.sapMPanel{
+    margin: 5px 0px !important;
+}
+
+.myProfileDialog .sapMDialogTitle {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.myProfileForm {
+    padding: 10px !important;
+}
+
+.profileLabel {
+    font-weight: 600 !important;
+    color: #34495e;
+}
+
+.profileText {
+    font-size: 0.9rem;
+    color: #2c3e50;
+}
+
+.sapMObjectStatusText {
+    font-weight: bold;
+}
+
+.btnCloseProfile {
+    background: #007aff !important;
+    color: white !important;
+    border-radius: 8px !important;
+}
+
+#profileDialog {
+    border-radius: 14px !important;
+    box-shadow: 0px 8px 28px rgba(0, 0, 0, 0.18) !important;
+}
+
+.myProfileDialog .sapMDialogScrollCont {
+    padding: 15px !important;
+    background-color: #fafbfd;
+}
+
+.sapUiLargeMarginBottom{
+    margin-bottom: 2px !important;
+}
+
+.sapUiSmallMargin{
+    margin: 0px !important;
+}

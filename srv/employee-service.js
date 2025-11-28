@@ -1,6 +1,11 @@
 const cds = require('@sap/cds');
+const { 
+  notifyTimesheetModification,
+  notifyNonProjectRequest 
+} = require('./email_service');
 
 module.exports = cds.service.impl(async function() {
+    
    const getAuthenticatedEmployee = async (req) => {
     const userId = req.user.id;
     
@@ -866,127 +871,76 @@ if (project_ID) {
 
 
 // After CREATE - Enrich and return complete data
+// After CREATE - Enrich and return complete data
 this.after('CREATE', 'MyTimesheets', async (result, req) => {
     console.log('🔧 After CREATE - Start enrichment');
 
     try {
-        // 1) Prefer the result object if CAP provided it
-        let timesheet = result && result.ID ? result : null;
-
-        // 2) Next fallback: if req.data has an ID (client-provided), fetch by ID
-        if (!timesheet && req.data && req.data.ID) {
-            timesheet = await SELECT.one.from('my.timesheet.Timesheets').where({ ID: req.data.ID });
-        }
-
-        // 3) Next fallback: use unique timesheetID + employee_ID (we generate timesheetID in before hook)
-        if (!timesheet && req.data && req.data.timesheetID) {
-            timesheet = await SELECT.one.from('my.timesheet.Timesheets')
-                .where({ timesheetID: req.data.timesheetID, employee_ID: req.data.employee_ID });
-        }
-
-        // 4) Last resort: try to find a recent record for this employee matching weekStartDate + task + project (may be noisy)
-        if (!timesheet && req.data && req.data.employee_ID && req.data.weekStartDate) {
-            timesheet = await SELECT.one.from('my.timesheet.Timesheets')
-                .where({
-                    employee_ID: req.data.employee_ID,
-                    weekStartDate: req.data.weekStartDate,
-                    task: req.data.task
-                });
-        }
-
-        if (!timesheet) {
-            console.warn('⚠️ After CREATE: Unable to locate created timesheet in DB; returning request payload as fallback');
-            return req.data || {};
-        }
-
- console.log('✅ Fetched created timesheet:', timesheet.timesheetID || timesheet.ID);
-
-// Enrich with project name - ALWAYS set field even if null
-if (timesheet.project_ID) {
-    const project = await SELECT.one
-        .from('my.timesheet.Projects')
-        .columns('projectName', 'projectRole')
-        .where({ ID: timesheet.project_ID });
-
-    if (project) {
-        timesheet.projectName = project.projectName;
-        timesheet.projectRole = project.projectRole;
-        console.log('✅ Enriched with project name:', project.projectName);
-    } else {
-        timesheet.projectName = null;
-        timesheet.projectRole = null;
-    }
-} else {
-    timesheet.projectName = null;
-    timesheet.projectRole = null;
-}
-
-// Enrich with employee name
-if (timesheet.employee_ID) {
-    const employee = await SELECT.one
-        .from('my.timesheet.Employees')
-        .columns('firstName', 'lastName', 'employeeID')
-        .where({ ID: timesheet.employee_ID });
-
-    if (employee) {
-        timesheet.employeeName = `${employee.firstName} ${employee.lastName}`;
-    } else {
-        timesheet.employeeName = null;
-    }
-} else {
-    timesheet.employeeName = null;
-}
-
-// Enrich with activity name - ALWAYS set field
-if (timesheet.activity_ID) {
-    const activity = await SELECT.one
-        .from('my.timesheet.Activities')
-        .columns('activity')
-        .where({ ID: timesheet.activity_ID });
-
-    if (activity) {
-        timesheet.activityName = activity.activity;
-    } else {
-        timesheet.activityName = null;
-    }
-} else {
-    timesheet.activityName = null;
-}
-
-// Enrich with non-project type - ALWAYS set field
-if (timesheet.nonProjectType_ID) {
-    const npt = await SELECT.one
-        .from('my.timesheet.NonProjectTypes')
-        .columns('typeName', 'nonProjectTypeID')
-        .where({ ID: timesheet.nonProjectType_ID });
-
-    if (npt) {
-        timesheet.nonProjectTypeName = npt.typeName;
-        timesheet.nonProjectTypeID = npt.nonProjectTypeID;
-    } else {
-        timesheet.nonProjectTypeName = null;
-        timesheet.nonProjectTypeID = null;
-    }
-} else {
-    timesheet.nonProjectTypeName = null;
-    timesheet.nonProjectTypeID = null;
-}
-
-        // Ensure Location header (use actual DB ID)
-        try {
-            req._.res.set('location', `MyTimesheets(${timesheet.ID})`);
-        } catch (e) {
-            // If req._.res not available, ignore - but we still return the timesheet
-            console.warn('⚠️ Could not set location header:', e.message || e);
-        }
-
+        // ... your existing enrichment code ...
+        
         console.log('✅ After CREATE - Enrichment complete, returning enriched timesheet');
-        // Returning the object will make OData return it (201/200) instead of 204
+        
+        // ✅ NEW: CHECK FOR NON-PROJECT REQUEST EMAIL NOTIFICATION
+        if (timesheet.nonProjectType_ID && !timesheet.project_ID) {
+            console.log('📧 Non-project timesheet CREATED - checking for email notification');
+            
+            try {
+                // Get employee who created this
+                const employee = await SELECT.one
+                    .from('my.timesheet.Employees')
+                    .columns('ID', 'employeeID', 'firstName', 'lastName', 'email', 'managerID_ID')
+                    .where({ ID: timesheet.employee_ID });
+
+                if (employee && employee.managerID_ID) {
+                    // Get non-project type details
+                    const nonProjectType = await SELECT.one
+                        .from('my.timesheet.NonProjectTypes')
+                        .columns('typeName', 'nonProjectTypeID', 'description')
+                        .where({ ID: timesheet.nonProjectType_ID });
+
+                    if (nonProjectType) {
+                        // Get manager details
+                        const manager = await SELECT.one
+                            .from('my.timesheet.Employees')
+                            .columns('email', 'firstName', 'lastName')
+                            .where({ ID: employee.managerID_ID });
+
+                        if (manager && manager.email) {
+                            console.log('📧 Sending non-project request email to manager:', manager.email);
+                            
+                            const totalDays = (timesheet.totalWeekHours / 8).toFixed(1);
+                            
+                            const emailResult = await notifyNonProjectRequest({
+                                employeeName: `${employee.firstName} ${employee.lastName}`,
+                                employeeID: employee.employeeID,
+                                requestType: nonProjectType.typeName,
+                                requestTypeID: nonProjectType.nonProjectTypeID,
+                                weekStartDate: timesheet.weekStartDate,
+                                weekEndDate: timesheet.weekEndDate,
+                                totalHours: timesheet.totalWeekHours || 0,
+                                totalDays: totalDays,
+                                taskDetails: timesheet.taskDetails || 'No additional details provided',
+                                managerEmail: manager.email
+                            });
+
+                            if (emailResult && emailResult.success) {
+                                console.log('✅✅✅ NON-PROJECT EMAIL SENT (CREATE) ✅✅✅');
+                                console.log('   Message ID:', emailResult.messageId);
+                            } else {
+                                console.error('❌ Failed to send non-project email:', emailResult?.error);
+                            }
+                        }
+                    }
+                }
+            } catch (emailError) {
+                console.error('❌ Error sending non-project email:', emailError);
+            }
+        }
+        
         return timesheet;
 
     } catch (error) {
         console.error('❌ Error in after CREATE enrichment:', error);
-        // return request payload so client gets something meaningful
         return req.data || {};
     }
 });
@@ -1090,30 +1044,285 @@ if (timesheet.nonProjectType_ID) {
         }
     });
 
-    // After UPDATE - Send notifications
-    this.after('UPDATE', 'MyTimesheets', async (data, req) => {
-        const employee = await getAuthenticatedEmployee(req);
-        if (!employee) return;
+// Enhanced DEBUG version - Replace your after UPDATE handler with this
 
-        const timesheet = await SELECT.one.from('my.timesheet.Timesheets')
-            .where({ ID: data.ID });
-
-        if (timesheet && timesheet.status === 'Modified') {
-            const notificationCount = await SELECT.from('my.timesheet.Notifications');
-            
-            if (employee.managerID_ID) {
-                await INSERT.into('my.timesheet.Notifications').entries({
-                    notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
-                    recipient_ID: employee.managerID_ID,
-                    message: `${employee.firstName} ${employee.lastName} modified previously approved timesheet for week ${timesheet.weekStartDate}`,
-                    notificationType: 'Timesheet Modified',
-                    isRead: false,
-                    relatedEntity: 'Timesheet',
-                    relatedEntityID: timesheet.ID
-                });
-            }
-        }
+this.after('UPDATE', 'MyTimesheets', async (data, req) => {
+    console.log('=================================================');
+    console.log('🔧 After UPDATE - Start notification check');
+    console.log('🔧 Data ID:', data.ID);
+    console.log('=================================================');
+    
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) {
+        console.error('❌ ERROR: Employee not found, skipping notifications');
+        return;
+    }
+    
+    console.log('✅ Employee found:', {
+        ID: employee.ID,
+        employeeID: employee.employeeID,
+        name: `${employee.firstName} ${employee.lastName}`,
+        email: employee.email,
+        managerID_ID: employee.managerID_ID
     });
+
+    const timesheet = await SELECT.one.from('my.timesheet.Timesheets')
+        .where({ ID: data.ID });
+
+    if (!timesheet) {
+        console.error('❌ ERROR: Timesheet not found after update');
+        return;
+    }
+    
+    console.log('✅ Timesheet found:', {
+        ID: timesheet.ID,
+        timesheetID: timesheet.timesheetID,
+        status: timesheet.status,
+        project_ID: timesheet.project_ID,
+        nonProjectType_ID: timesheet.nonProjectType_ID,
+        totalWeekHours: timesheet.totalWeekHours,
+        task: timesheet.task
+    });
+    
+    // CHECK 1: Environment Detection
+    console.log('🌍 Environment Check:');
+    console.log('   NODE_ENV:', process.env.NODE_ENV);
+    console.log('   VCAP_SERVICES exists:', !!process.env.VCAP_SERVICES);
+    if (process.env.VCAP_SERVICES) {
+        try {
+            const vcap = JSON.parse(process.env.VCAP_SERVICES);
+            console.log('   Destination service bound:', !!vcap.destination);
+        } catch (e) {
+            console.error('   ERROR parsing VCAP_SERVICES:', e.message);
+        }
+    }
+  
+    // CHECK 2: Timesheet Modification Detection
+    console.log('📋 Checking Modification Trigger:');
+    console.log('   Current status:', timesheet.status);
+    console.log('   Is Modified?', timesheet.status === 'Modified');
+    
+    if (timesheet.status === 'Modified') {
+        console.log('✅ TRIGGER DETECTED: Timesheet Modified');
+        
+        if (!employee.managerID_ID) {
+            console.error('❌ SKIP: Employee has no manager assigned');
+            return;
+        }
+        
+        console.log('✅ Employee has manager ID:', employee.managerID_ID);
+        
+        // Create in-app notification
+        const notificationCount = await SELECT.from('my.timesheet.Notifications');
+        
+        await INSERT.into('my.timesheet.Notifications').entries({
+            notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
+            recipient_ID: employee.managerID_ID,
+            message: `${employee.firstName} ${employee.lastName} modified previously approved timesheet for week ${timesheet.weekStartDate}`,
+            notificationType: 'Timesheet Modified',
+            isRead: false,
+            relatedEntity: 'Timesheet',
+            relatedEntityID: timesheet.ID
+        });
+        
+        console.log('✅ In-app notification created');
+
+        try {
+            // Get manager details
+            const manager = await SELECT.one
+                .from('my.timesheet.Employees')
+                .columns('email', 'firstName', 'lastName', 'ID', 'employeeID')
+                .where({ ID: employee.managerID_ID });
+
+            console.log('📧 Manager lookup result:', manager ? {
+                ID: manager.ID,
+                employeeID: manager.employeeID,
+                name: `${manager.firstName} ${manager.lastName}`,
+                email: manager.email
+            } : 'NOT FOUND');
+
+            if (!manager) {
+                console.error('❌ SKIP: Manager record not found in database');
+                return;
+            }
+
+            if (!manager.email) {
+                console.error('❌ SKIP: Manager has no email address');
+                return;
+            }
+            
+            console.log('✅ Manager email found:', manager.email);
+            console.log('📧 Preparing modification email...');
+            
+            // Get project details if exists
+            let projectInfo = 'Non-Project Activity';
+            if (timesheet.project_ID) {
+                console.log('🔍 Looking up project:', timesheet.project_ID);
+                const project = await SELECT.one
+                    .from('my.timesheet.Projects')
+                    .columns('projectName', 'projectID')
+                    .where({ ID: timesheet.project_ID });
+                
+                if (project) {
+                    projectInfo = `${project.projectName} (${project.projectID})`;
+                    console.log('✅ Project found:', projectInfo);
+                } else {
+                    console.warn('⚠️ Project not found for ID:', timesheet.project_ID);
+                }
+            }
+
+            console.log('📧 Calling notifyTimesheetModification with params:', {
+                employeeName: `${employee.firstName} ${employee.lastName}`,
+                employeeID: employee.employeeID,
+                weekStartDate: timesheet.weekStartDate,
+                weekEndDate: timesheet.weekEndDate,
+                task: timesheet.task,
+                projectInfo: projectInfo,
+                totalHours: timesheet.totalWeekHours || 0,
+                managerEmail: manager.email
+            });
+
+            const emailResult = await notifyTimesheetModification({
+                employeeName: `${employee.firstName} ${employee.lastName}`,
+                employeeID: employee.employeeID,
+                weekStartDate: timesheet.weekStartDate,
+                weekEndDate: timesheet.weekEndDate,
+                task: timesheet.task,
+                projectInfo: projectInfo,
+                totalHours: timesheet.totalWeekHours || 0,
+                managerEmail: manager.email
+            });
+
+            console.log('📧 Email function returned:', emailResult);
+
+            if (emailResult && emailResult.success) {
+                console.log('✅✅✅ MODIFICATION EMAIL SENT SUCCESSFULLY ✅✅✅');
+                console.log('   Message ID:', emailResult.messageId);
+                console.log('   Recipients:', emailResult.recipients);
+                console.log('   Timestamp:', emailResult.timestamp);
+            } else {
+                console.error('❌❌❌ MODIFICATION EMAIL FAILED ❌❌❌');
+                console.error('   Error:', emailResult?.error || 'Unknown error');
+            }
+        } catch (emailError) {
+            console.error('❌❌❌ EXCEPTION in modification email:', emailError);
+            console.error('   Message:', emailError.message);
+            console.error('   Stack:', emailError.stack);
+        }
+    } else {
+        console.log('ℹ️ Status is not Modified, checking non-project trigger...');
+    }
+
+    // CHECK 3: Non-Project Request Detection
+    console.log('📋 Checking Non-Project Trigger:');
+    console.log('   Has nonProjectType_ID?', !!timesheet.nonProjectType_ID);
+    console.log('   Has project_ID?', !!timesheet.project_ID);
+    console.log('   Is Non-Project?', !!timesheet.nonProjectType_ID && !timesheet.project_ID);
+    
+    if (timesheet.nonProjectType_ID && !timesheet.project_ID) {
+        console.log('✅ TRIGGER DETECTED: Non-Project Request');
+        
+        try {
+            // Get non-project type details
+            console.log('🔍 Looking up non-project type:', timesheet.nonProjectType_ID);
+            const nonProjectType = await SELECT.one
+                .from('my.timesheet.NonProjectTypes')
+                .columns('typeName', 'nonProjectTypeID', 'description')
+                .where({ ID: timesheet.nonProjectType_ID });
+
+            console.log('📋 Non-project type result:', nonProjectType || 'NOT FOUND');
+
+            if (!nonProjectType) {
+                console.error('❌ SKIP: Non-project type not found');
+                return;
+            }
+
+            if (!employee.managerID_ID) {
+                console.error('❌ SKIP: Employee has no manager assigned');
+                return;
+            }
+
+            console.log('✅ Employee has manager ID:', employee.managerID_ID);
+
+            // Get manager details
+            const manager = await SELECT.one
+                .from('my.timesheet.Employees')
+                .columns('email', 'firstName', 'lastName', 'ID', 'employeeID')
+                .where({ ID: employee.managerID_ID });
+
+            console.log('📧 Manager lookup result:', manager ? {
+                ID: manager.ID,
+                employeeID: manager.employeeID,
+                name: `${manager.firstName} ${manager.lastName}`,
+                email: manager.email
+            } : 'NOT FOUND');
+
+            if (!manager) {
+                console.error('❌ SKIP: Manager record not found in database');
+                return;
+            }
+
+            if (!manager.email) {
+                console.error('❌ SKIP: Manager has no email address');
+                return;
+            }
+            
+            console.log('✅ Manager email found:', manager.email);
+            console.log('📧 Preparing non-project request email...');
+            
+            // Calculate total days (8 hours = 1 day)
+            const totalDays = (timesheet.totalWeekHours / 8).toFixed(1);
+            
+            console.log('📧 Calling notifyNonProjectRequest with params:', {
+                employeeName: `${employee.firstName} ${employee.lastName}`,
+                employeeID: employee.employeeID,
+                requestType: nonProjectType.typeName,
+                requestTypeID: nonProjectType.nonProjectTypeID,
+                weekStartDate: timesheet.weekStartDate,
+                weekEndDate: timesheet.weekEndDate,
+                totalHours: timesheet.totalWeekHours || 0,
+                totalDays: totalDays,
+                taskDetails: timesheet.taskDetails || 'No additional details provided',
+                managerEmail: manager.email
+            });
+
+            const emailResult = await notifyNonProjectRequest({
+                employeeName: `${employee.firstName} ${employee.lastName}`,
+                employeeID: employee.employeeID,
+                requestType: nonProjectType.typeName,
+                requestTypeID: nonProjectType.nonProjectTypeID,
+                weekStartDate: timesheet.weekStartDate,
+                weekEndDate: timesheet.weekEndDate,
+                totalHours: timesheet.totalWeekHours || 0,
+                totalDays: totalDays,
+                taskDetails: timesheet.taskDetails || 'No additional details provided',
+                managerEmail: manager.email
+            });
+
+            console.log('📧 Email function returned:', emailResult);
+
+            if (emailResult && emailResult.success) {
+                console.log('✅✅✅ NON-PROJECT EMAIL SENT SUCCESSFULLY ✅✅✅');
+                console.log('   Message ID:', emailResult.messageId);
+                console.log('   Recipients:', emailResult.recipients);
+                console.log('   Timestamp:', emailResult.timestamp);
+            } else {
+                console.error('❌❌❌ NON-PROJECT EMAIL FAILED ❌❌❌');
+                console.error('   Error:', emailResult?.error || 'Unknown error');
+            }
+        } catch (emailError) {
+            console.error('❌❌❌ EXCEPTION in non-project email:', emailError);
+            console.error('   Message:', emailError.message);
+            console.error('   Stack:', emailError.stack);
+        }
+    } else {
+        console.log('ℹ️ Not a non-project request (either has project_ID or no nonProjectType_ID)');
+    }
+
+    console.log('=================================================');
+    console.log('🔧 After UPDATE - Notification check complete');
+    console.log('=================================================');
+});
 
     // Function to get week boundaries
     this.on('getWeekBoundaries', async (req) => {

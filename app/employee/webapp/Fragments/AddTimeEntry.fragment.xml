@@ -92,10 +92,11 @@
             <Button
                 text="Save"
                 type="Emphasized"
+                id="idSaveBtn"
                 icon="sap-icon://save"
                 press="onSaveNewEntry" />
             <Button
-                text="Save + New"
+                text="Save"
                 icon="sap-icon://add"
                 press="onSaveAndNewEntry" />
             <Button
