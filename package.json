@@ -38,7 +38,7 @@
     "deploy": "cf deploy mta_archives/archive.mtar --retries 1",
     "watch-admin": "cds watch --open admin/index.html?sap-ui-xx-viewCache=false --livereload false",
     "watch-employee": "cds watch --open employee/index.html?sap-ui-xx-viewCache=false --livereload false",
-    "watch-manager": "cds watch --open manager.com.manager/index.html?sap-ui-xx-viewCache=false",
+    "watch-manager": "cds watch --open manager.com.manager/index.html?sap-ui-xx-viewCache=false --livereload false",
     "undeploy": "cf undeploy timesheet-application --delete-services --delete-service-keys --delete-service-brokers"
   },
   "cds": {

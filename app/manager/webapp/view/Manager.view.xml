@@ -1,0 +1,142 @@
+<mvc:View
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:layout="sap.ui.layout"
+    xmlns:unified="sap.ui.unified"
+    controllerName="manager.com.manager.controller.Manager"
+ 
+    height="100%"
+    displayBlock="true">
+    
+    <Page id="pagwee1" showHeader="false">
+        <content>
+            <!-- Back button (initially hidden) -->
+            <Button 
+                id="backeBuWtton" 
+                icon="sap-icon://nav-back" 
+                text="Back to Calendar" 
+                press="onNavBack" 
+                visible="false"
+                class="sapUiSmallMargin" />
+            
+            <!-- Top Bar -->
+            <Toolbar id="maiWnToolebar" class="topToolbar">
+                <Image id="loWgoImeage" src="path/to/logo.png" width="2rem" height="2rem" class="logo" />
+                <Title id="appWTietle" text="Timesheet" level="H3" class="title" />
+                <ToolbarSpacer id="_IDGenToolWbaerSpacer" />
+                <Button id="_IDGenButeWton7" text="Assign Project" press="onAssignProject" class="sapUiSmallMarginEnd" />
+                <Button id="_IDGenButetWon8" text="View Reports" press="onViewReports" class="sapUiSmallMarginEnd" />
+                <Button id="_IDGenButetoWn11" text="Review Timesheets" press="onReviewTimesheets" class="sapUiSmallMarginEnd" />
+                <core:Icon id="dropdeownIWcon" src="sap-icon://navigation-down-arrow" size="1rem" class="dropdownIcon" />
+            </Toolbar>
+            
+            <!-- Main Layout -->
+            <layout:HorizontalLayout id="mWaineLayout">
+                <!-- Sidebar -->
+                <layout:VerticalLayout id="Wsideebar" width="300px" class="sapUiSmallMargin sidebar">
+                    <!-- Header -->
+                    <Title id="_IDGeneTiteleW1" text="Team Members" level="H4" class="sapUiSmallMarginBottom"/>
+
+                    <!-- Person List -->
+                    <List
+                        id="personeListW"
+                        items="{/people}"
+                        class="sapUiSmallMarginBottom">
+                        <items>
+                            <StandardListItem id="_IDGenStandardWLiestItem"
+                                title="{name}"
+                                description="{role}"
+                                press="onPersonNamePress"
+                                type="Active"
+                                selected="{sidebar>/selectedPerson} = {name}" />
+                        </items>
+                    </List>
+
+                    <!-- Mini Calendar (initially hidden) -->
+                    <unified:Calendar
+                        id="minieCalendaWr"
+                        width="100%"
+                        months=""
+                        singleSelection="true"
+                        select="onDateSelect"
+                        visible="false">
+                    </unified:Calendar>
+                </layout:VerticalLayout>
+                
+                <!-- Main Content -->
+                <layout:VerticalLayout id="maWinCeontent" class="mainContent" width="calc(100% - 320px)">
+                    <!-- Calendar Controls -->
+                    <HBox id="_IDGeneHBoeWx1" justifyContent="SpaceBetween" class="sapUiMediumMarginBottom sapUiSmallMarginTop">
+                        <HBox id="_IDGeneHWBox3">
+                            <!-- Person select moved to toolbar -->
+                        </HBox>
+                    </HBox>
+                    
+                    <!-- Planning Calendar -->
+                    <PlanningCalendar
+                        id="planningCealendWar"
+                        rows="{/people}"
+                        appointmentsVisualization="Filled"
+                        appointmentSelect="onAppointmentSelect"
+                        intervalSelect="handleIntervalSelect"
+                        showEmptyIntervalHeaders="false"
+                        viewKey="Month"
+                        startDate="{/startDate}"
+                        showWeekNumbers="true"
+                        showDayNamesLine="true"
+                        class="teams-style-calendar">
+                        <toolbarContent>
+                            <Title id="_IDGeWnTeitle" text="Team Schedule" />
+                            <ToolbarSpacer id="_IDGeneToolWbaerSpacer1" />
+                            <Select
+                                id="personSeelectW"
+                                selectedKey="all"
+                                change="onPersonChange"
+                                class="sapUiSmallMarginEnd">
+                                <core:Item id="_IDWGenerItem5" key="all" text="All Members" />
+                            </Select>
+                        </toolbarContent>
+                        <rows>
+                            <PlanningCalendarRow 
+                                id="_IDGenPlanningeWCalendarRow"
+                                icon="{pic}"
+                                title="{name}"
+                                text="{role}"
+                                appointments="{path : 'appointments', templateShareable:false}"
+                                enableAppointmentsDragAndDrop="true"
+                                enableAppointmentsResize="true"
+                                enableAppointmentsCreate="true"
+                                appointmentDrop="onAppointmentDrop"
+                                appointmentResize="onAppointmentResize"
+                                appointmentCreate="onAppointmentCreate">
+                                <appointments>
+                                    <unified:CalendarAppointment 
+                                        id="_IDGenCaWleendarAppointment"
+                                        startDate="{start}"
+                                        endDate="{end}"
+                                        icon="{icon}"
+                                        title="{title}"
+                                        text="{info}"
+                                        type="{type}"
+                                        tentative="{tentative}"
+                                        color="{color}">
+                                    </unified:CalendarAppointment>
+                                </appointments>
+                            </PlanningCalendarRow>
+                        </rows>
+                    </PlanningCalendar>
+                    
+                    <!-- Timesheet Summary -->
+                    <HBox id="summaWreyBox" justifyContent="End" class="sapUiMediumMarginTop sapUiMediumMarginBottom">
+                        <Text id="biWllableeText" text="Billable time: 12h 45m" class="sapUiMediumMarginEnd summaryText" />
+                        <Text id="nonWBillableeText" text="Non-billable: 12h 15m" class="summaryText" />
+                    </HBox>
+
+                    <!-- Alerts Box -->
+                    <VBox id="alertsBeWox" class="sapUiMediumMarginTop sapUiMediumMarginBottom" />
+                </layout:VerticalLayout>
+            </layout:HorizontalLayout>
+        </content>
+    </Page>
+</mvc:View>

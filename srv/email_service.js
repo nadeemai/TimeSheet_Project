@@ -56,25 +56,50 @@ async function getOAuth2AccessToken(destinationConfig) {
 async function getDestinationConfig() {
   try {
     console.log('🔍 Reading destination configuration from BTP...');
-    
-    // Load destination service credentials
-    const destService = xsenv.getServices({ dest: { label: 'destination' } });
-    
-    if (!destService || !destService.dest) {
+
+    // 1) Load destination service credentials (xsenv returns credentials directly)
+    const services = xsenv.getServices({ dest: { tag: 'destination' } });
+    const destCredentials = services.dest;
+
+    if (!destCredentials) {
       throw new Error('Destination service not bound. Check mta.yaml configuration.');
     }
 
-    console.log('Destination service found');
+    console.log('✅ Destination service credentials loaded');
+    console.log('   destCredentials.uri:', destCredentials.uri);
+    console.log('   destCredentials.url:', destCredentials.url);
 
     const axios = require('axios');
-    const destServiceUrl = destService.dest.uri;
-    const destServiceToken = destService.dest.credentials?.token || await getDestinationServiceToken(destService.dest);
+
+    // 2) Get token for Destination service API
+    const destServiceToken = await getDestinationServiceToken(destCredentials);
+    console.log('✅ Destination service token obtained');
+
+    const destServiceUrl = destCredentials.uri; // IMPORTANT: use "uri"
+
+    // 3) DEBUG: list all destinations visible to this instance
+    const listResp = await axios.get(
+      `${destServiceUrl}/destination-configuration/v1/destinations`,
+      {
+        headers: {
+          Authorization: `Bearer ${destServiceToken}`
+        }
+      }
+    );
+
+    console.log('📋 Destinations visible to this instance:');
+    for (const d of listResp.data.destinations || []) {
+      console.log(`   - ${d.Name}`);
+    }
+
+    // 4) Now fetch the specific destination
+    console.log(`🔍 Fetching destination "${DESTINATION_NAME}"...`);
 
     const response = await axios.get(
       `${destServiceUrl}/destination-configuration/v1/destinations/${DESTINATION_NAME}`,
       {
         headers: {
-          'Authorization': `Bearer ${destServiceToken}`
+          Authorization: `Bearer ${destServiceToken}`
         }
       }
     );
@@ -82,11 +107,10 @@ async function getDestinationConfig() {
     const destination = response.data.destinationConfiguration;
     console.log('✅ Destination configuration loaded:', DESTINATION_NAME);
 
-  
     const config = {
       host: destination['mail.smtp.host'],
       port: parseInt(destination['mail.smtp.port'] || '587'),
-      secure: destination['mail.smtp.port'] === '465', 
+      secure: destination['mail.smtp.port'] === '465',
       tokenServiceURL: destination.tokenServiceURL,
       clientId: destination.clientId,
       clientSecret: destination.clientSecret,
@@ -95,7 +119,6 @@ async function getDestinationConfig() {
       from: destination['mail.from'] || FROM_EMAIL
     };
 
-    // Validate required fields
     if (!config.host) {
       throw new Error('SMTP host not configured in destination');
     }
@@ -118,6 +141,7 @@ async function getDestinationConfig() {
     throw error;
   }
 }
+
 
 async function getDestinationServiceToken(destCredentials) {
   try {
