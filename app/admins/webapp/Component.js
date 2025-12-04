@@ -1,10 +1,10 @@
 sap.ui.define([
     "sap/ui/core/UIComponent",
-    "manager/model/models"
+    "admins/model/models"
 ], (UIComponent, models) => {
     "use strict";
 
-    return UIComponent.extend("manager.Component", {
+    return UIComponent.extend("admins.Component", {
         metadata: {
             manifest: "json"
         },
@@ -27,11 +27,12 @@ sap.ui.define([
                     console.log(oData)
                     let user = oData.getCurrentUser;
 
-                    if (user.authenticated && user.role === "Manager") {
+                    if (user.authenticated && user.role === "Admin") {
+                        console.log(`${user.authenticated} & ${user.role}`)
                         this.setModel(new sap.ui.model.json.JSONModel(user), "currentUser");
-                        this.getRouter().navTo("manager", {}, true);
+                        this.getRouter().navTo("admins", {}, true);
                     } else {
-                        sap.m.MessageBox.error("Not authorized as Manager.");
+                        sap.m.MessageBox.error("Not authorized as Admin.");
                     }
                 },
                 error: e => sap.m.MessageToast.show("User API Error")

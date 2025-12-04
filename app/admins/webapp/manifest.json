@@ -1,7 +1,7 @@
 {
   "_version": "1.76.0",
   "sap.app": {
-    "id": "manager",
+    "id": "admins",
     "type": "application",
     "i18n": "i18n/i18n.properties",
     "applicationVersion": {
@@ -12,20 +12,20 @@
     "resources": "resources.json",
     "sourceTemplate": {
       "id": "@sap/generator-fiori:basic",
-      "version": "1.19.6",
-      "toolsId": "924072e7-18cc-45b5-b906-b7056e3467f6"
+      "version": "1.19.5",
+      "toolsId": "d5997fb2-f33c-4362-8151-49d5ebc97753"
     },
     "dataSources": {
       "mainService": {
-        "uri": "/odata/v4/manager/",
+        "uri": "/odata/v4/admin/",
         "type": "OData",
         "settings": {
           "annotations": [],
           "odataVersion": "4.0"
         }
       },
-       "timesheetServiceV2": {
-        "uri": "/odata/v2/manager/",
+      "adminService": {
+        "uri": "/odata/v2/admin/",
         "type": "OData",
         "settings": {
           "odataVersion": "2.0",
@@ -43,12 +43,11 @@
     },
     "crossNavigation": {
       "inbounds": {
-        "manager-display": {
-          "semanticObject": "manager",
+        "admin-display": {
+          "semanticObject": "admin",
           "action": "display",
-          "title": "Manager Portal",
-          "subTitle": "Manager dashboard",
-          "icon": "sap-icon://manager",
+          "title": "Admin Portal",
+          "icon": "sap-icon://employee",
           "signature": {
             "parameters": {},
             "additionalParameters": "allowed"
@@ -73,10 +72,11 @@
       "phone": true
     }
   },
+
   "sap.ui5": {
     "flexEnabled": false,
     "dependencies": {
-      "minUI5Version": "1.143.0",
+      "minUI5Version": "1.142.0",
       "libs": {
         "sap.m": {},
         "sap.ui.core": {}
@@ -90,7 +90,7 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "manager.i18n.i18n"
+          "bundleName": "admins.i18n.i18n"
         }
       },
       "": {
@@ -102,8 +102,8 @@
           "earlyRequests": true
         }
       },
-      "timesheetServiceV2": {
-        "dataSource": "timesheetServiceV2",
+      "adminService": {
+        "dataSource": "adminService",
         "type": "sap.ui.model.odata.v2.ODataModel",
         "settings": {
           "useBatch": false,
@@ -125,38 +125,39 @@
       ]
     },
     "routing": {
-  "config": {
-    "routerClass": "sap.m.routing.Router",
-    "controlAggregation": "pages",
-    "controlId": "app",
-    "transition": "slide",
-    "type": "View",
-    "viewType": "XML",
-    "viewPath": "manager.view",
-    "async": true
-  },
-  "routes": [
-    {
-      "pattern": "",
-      "name": "manager",
-      "target": "TargetManager"
-    }
-  ],
-  "targets": {
-    "TargetManager": {
-      "viewName": "Manager",
-      "viewId": "manager",
-      "viewLevel": 1
-    }
-  }
-},
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "controlAggregation": "pages",
+        "controlId": "app",
+        "transition": "slide",
+        "type": "View",
+        "viewType": "XML",
+        "viewPath": "admins.view",
+        "async": true
+      },
+      "routes": [
+        {
+          "pattern": "",
+          "name": "admins",
+          "target": "admins"
+        }
+      ],
+      "targets": {
+        "admins": {
+          "viewName": "Admins",
+          "viewId": "admins",
+          "viewLevel": 1
+        }
+      }
+    },
     "rootView": {
-      "viewName": "manager.view.App",
+      "viewName": "admins.view.App",
       "type": "XML",
       "id": "App",
       "async": true
     }
   },
+  
   "sap.cloud": {
     "public": true,
     "service": "timesheet-application"

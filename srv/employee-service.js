@@ -20,7 +20,7 @@ module.exports = cds.service.impl(async function() {
     let employee = await SELECT.one.from('my.timesheet.Employees')
         .where({ email: userId, isActive: true });
 
-    // STRATEGY 2: If userId is not a full email, try appending domain
+
     if (!employee && !userId.includes('@')) {
         console.log('⚠️ User ID is not an email, trying with @sumodigitech.com domain...');
         const emailWithDomain = `${userId}@sumodigitech.com`;
@@ -28,7 +28,6 @@ module.exports = cds.service.impl(async function() {
             .where({ email: emailWithDomain, isActive: true });
     }
 
-    // STRATEGY 3: Case-insensitive email search (fallback)
     if (!employee) {
         console.log('⚠️ Trying case-insensitive email search...');
         const allEmployees = await SELECT.from('my.timesheet.Employees')
@@ -41,17 +40,15 @@ module.exports = cds.service.impl(async function() {
     }
 
     if (!employee) {
-        console.log('❌ Employee not found for email:', userId);
+        console.log('Employee not found for email:', userId);
         req.error(404, 'Employee profile not found or inactive. Please contact administrator.');
         return null;
     }
 
-    console.log('✅ Employee authenticated:', employee.employeeID, 'Email:', employee.email);
+    console.log('Employee authenticated:', employee.employeeID, 'Email:', employee.email);
     return employee;
 };
 
-
-    // Helper to calculate date differences
     const calculateDateDiff = (startDate, endDate) => {
         if (!startDate || !endDate) return null;
         const start = new Date(startDate);
@@ -80,7 +77,6 @@ module.exports = cds.service.impl(async function() {
         return 'On Track';
     };
 
-    // Helper to get week boundaries (Monday to Sunday)
     const getWeekBoundaries = (date) => {
         const inputDate = date ? new Date(date) : new Date();
 
@@ -122,7 +118,6 @@ module.exports = cds.service.impl(async function() {
         return days;
     };
 
-// MyTimesheets READ handler - Direct queries without expand
 this.on('READ', 'MyTimesheets', async (req) => {
     console.log('📊 MyTimesheets READ - Start');
     console.log('📊 User ID:', req.user.id);
@@ -136,7 +131,6 @@ this.on('READ', 'MyTimesheets', async (req) => {
     console.log('✅ Employee found:', employee.employeeID, 'ID:', employee.ID);
 
     try {
-        // Fetch timesheets - NO EXPAND, just raw data
         const timesheets = await SELECT.from('my.timesheet.Timesheets')
             .where({ employee_ID: employee.ID });
 
@@ -147,9 +141,7 @@ this.on('READ', 'MyTimesheets', async (req) => {
             return [];
         }
         
-       // Enrich each timesheet with related data
 for (const ts of timesheets) {
-    // Set employee info
     ts.employee_ID = employee.ID;
     ts.employeeName = `${employee.firstName} ${employee.lastName}`;
     
@@ -353,9 +345,8 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
         if (!npt.isActive) return req.error(400, 'This non-project type is not active');
     }
 
-    // attach employee and default status
     payload.employee_ID = employeeID;
-    payload.status = payload.status || 'Draft';
+    payload.status = payload.status || 'Submitted';
 
     // ensure timesheetID exists (generate if not)
     if (!payload.timesheetID) {
@@ -670,20 +661,19 @@ this.on('READ', 'BookedHoursOverview', async (req) => {
         }
     });
 
-    // Before CREATE - Validate and prepare weekly batch entry
 this.before('CREATE', 'MyTimesheets', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return;
 
     const employeeID = employee.ID;
     const { task, project_ID, activity_ID, nonProjectType_ID, isBillable } = req.data;
-     // ✅ NEW: Convert projectID string to UUID if needed
+
     if (project_ID) {
-        // Check if it's a UUID format (contains hyphens) or a project code
+        
         const isUUID = project_ID.includes('-');
         
         if (!isUUID) {
-            // It's a project code like "PRJ0003", convert to UUID
+            
             console.log('⚠️ Converting project code to UUID:', project_ID);
             const project = await SELECT.one
                 .from('my.timesheet.Projects')
@@ -694,10 +684,9 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
                 return req.error(404, `Project with code ${project_ID} not found`);
             }
             
-            req.data.project_ID = project.ID; // Replace with UUID
-            console.log('✅ Converted to UUID:', project.ID);
+            req.data.project_ID = project.ID; 
+            console.log('Converted to UUID:', project.ID);
         } else {
-            // It's already a UUID, verify it exists
             const project = await SELECT.one
                 .from('my.timesheet.Projects')
                 .columns('ID')
@@ -714,8 +703,6 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         return req.error(400, `Invalid task type. Must be one of: ${validTasks.join(', ')}`);
     }
 
-    // compute weekBoundaries and weekDates BEFORE using them >>> ---
-    // prefer an explicit date from the request if provided, else fallback to weekStartDate if present, else today
     const inputDateForWeek = req.data.date || req.data.weekStartDate || new Date().toISOString().split('T')[0];
     let weekBoundaries;
     try {
@@ -727,7 +714,7 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
     const weekDates = getWeekDates(weekBoundaries.weekStart);
    
 
-    // now safe to assign these values to req.data
+    
     req.data.weekStartDate = weekBoundaries.weekStart;
     req.data.weekEndDate   = weekBoundaries.weekEnd;
 
@@ -746,7 +733,6 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
     req.data.sundayDate    = weekDates[6].date;
     req.data.sundayDay     = weekDates[6].day;
 
-    // default hours/details
     req.data.mondayHours = req.data.mondayHours || 0;
     req.data.tuesdayHours = req.data.tuesdayHours || 0;
     req.data.wednesdayHours = req.data.wednesdayHours || 0;
@@ -763,7 +749,6 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
     req.data.saturdayTaskDetails = req.data.saturdayTaskDetails || '';
     req.data.sundayTaskDetails = req.data.sundayTaskDetails || '';
 
-    // total week hours
     req.data.totalWeekHours =
         parseFloat(req.data.mondayHours || 0) +
         parseFloat(req.data.tuesdayHours || 0) +
@@ -805,18 +790,15 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         }
     }
 
-    // Check for duplicate entries
     const whereClause = {
         employee_ID: employeeID,
         task: task,
         weekStartDate: weekBoundaries.weekStart
     };
 
-    //Allow any active project, not just assigned ones
 if (project_ID) {
     whereClause.project_ID = project_ID;
-    
-    // Verify the project exists and is active
+
     const projectExists = await SELECT.one
         .from('my.timesheet.Projects')
         .where({ ID: project_ID, status: 'Active' });
@@ -825,7 +807,7 @@ if (project_ID) {
         return req.error(404, 'Project not found or is not active. Please select an active project.');
     }
     
-    console.log('✅ Employee can work on any active project:', projectExists.projectName);
+    console.log('Employee can work on any active project:', projectExists.projectName);
 } else if (task !== 'Leave' && !nonProjectType_ID) {
     return req.error(400, 'Project is required for project-related tasks. Please select a project or choose a non-project task like Leave.');
 }
@@ -836,7 +818,6 @@ if (project_ID) {
         return req.error(400, `A timesheet entry for this ${project_ID ? 'project/' : ''}task already exists for week starting ${weekBoundaries.weekStart}. Please update the existing entry instead.`);
     }
 
-    // activity & nonProjectType checks (unchanged)
     if (activity_ID) {
         const activity = await SELECT.one.from('my.timesheet.Activities').where({ ID: activity_ID });
         if (!activity) {
@@ -859,9 +840,8 @@ if (project_ID) {
     }
 
     req.data.employee_ID = employeeID;
-    req.data.status = req.data.status || 'Draft';
+    req.data.status = req.data.status ||'Submitted';
 
-    // Generate timesheetID here if not provided
     if (!req.data.timesheetID) {
         const employeeTimesheets = await SELECT.from('my.timesheet.Timesheets').where({ employee_ID: employeeID });
         req.data.timesheetID = `TS${String(employeeTimesheets.length + 1).padStart(4, '0')}`;
@@ -869,9 +849,6 @@ if (project_ID) {
     }
 });
 
-
-// After CREATE - Enrich and return complete data
-// After CREATE - Enrich and return complete data
 this.after('CREATE', 'MyTimesheets', async (result, req) => {
     console.log('🔧 After CREATE - Start enrichment');
 

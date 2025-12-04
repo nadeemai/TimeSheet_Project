@@ -2,13 +2,12 @@
   "name": "timesheet-application",
   "version": "1.0.0",
   "description": "SAP CAPM Timesheet Application with Role-Based Access",
-  "main": "server.js",
   "repository": "<Add your repository here>",
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@cap-js-community/odata-v2-adapter": "^1.15.5",
-    "@cap-js/hana": "^2.3.4",
+    "@cap-js-community/odata-v2-adapter": "^1.15.7",
+    "@cap-js/hana": "^2.4.1",
     "@sap-cloud-sdk/mail-client": "^3.24.0",
     "@sap/cds": "^9.4.4",
     "@sap/xsenv": "^6.0.0",
@@ -24,7 +23,7 @@
   },
   "devDependencies": {
     "@cap-js/sqlite": "^2",
-    "@sap/cds-dk": "^9",
+    "@sap/cds-dk": "^9.4.3",
     "@sap/eslint-plugin-cds": "^4",
     "cds-plugin-ui5": "^0.13.0",
     "eslint": "^9",
@@ -33,21 +32,18 @@
   },
   "scripts": {
     "start": "cds-serve",
-    "watch": "cds watch",
+    "watch": "cds watch --profile hybrid",
     "build": "rimraf resources mta_archives && mbt build --mtar archive",
     "deploy": "cf deploy mta_archives/archive.mtar --retries 1",
     "watch-admin": "cds watch --open admin/index.html?sap-ui-xx-viewCache=false --livereload false",
     "watch-employee": "cds watch --open employee/index.html?sap-ui-xx-viewCache=false --livereload false",
-    "watch-manager": "cds watch --open manager.com.manager/index.html?sap-ui-xx-viewCache=false --livereload false",
+    "watch-manager": "cds watch --open manager/index.html?sap-ui-xx-viewCache=false --livereload false",
     "undeploy": "cf undeploy timesheet-application --delete-services --delete-service-keys --delete-service-brokers"
   },
   "cds": {
     "requires": {
       "db": {
-        "kind": "hana",
-        "credentials": {
-          "url": "db.hana"
-        }
+        "kind": "hana"
       },
       "auth": {
         "[production]": {
@@ -60,7 +56,7 @@
               "id": "aditya.mishra@sumodigitech.com",
               "password": "initial",
               "roles": [
-                "Employee"
+                "Manager"
               ]
             },
             "nadeem.abbas@sumodigitech.com": {
@@ -128,7 +124,7 @@
   "sapux": [
     "app/employee",
     "app/manager",
-    "app/admin"
+    "app/admins"
   ],
   "workspaces": [
     "app/*"

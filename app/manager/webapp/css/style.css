@@ -1,1 +1,28 @@
 /* Enter your custom styles here */
+.profileRow {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.profileLabel {
+    width: 150px;
+    font-weight: bold;
+    color: #32363a;
+}
+
+.profileValue {
+    color: #0a6ed1;
+    font-weight: 500;
+    padding-left: 8px;
+}
+.sapMITBFilter .sapMITBText{
+    width: 5.5rem !important;
+}
+.sapUiSizeCompact .sapMPanel{
+    min-height: 3rem !important;
+}
+
+.sapUiLargeMarginBottom{
+    margin-bottom: 0px !important;
+}

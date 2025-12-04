@@ -1,7 +1,7 @@
 
 ### 1. Get My Manager Profile
 GET http://localhost:4004/odata/v4/manager/MyManagerProfile
-Authorization: Basic jayant.kumar:initial
+Authorization: Basic jayant.kumar@sumodigitech.com:initial
 
 ### 2. Get Manager Profile with Role Details
 GET http://localhost:4004/odata/v4/manager/MyManagerProfile?$expand=userRole
@@ -196,7 +196,7 @@ Authorization: Basic jayant.kumar:initial
 ### 32. Approve Timesheet
 POST http://localhost:4004/odata/v4/manager/ManagerService.approveTimesheet
 Content-Type: application/json
-Authorization: Basic jayant.kumar:initial
+Authorization: Basic jayant.kumar@sumodigitech.com:initial
 
 {
   "timesheetID": "TS0001"
@@ -420,3 +420,16 @@ Authorization: Basic jayant.kumar:initial
 ### 67. Get Team Activity Summary
 GET http://localhost:4004/odata/v4/manager/TeamTimesheets?$filter=workDate ge 2024-10-01&$select=employeeName,workDate,hoursWorked,workType,status
 Authorization: Basic jayant.kumar:initial
+
+
+POST http://localhost:33251/odata/v4/manager/assignProjectToEmployee
+Authorization: Basic jayant.kumar@sumodigitech.com:initial
+Content-Type: application/json
+
+{
+  "employeeID": "EMP003",
+  "projectID": "PRJ003"
+}
+
+GET  http://localhost:37209/odata/v4/manager/AssigneassignmentDatedProjects
+Authorization: Basic jayant.kumar@sumodigitech.com:initial

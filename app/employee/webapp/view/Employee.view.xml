@@ -90,10 +90,10 @@
                 class="sapUiTinyMarginEnd"/>
 
         <!-- Download Button -->
-        <Button icon="sap-icon://download"
+        <!-- <Button icon="sap-icon://download"
                 text="PDF"
                 press="onDownloadPDF"
-                class="sapUiTinyMarginEnd"/>
+                class="sapUiTinyMarginEnd"/> -->
     </HBox>
 </HBox>
 

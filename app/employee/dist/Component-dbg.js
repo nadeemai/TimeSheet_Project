@@ -40,7 +40,7 @@ _checkCurrentUser: function () {
                 this.setModel(new sap.ui.model.json.JSONModel(user), "currentUser");
 
                 // Route to Employee Dashboard
-                this.getRouter().navTo("Employee", {}, true);
+                this.getRouter().navTo("employee", {}, true);
             } 
             else {
                 sap.m.MessageBox.error(

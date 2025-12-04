@@ -40,7 +40,7 @@ entity Employees : cuid, managed {
 
 entity UserRoles : cuid, managed {
     roleID          : String(10) @title: 'Role ID';
-    roleName        : String(20) @title: 'Role Name' @mandatory; // Employee, Manager, Admin
+    roleName        : String(20) @title: 'Role Name' @mandatory;
     description     : String(200) @title: 'Description';
     employees       : Association to many Employees on employees.userRole = $self;
 }
@@ -55,7 +55,7 @@ entity Projects : cuid, managed {
     budget          : Decimal(15,2) @title: 'Budget';
     allocatedHours  : Integer @title: 'Allocated Hours';
     status          : String(20) @title: 'Status' default 'Active';
-    projectRole     : String(50) @title: 'Project Role'; // Designing, Developing, Testing, Deployment
+    projectRole     : String(50) @title: 'Project Role'; 
     projectOwner    : Association to Employees @title: 'Project Owner';
     projectApprover : Association to Employees @title: 'Project Approver';
     projectSponsor  : Association to Employees @title: 'Project Sponsor';
@@ -72,7 +72,7 @@ entity ProjectAssignments : cuid, managed {
 
 entity NonProjectTypes : cuid, managed {
     nonProjectTypeID : String(10) @title: 'Non-Project Type ID';
-    typeName        : String(50) @title: 'Type Name' @mandatory; // Training, Soft Skills, Leave, etc.
+    typeName        : String(50) @title: 'Type Name' @mandatory;
     description     : String(500) @title: 'Description';
     isBillable      : Boolean @title: 'Billable' default false;
     isActive        : Boolean @title: 'Active Status' default true;
@@ -81,13 +81,13 @@ entity NonProjectTypes : cuid, managed {
 entity Activities : cuid, managed {
     activityID      : String(10) @title: 'Activity ID';
     activity        : String(100) @title: 'Activity Name' @mandatory;
-    activityType    : String(20) @title: 'Activity Type'; // Project, NonProject
+    activityType    : String(20) @title: 'Activity Type';
     project         : Association to Projects @title: 'Project';
     isBillable      : Boolean @title: 'Billable';
     plannedHours    : Integer @title: 'Planned Hours';
     startDate       : Date @title: 'Start Date';
     endDate         : Date @title: 'End Date';
-    status          : String(20) @title: 'Status' default 'Active'; // Active, Inactive, Completed
+    status          : String(20) @title: 'Status' default 'Active';
 }
 
 entity Timesheets : cuid, managed {
@@ -98,11 +98,11 @@ entity Timesheets : cuid, managed {
     nonProjectType  : Association to NonProjectTypes @title: 'Non-Project Type';
     
  
-    weekStartDate   : Date @title: 'Week Start Date' @mandatory; // Monday of the week
-    weekEndDate     : Date @title: 'Week End Date' @mandatory;   // Sunday of the week
+    weekStartDate   : Date @title: 'Week Start Date' @mandatory; 
+    weekEndDate     : Date @title: 'Week End Date' @mandatory; 
     
-    task            : String(50) @title: 'Task'; // Designing, Testing, Leave, etc.
-    taskDetails     : String(500) @title: 'General Task Details'; // Overall description for the week
+    task            : String(50) @title: 'Task'; 
+    taskDetails     : String(500) @title: 'General Task Details'; 
     
 
     mondayHours     : Decimal(4,2) @title: 'Monday Hours' default 0;
@@ -149,7 +149,7 @@ entity Timesheets : cuid, managed {
 
     totalWeekHours  : Decimal(5,2) @title: 'Total Week Hours' default 0;
     
-    status          : String(20) @title: 'Status' default 'Draft'; // Draft, Submitted, Approved, Rejected
+     status          : String(20) @title: 'Status' default 'Submitted';
     approvedBy      : Association to Employees @title: 'Approved By (Manager)';
     approvalDate    : DateTime @title: 'Approval Date';
     isBillable      : Boolean @title: 'Billable' default true;

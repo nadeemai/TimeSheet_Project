@@ -2,16 +2,16 @@
   "welcomeFile": "/index.html",
   "authenticationMethod": "route",
   "routes": [
-     {
+        {
       "source": "^/odata/(.*)$",
       "target": "/odata/$1",
       "destination": "timesheet-application-srv-api",
       "authenticationType": "xsuaa",
       "csrfProtection": false
     },
-    {
-      "source": "/odata/v2/manager/(.*)$",
-      "target": "/odata/v2/manager/$1",
+     {
+      "source": "/odata/v2/admin/(.*)$",
+      "target": "/odata/v2/admin/$1",
       "destination": "timesheet-application-srv-api",
       "authenticationType": "xsuaa",
       "csrfProtection": false

@@ -11,7 +11,7 @@ module.exports = cds.service.impl(async function() {
     console.log('🔍 Admin Auth - User roles:', req.user.attr);
     
     if (!userId) {
-        console.log('❌ No user ID found');
+        console.log('No user ID found');
         req.error(401, 'User not authenticated');
         return null;
     }
@@ -75,7 +75,7 @@ module.exports = cds.service.impl(async function() {
         }
     }
 
-    console.log('✅ Admin authenticated successfully:', admin.employeeID, 'Email:', admin.email);
+    console.log('Admin authenticated successfully:', admin.employeeID, 'Email:', admin.email);
     return admin;
 };
     //Separate validation - more lenient for CREATE
@@ -88,7 +88,7 @@ module.exports = cds.service.impl(async function() {
             return req.reject(403, 'Admin access required');
         }
         
-        console.log('✅ Admin validation passed for CREATE');
+        console.log('Admin validation passed for CREATE');
         
         // Auto-generate employeeID if not provided
         if (!req.data.employeeID) {
@@ -104,11 +104,11 @@ module.exports = cds.service.impl(async function() {
         
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) {
-            console.log('❌ Admin validation failed for UPDATE/DELETE');
+            console.log('Admin validation failed for UPDATE/DELETE');
             return req.reject(403, 'Admin access required');
         }
         
-        console.log('✅ Admin validation passed for UPDATE/DELETE');
+        console.log('Admin validation passed for UPDATE/DELETE');
     });
 
     // Action: Create Employee with manager assignment
@@ -120,11 +120,11 @@ module.exports = cds.service.impl(async function() {
         // Validate admin
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) {
-            console.log('❌ createEmployee: Admin authentication failed');
+            console.log('createEmployee: Admin authentication failed');
             return 'Admin authentication failed';
         }
 
-        console.log('✅ createEmployee: Admin authenticated');
+        console.log('createEmployee: Admin authenticated');
 
         const existing = await SELECT.one.from(Employees).where({ employeeID });
         if (existing) {
@@ -169,7 +169,7 @@ module.exports = cds.service.impl(async function() {
             managerID_ID: manager ? manager.ID : null
         });
 
-        console.log('✅ Employee created successfully:', employeeID);
+        console.log('Employee created successfully:', employeeID);
         return `Employee ${firstName} ${lastName} created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}`;
     });
 
@@ -443,7 +443,6 @@ module.exports = cds.service.impl(async function() {
         return `Employee ${employee.firstName} ${employee.lastName} assigned to Manager ${manager.firstName} ${manager.lastName}`;
     });
 
-// For admin-service.js:
 this.on('assignProjectToEmployee', async (req) => {
     const { employeeID, projectID } = req.data;
     
@@ -460,7 +459,6 @@ this.on('assignProjectToEmployee', async (req) => {
         return req.error(404, 'Project not found');
     }
 
-    // Check if assignment already exists in ProjectAssignments table
     const existingAssignment = await SELECT.one
         .from('my.timesheet.ProjectAssignments')
         .where({ employee_ID: employee.ID, project_ID: project.ID, isActive: true });
@@ -479,7 +477,7 @@ this.on('assignProjectToEmployee', async (req) => {
         isActive: true
     });
 
-    console.log(`✅ Created ProjectAssignment for ${employee.employeeID} → ${project.projectID}`);
+    console.log(` Created ProjectAssignment for ${employee.employeeID} → ${project.projectID}`);
 
     // Create placeholder timesheet for the current week
     const timesheetsForProject = await SELECT.from(Timesheets)
@@ -557,32 +555,34 @@ this.on('assignProjectToEmployee', async (req) => {
             sundayTaskDetails: ''
         });
         
-        console.log(`✅ Created placeholder timesheet ${timesheetID}`);
+        console.log(`Created placeholder timesheet ${timesheetID}`);
     }
 
-    // Create notifications
     const notificationCount = await SELECT.from(Notifications);
+
+await INSERT.into(Notifications).entries({
+    notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
+    recipient_ID: employee.ID,
+    message: `Admin has assigned you to project "${project.projectName}" (${project.projectID}). Please review your project assignments and start logging your timesheet entries.`,
+    notificationType: 'Project Assignment',
+    isRead: false,
+    relatedEntity: 'Project',
+    relatedEntityID: project.ID
+});
+
+if (employee.managerID_ID) {
     await INSERT.into(Notifications).entries({
-        notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
-        recipient_ID: employee.ID,
-        message: `Admin assigned you to project: ${project.projectName}`,
-        notificationType: 'Project Assignment',
+        notificationID: `NOT${String(notificationCount.length + 2).padStart(4, '0')}`,
+        recipient_ID: employee.managerID_ID,
+        message: `Your team member ${employee.firstName} ${employee.lastName} (${employee.employeeID}) has been assigned to project "${project.projectName}" (${project.projectID}) by Admin. Please monitor their progress.`,
+        notificationType: 'Team Project Assignment',
         isRead: false,
         relatedEntity: 'Project',
         relatedEntityID: project.ID
     });
+}
 
-    if (employee.managerID_ID) {
-        await INSERT.into(Notifications).entries({
-            notificationID: `NOT${String(notificationCount.length + 2).padStart(4, '0')}`,
-            recipient_ID: employee.managerID_ID,
-            message: `${employee.firstName} ${employee.lastName} has been assigned to project: ${project.projectName}`,
-            notificationType: 'Project Assignment',
-            isRead: false,
-            relatedEntity: 'Project',
-            relatedEntityID: project.ID
-        });
-    }
+console.log('Enhanced notifications created for project assignment');
 
     return `Project ${project.projectName} assigned to ${employee.firstName} ${employee.lastName} successfully`;
 });
@@ -774,6 +774,187 @@ this.on('assignProjectToEmployee', async (req) => {
         return `🚫 Timesheet ${timesheetID} rejected. Reason: ${reason || "No reason provided"}`;
     });
    
+
+this.on('READ', 'AvailableManagers', async (req) => {
+    console.log('📊 AvailableManagers READ - Start with enhancements');
+    
+    const admin = await getAuthenticatedAdmin(req);
+    if (!admin) return [];
+
+    const managers = await SELECT.from('my.timesheet.Employees')
+        .where({ isActive: true });
+
+    const enrichedManagers = [];
+
+    for (const emp of managers) {
+
+        if (emp.userRole_ID) {
+            const role = await SELECT.one.from('my.timesheet.UserRoles')
+                .where({ ID: emp.userRole_ID });
+            
+            if (role && role.roleName === 'Manager') {
+
+                const teamMembers = await SELECT.from('my.timesheet.Employees')
+                    .where({ managerID_ID: emp.ID, isActive: true });
+                
+                const teamSize = teamMembers.length;
+
+                const managerProjects = await SELECT.from('my.timesheet.Projects')
+                    .where({ projectOwner_ID: emp.ID });
+                
+                const totalProjects = managerProjects.length;
+
+                
+                enrichedManagers.push({
+                    ...emp,
+                    roleName: role.roleName,
+                    teamSize: teamSize,
+                    totalProjects: totalProjects
+                });
+            }
+        }
+    }
+
+    console.log('AvailableManagers enriched:', enrichedManagers.length, 'managers');
+    return enrichedManagers;
+});
+
+this.on('READ', 'OverallProgressSummary', async (req) => {
+    console.log('📊 OverallProgressSummary READ - Start');
+    
+    const admin = await getAuthenticatedAdmin(req);
+    if (!admin) return [];
+
+    // Get all projects
+    const projects = await SELECT.from('my.timesheet.Projects');
+
+    const summaryData = [];
+
+    for (const project of projects) {
+
+        const startDate = new Date(project.startDate);
+        const endDate = new Date(project.endDate);
+        const durationMs = endDate - startDate;
+        const duration = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const remainingMs = endDate - today;
+        const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+
+        let status = 'On Track';
+        if (remainingDays < 0) {
+            status = 'Delayed';
+        } else if (project.status === 'Completed') {
+            status = 'Completed';
+        } else if (project.status === 'On Hold') {
+            status = 'On Hold';
+        }
+
+        const projectTimesheets = await SELECT.from('my.timesheet.Timesheets')
+            .where({ project_ID: project.ID });
+        
+        let bookedHours = 0;
+        for (const ts of projectTimesheets) {
+            bookedHours += parseFloat(ts.totalWeekHours || 0);
+        }
+        const allocatedHours = project.allocatedHours || 0;
+        const remainingHours = allocatedHours - bookedHours;
+        const utilization = allocatedHours > 0 
+            ? parseFloat(((bookedHours / allocatedHours) * 100).toFixed(2))
+            : 0;
+
+        summaryData.push({
+            ID: project.ID,
+            projectID: project.projectID,
+            projectName: project.projectName,
+            startDate: project.startDate,
+            endDate: project.endDate,
+            duration: duration,
+            remainingDays: remainingDays,
+            status: status,
+            allocatedHours: allocatedHours,
+            bookedHours: parseFloat(bookedHours.toFixed(2)),
+            remainingHours: parseFloat(remainingHours.toFixed(2)),
+            utilization: utilization
+        });
+    }
+
+    console.log('OverallProgressSummary generated for', summaryData.length, 'projects');
+    return summaryData;
+});
+
+this.on('READ', 'Notifications', async (req) => {
+    console.log('📧 Admin Notifications READ - Enhanced');
+    
+    const admin = await getAuthenticatedAdmin(req);
+    if (!admin) return [];
+
+
+    const notifications = await SELECT.from('my.timesheet.Notifications')
+        .orderBy('createdAt desc');
+
+
+    for (const notif of notifications) {
+        if (notif.recipient_ID) {
+            const recipient = await SELECT.one.from('my.timesheet.Employees')
+                .columns('firstName', 'lastName', 'employeeID')
+                .where({ ID: notif.recipient_ID });
+            
+            if (recipient) {
+                notif.recipientName = `${recipient.firstName} ${recipient.lastName}`;
+                notif.recipientEmpID = recipient.employeeID;
+            }
+        }
+
+
+        if (notif.relatedEntity === 'Timesheet' && notif.relatedEntityID) {
+            const timesheet = await SELECT.one.from('my.timesheet.Timesheets')
+                .columns('timesheetID', 'weekStartDate', 'weekEndDate', 'status')
+                .where({ ID: notif.relatedEntityID });
+            
+            if (timesheet) {
+                notif.relatedDetails = `Timesheet ${timesheet.timesheetID} (Week: ${timesheet.weekStartDate} to ${timesheet.weekEndDate}) - Status: ${timesheet.status}`;
+            }
+        } else if (notif.relatedEntity === 'Project' && notif.relatedEntityID) {
+            const project = await SELECT.one.from('my.timesheet.Projects')
+                .columns('projectID', 'projectName')
+                .where({ ID: notif.relatedEntityID });
+            
+            if (project) {
+                notif.relatedDetails = `Project: ${project.projectName} (${project.projectID})`;
+            }
+        } else if (notif.relatedEntity === 'Employee' && notif.relatedEntityID) {
+            const employee = await SELECT.one.from('my.timesheet.Employees')
+                .columns('employeeID', 'firstName', 'lastName')
+                .where({ ID: notif.relatedEntityID });
+            
+            if (employee) {
+                notif.relatedDetails = `Employee: ${employee.firstName} ${employee.lastName} (${employee.employeeID})`;
+            }
+        }
+    }
+
+    console.log('Admin Notifications enriched:', notifications.length);
+    return notifications;
+});
+
+const createNotification = async (recipientID, message, type, entityType, entityID) => {
+    const notificationCount = await SELECT.from('my.timesheet.Notifications');
+    
+    await INSERT.into('my.timesheet.Notifications').entries({
+        notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
+        recipient_ID: recipientID,
+        message: message,
+        notificationType: type,
+        isRead: false,
+        relatedEntity: entityType,
+        relatedEntityID: entityID
+    });
+    
+    console.log(`✅ Notification created: ${type} for recipient ${recipientID}`);
+};
+
     // Action 1: Delete all timesheets for a specific employee
     this.on('deleteEmployeeTimesheets', async (req) => {
         const { employeeID } = req.data;

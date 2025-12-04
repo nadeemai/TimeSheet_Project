@@ -255,8 +255,6 @@ service ManagerService {
     where
       projectOwner.email = $user.id;
 
-
-  @readonly
   @cds.redirection.target
   entity TeamTimesheets as
     select from timesheet.Timesheets {
@@ -347,6 +345,22 @@ service ManagerService {
     where
       status = 'Active';
 
+  
+
+  @cds.redirection.target
+  entity AssignedProjects as
+    select from timesheet.ProjectAssignments {
+      key ID,
+          employee.employeeID                                as employeeID    : String,
+          employee.firstName || ' ' || employee.lastName     as employeeName  : String,
+          project.projectID                                  as projectID     : String,
+          project.projectName                                as projectName   : String,
+          assignedBy.firstName || ' ' || assignedBy.lastName as assignedBy    : String,
+          isActive
+    }
+    where
+      assignedBy.email = $user.id;
+
   action approveTimesheet(timesheetID: String) returns String;
   action rejectTimesheet(timesheetID: String, reason: String) returns String;
   action assignProjectToEmployee(employeeID: String, projectID: String) returns String;
@@ -381,6 +395,9 @@ service AdminService {
     select from timesheet.UserRoles {
       *
     };
+
+    @readonly
+entity OverallProgressSummary as projection on timesheet.Projects;
 
   @cds.redirection.target
   entity Activities as
@@ -422,32 +439,6 @@ service AdminService {
     select from timesheet.Notifications {
       *,
       recipient.firstName || ' ' || recipient.lastName as recipientName : String
-    };
-
-  @readonly
-  entity OverallProgressReport as
-    select from timesheet.Timesheets {
-      key ID,
-          employee.managerID.ID                                              as managerID        : UUID,
-          employee.managerID.employeeID                                      as managerEmpID     : String,
-          employee.managerID.firstName || ' ' || employee.managerID.lastName as managerName      : String,
-          employee.ID                                                        as employeeID       : UUID,
-          employee.employeeID                                                as empID            : String,
-          employee.firstName || ' ' || employee.lastName                     as employeeName     : String,
-          project.ID                                                         as projectID        : UUID,
-          project.projectID                                                  as projID           : String,
-          project.projectName,
-          project.projectRole,
-          project.allocatedHours,
-          project.budget,
-          activity.activity                                                  as activityName,
-          activity.activityType                                              as activityType     : String,
-          weekStartDate,
-          weekEndDate,
-          totalWeekHours                                                     as totalBookedHours : Decimal(10, 2),
-          task,
-          taskDetails,
-          status
     };
 
   @readonly

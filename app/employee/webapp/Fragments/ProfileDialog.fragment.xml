@@ -1,7 +1,6 @@
 <core:FragmentDefinition
     xmlns="sap.m"
-    xmlns:core="sap.ui.core"
-    xmlns:f="sap.ui.layout.form">
+    xmlns:core="sap.ui.core">
 
     <Dialog
         id="profileDialog"
@@ -10,56 +9,69 @@
         contentWidth="520px"
         afterClose="onCloseProfileDialog">
 
-        <f:SimpleForm id="_IDGenSimpleForm"
-            editable="false"
-            layout="ResponsiveGridLayout"
-            labelSpanXL="4"
-            labelSpanL="4"
-            labelSpanM="4"
-            columnsXL="2"
-            columnsL="2"
-            columnsM="2"
-            class="myProfileForm">
+        <VBox class="sapUiSmallMargin">
 
-            <f:content>
+            <!-- Employee ID -->
+            <HBox class="profileRow">
+                <Label text="Employee ID:" class="profileLabel"/>
+                <Text text="{view>/profile/employeeID}" class="profileValue"/>
+            </HBox>
 
-                <Label text="Employee ID" class="profileLabel"/>
-                <Text text="{view>/profile/employeeID}" class="profileText"/>
+            <!-- First Name -->
+            <HBox class="profileRow">
+                <Label text="First Name:" class="profileLabel"/>
+                <Text text="{view>/profile/firstName}" class="profileValue"/>
+            </HBox>
 
-                <Label text="First Name" class="profileLabel"/>
-                <Text text="{view>/profile/firstName}" class="profileText"/>
+            <!-- Last Name -->
+            <HBox class="profileRow">
+                <Label text="Last Name:" class="profileLabel"/>
+                <Text text="{view>/profile/lastName}" class="profileValue"/>
+            </HBox>
 
-                <Label text="Last Name" class="profileLabel"/>
-                <Text text="{view>/profile/lastName}" class="profileText"/>
+            <!-- Email -->
+            <HBox class="profileRow">
+                <Label text="Email:" class="profileLabel"/>
+                <Text text="{view>/profile/email}" class="profileValue"/>
+            </HBox>
 
-                <Label text="Email" class="profileLabel"/>
-                <Text text="{view>/profile/email}" class="profileText"/>
+            <!-- Manager Name -->
+            <HBox class="profileRow">
+                <Label text="Manager Name:" class="profileLabel"/>
+                <Text text="{view>/profile/managerName}" class="profileValue"/>
+            </HBox>
 
-                <Label text="Manager Name" class="profileLabel"/>
-                <Text text="{view>/profile/managerName}" class="profileText"/>
+            <!-- Manager Email -->
+            <HBox class="profileRow">
+                <Label text="Manager Email:" class="profileLabel"/>
+                <Text text="{view>/profile/managerEmail}" class="profileValue"/>
+            </HBox>
 
-                <Label text="Manager Email" class="profileLabel"/>
-                <Text text="{view>/profile/managerEmail}" class="profileText"/>
-
-                <Label text="Active Status" class="profileLabel"/>
+            <!-- Active Status -->
+            <HBox class="profileRow">
+                <Label text="Active Status:" class="profileLabel"/>
                 <ObjectStatus
                     text="{view>/profile/activeStatus}"
-                    state="{= ${view>/profile/activeStatus} === 'Yes' ? 'Success' : 'Error' }"/>
+                    state="{= ${view>/profile/activeStatus} === 'Yes' ? 'Success' : 'Error' }"
+                    class="profileValue"/>
+            </HBox>
 
-                <Label text="Changed By" class="profileLabel"/>
-                <Text text="{view>/profile/changedBy}" class="profileText"/>
+            <!-- Changed By -->
+            <HBox class="profileRow">
+                <Label text="Changed By:" class="profileLabel"/>
+                <Text text="{view>/profile/changedBy}" class="profileValue"/>
+            </HBox>
 
-                <Label text="User Role" class="profileLabel"/>
-                <Text text="{view>/profile/userRole}" class="profileText"/>
+            <!-- User Role -->
+            <HBox class="profileRow">
+                <Label text="User Role:" class="profileLabel"/>
+                <Text text="{view>/profile/userRole}" class="profileValue"/>
+            </HBox>
 
-            </f:content>
-        </f:SimpleForm>
+        </VBox>
 
         <buttons>
-            <Button text="Close"
-                type="Emphasized"
-                class="btnCloseProfile"
-                press="onCloseProfileDialog"/>
+            <Button text="Close" type="Emphasized" press="onCloseProfileDialog"/>
         </buttons>
 
     </Dialog>

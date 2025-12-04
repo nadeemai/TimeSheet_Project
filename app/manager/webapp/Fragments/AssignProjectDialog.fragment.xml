@@ -1,0 +1,58 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+
+    <Dialog
+        id="assignProjectDialog"
+        title="Assign Project"
+        contentWidth="400px"
+        stretch="{device>/system/phone}">
+
+        <content>
+            <VBox
+                class="sapUiSmallMargin"
+                renderType="Bare">
+
+                <!-- Project Field -->
+                <VBox class="sapUiSmallMarginBottom">
+                    <Label text="Project" required="true"/>
+                    <Select
+                        id="projectSelect"
+                        items="{/projects}"
+                        selectedKey="{/selectedProject}"
+                        width="100%"
+                        forceSelection="false">
+                        <items>
+                            <core:Item key="{id}" text="{name}"/>
+                        </items>
+                    </Select>
+                </VBox>
+
+                <!-- Employee Field -->
+                <VBox class="sapUiSmallMarginBottom">
+                    <Label text="Employee" required="true"/>
+                    <Select
+                        id="employeeSelect"
+                        items="{/employees}"
+                        selectedKey="{/selectedEmployee}"
+                        width="100%"
+                        forceSelection="false">
+                        <items>
+                            <core:Item key="{employeeID}" text="{fullName}"/>
+                        </items>
+                    </Select>
+                </VBox>
+
+            </VBox>
+        </content>
+
+        <beginButton>
+            <Button text="Cancel" press="onAssignProjectCancel"/>
+        </beginButton>
+
+        <endButton>
+            <Button text="Assign" type="Emphasized" press="onAssignProjectConfirm"/>
+        </endButton>
+
+    </Dialog>
+</core:FragmentDefinition>

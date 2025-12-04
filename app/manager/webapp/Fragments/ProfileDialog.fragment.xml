@@ -4,8 +4,8 @@
 
     <Dialog
         id="profileDialog"
-        title="Employee Profile"
-        class="sapUiPopupWithPadding myProfileDialog"
+        title="Manager Profile"
+        class="sapUiPopupWithPadding"
         contentWidth="520px"
         afterClose="onCloseProfileDialog">
 
@@ -35,44 +35,29 @@
                 <Text text="{view>/profile/email}" class="profileValue"/>
             </HBox>
 
-            <!-- Manager Name -->
-            <HBox class="profileRow">
-                <Label text="Manager Name:" class="profileLabel"/>
-                <Text text="{view>/profile/managerName}" class="profileValue"/>
-            </HBox>
-
-            <!-- Manager Email -->
-            <HBox class="profileRow">
-                <Label text="Manager Email:" class="profileLabel"/>
-                <Text text="{view>/profile/managerEmail}" class="profileValue"/>
-            </HBox>
-
-            <!-- Active Status -->
+            <!-- Status -->
             <HBox class="profileRow">
                 <Label text="Active Status:" class="profileLabel"/>
                 <ObjectStatus
                     text="{view>/profile/activeStatus}"
-                    state="{= ${view>/profile/activeStatus} === 'Yes' ? 'Success' : 'Error' }"
+                    state="{= ${view>/profile/activeStatus} === 'Yes' ? 'Success' : 'Error'}"
                     class="profileValue"/>
             </HBox>
 
-            <!-- Changed By -->
-            <HBox class="profileRow">
-                <Label text="Changed By:" class="profileLabel"/>
-                <Text text="{view>/profile/changedBy}" class="profileValue"/>
-            </HBox>
 
-            <!-- User Role -->
             <HBox class="profileRow">
                 <Label text="User Role:" class="profileLabel"/>
                 <Text text="{view>/profile/userRole}" class="profileValue"/>
             </HBox>
 
+            
+
         </VBox>
 
         <buttons>
-            <Button text="Close" type="Emphasized" press="onCloseProfileDialog"/>
+            <Button text="Close" press="onCloseProfileDialog"/>
         </buttons>
 
     </Dialog>
+
 </core:FragmentDefinition>
