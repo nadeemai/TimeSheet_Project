@@ -130,3 +130,79 @@
     font-weight: 500;
     padding-left: 8px;
 }
+
+/* ----- Dialog Styling ----- */
+.leaveDialog {
+    border-radius: 14px !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.20) !important;
+    padding: 16px !important;
+}
+
+/* ----- Container ----- */
+.leaveContainer {
+    padding: 25px 14px;
+}
+
+/* ----- Employee Info Styling ----- */
+.employeeName {
+    font-size: 1.2rem;
+    color: #1a1a1a;
+    margin-bottom: 2px;
+    text-align: center;
+}
+
+.employeeYear {
+    font-size: 0.95rem;
+    color: #6b6b6b;
+    margin-bottom: 12px;
+}
+
+/* ----- Table Styling ----- */
+.leaveTable {
+    border-radius: 10px;
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #e2e2e2;
+}
+
+/* Column Headers */
+.columnHeader {
+    font-weight: bold;
+    font-size: 0.95rem;
+    color: #2c3e50;
+}
+
+/* Table Row Hover Effect */
+.tableRow:hover {
+    background: #f3f6fb !important;
+}
+
+/* Cell Text */
+.cellText {
+    font-size: 0.92rem;
+    color: #333;
+}
+
+/* Numbers */
+.cellNumber {
+    text-align: center;
+    font-size: 0.9rem;
+    color: #444;
+    font-weight: 600;
+}
+
+/* Highlight low remaining leaves */
+.remainingCell {
+    font-weight: bold;
+}
+
+/* If you want to color low leave values dynamically, add: */
+.remainingCell[data-low="true"] {
+    color: #d9534f; /* red */
+}
+
+/* Close button styling */
+.closeButton {
+    font-weight: bold !important;
+    color: #0a6ed1 !important;
+}

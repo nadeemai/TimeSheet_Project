@@ -1,0 +1,4 @@
+ID;leaveTypeID;typeName;defaultHours;description;isActive
+01234567-89ab-cdef-0123-456789abcde1;LT001;Personal Leave;8;Full day personal leave - 8 hours;true
+01234567-89ab-cdef-0123-456789abcde2;LT002;Sick Leave;8;Full day sick leave - 8 hours;true
+01234567-89ab-cdef-0123-456789abcde3;LT003;Half Day Leave;4;Half day leave - 4 hours;true

@@ -9,7 +9,7 @@ Content-Type: application/json
 
 
 ### 1. GET - Read All Employees
-GET http://localhost:3422/odata/v4/admin/Employees
+GET http://localhost:33251/odata/v4/admin/Employees
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 
 ###
@@ -164,12 +164,12 @@ Authorization: Basic pushpak.jha:initial
 ###
 
 ### 16. POST - Assign Employee to Manager
-POST http://localhost:4005/odata/v4/admin/assignEmployeeToManager
+POST http://localhost:37209/odata/v4/admin/assignEmployeeToManager
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "employeeID": "EMP0013",
+  "employeeID": "EMP001",
   "managerEmployeeID": "EMP005"
 }
 
@@ -458,3 +458,16 @@ Authorization: Basic pushpak.jha@sumodigitech.com:initial
 ### 7. Get Specific Employee Details
 GET http://localhost:4008/odata/v4/admin/Employees?$filter=employeeID eq 'EMP006'
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+### 1. Get list of documents
+GET http://localhost:4007/odata/v4/employee/AvailableDocuments
+Authorization: Basic aditya.mishra@sumodigitech.com:initial
+
+### 2. Download document
+GET http://localhost:8493/odata/v4/employee/downloadDocument
+Authorization: Basic aditya.mishra@sumodigitech.com:initial
+Content-Type: application/json
+
+{
+  "documentID": "DOC0001"
+}

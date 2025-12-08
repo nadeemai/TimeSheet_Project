@@ -65,14 +65,25 @@ sap.ui.define([
 
       // Restore selected employee from localStorage if available
       var storedEmployeeId = localStorage.getItem("selectedEmployeeId");
+      var storedEmployeeName = localStorage.getItem("selectedEmployeeName"); // Add this line
       if (storedEmployeeId) {
         oModel.setProperty("/selectedEmployee", storedEmployeeId);
+        oModel.setProperty("/selectedEmployeeName", storedEmployeeName || ""); // Add this line
         // Load timesheet for the stored employee immediately
         var weekStart = oModel.getProperty("/currentWeekStart");
         var weekEnd = this._getWeekEnd(weekStart);
         this._loadAdminTimesheetData(storedEmployeeId, weekStart, weekEnd);
       }
-      
+ 
+
+      var oModel = this.getView().getModel();
+      oModel.setProperty("/leaveBalancesByEmployee", []);
+      oModel.setProperty("/allLeaveBalances", []);
+
+      // ... rest of existing code ...
+
+      // Load leave data when the controller initializes
+      this._loadLeaveBalances();
 
       // Add a handler to synchronize the employee list with the dropdown
       this.getView().attachModelContextChange(function () {
@@ -97,6 +108,443 @@ sap.ui.define([
           }
         }
       }.bind(this));
+    },
+
+    onSearchEmployeeLeave: function(oEvent) {
+    var sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue");
+    var oVBox = this.byId("employeeLeaveVBox");
+    var oBinding = oVBox.getBinding("items");
+   
+    if (sQuery) {
+        var oFilter = new sap.ui.model.Filter({
+            path: "employeeName",
+            operator: sap.ui.model.FilterOperator.Contains,
+            value1: sQuery,
+            caseSensitive: false
+        });
+        oBinding.filter([oFilter]);
+    } else {
+        oBinding.filter([]);
+    }
+},
+
+    // Function to load leave balances from the backend
+    _loadLeaveBalances: function () {
+      var oModel = this.getOwnerComponent().getModel("adminService");
+      var oViewModel = this.getView().getModel();
+      var that = this;
+
+      // Show loading indicator
+      BusyIndicator.show(0);
+
+      oModel.read("/EmployeeLeaveBalance", {
+        success: function (oData) {
+          var aLeaveBalances = oData.results || oData.value || [];
+          console.log("Leave balance data:", aLeaveBalances);
+
+          // Store the raw data
+          oViewModel.setProperty("/allLeaveBalances", aLeaveBalances);
+
+          // Format and group the leave balance data by employee
+          var aGroupedLeaveBalances = that._groupLeaveBalancesByEmployee(aLeaveBalances);
+
+          // Update the model with the grouped data
+          oViewModel.setProperty("/leaveBalancesByEmployee", aGroupedLeaveBalances);
+
+          // Hide loading indicator
+          BusyIndicator.hide();
+
+          MessageToast.show("Leave balances loaded successfully");
+        },
+        error: function (oError) {
+          console.error("Error loading leave balances:", oError);
+          MessageToast.show("Error loading leave balance data");
+
+          // Hide loading indicator
+          BusyIndicator.hide();
+        }
+      });
+    },
+
+    // Function to group leave balances by employee
+    _groupLeaveBalancesByEmployee: function (aLeaveBalances) {
+      var oGroupedData = {};
+
+      // Group by employee
+      aLeaveBalances.forEach(function (leaveBalance) {
+        // Handle different possible field names for employee ID
+        var sEmployeeId = leaveBalance.employeeEmpID || leaveBalance.employeeId || leaveBalance.employeeID;
+        var sEmployeeName = leaveBalance.employeeName || (leaveBalance.firstName + " " + leaveBalance.lastName);
+
+        if (!oGroupedData[sEmployeeId]) {
+          oGroupedData[sEmployeeId] = {
+            employeeId: sEmployeeId,
+            employeeName: sEmployeeName,
+            leaveTypes: []
+          };
+        }
+
+        // Add leave type to the employee
+        oGroupedData[sEmployeeId].leaveTypes.push({
+          id: leaveBalance.ID,
+          leaveType: leaveBalance.leaveTypeName || leaveBalance.leaveType || "Sick Leave",
+          totalLeaves: parseFloat(leaveBalance.totalLeaves || leaveBalance.totalLeavesDays || 0).toFixed(2),
+          usedLeave: parseFloat(leaveBalance.usedLeaves || leaveBalance.usedLeaveDays || 0).toFixed(2),
+          remainingLeave: parseFloat(leaveBalance.remainingLeaves || leaveBalance.remainingLeave || leaveBalance.remainingLeaveDays || 0).toFixed(2),
+          createdDate: leaveBalance.createdAt || leaveBalance.createdDate,
+          createdBy: leaveBalance.createdBy || leaveBalance.creatorEmail
+        });
+      });
+
+      // Convert to array for binding
+      return Object.keys(oGroupedData).map(function (employeeId) {
+        return oGroupedData[employeeId];
+      });
+    },
+
+    // Function to handle add leave balance button press
+    onAddLeaveBalance: function () {
+      // Create a dialog if it doesn't exist yet
+      if (!this._oAddLeaveDialog) {
+        this._oAddLeaveDialog = sap.ui.xmlfragment(
+          this.createId("addLeaveDialogFrag"),
+          "admin.fragments.AddLeaveDialog",
+          this
+        );
+        this.getView().addDependent(this._oAddLeaveDialog);
+      }
+
+      // Create a model for the dialog
+      let oDialogModel = new JSONModel({
+        employees: [],
+        selectedEmployee: "",
+        leaveType: "Sick Leave",
+        totalLeaves: ""
+      });
+      this._oAddLeaveDialog.setModel(oDialogModel);
+
+      // Load employees
+      this._loadEmployeesForLeaveDialog(oDialogModel);
+
+      // Clear previous selections
+      oDialogModel.setProperty("/selectedEmployee", "");
+      oDialogModel.setProperty("/leaveType", "Sick Leave");
+      oDialogModel.setProperty("/totalLeaves", "");
+
+      // Open the dialog
+      this._oAddLeaveDialog.open();
+    },
+
+    // Function to load employees for the leave dialog
+    _loadEmployeesForLeaveDialog: function (oDialogModel) {
+      var oModel = this.getView().getModel();
+      var aUsers = oModel.getProperty("/users") || [];
+
+      // Format employees for the dialog
+      var aEmployees = aUsers.map(function (user) {
+        return {
+          employeeId: user.userId,
+          employeeName: user.firstName + " " + user.lastName
+        };
+      });
+
+      oDialogModel.setProperty("/employees", aEmployees);
+    },
+
+    // Function to confirm adding leave balance
+    onAddLeaveConfirm: function () {
+      let oDialogModel = this._oAddLeaveDialog.getModel();
+      let sEmployeeId = oDialogModel.getProperty("/selectedEmployee");
+      let sLeaveType = oDialogModel.getProperty("/leaveType");
+      let stotalLeaves = oDialogModel.getProperty("/totalLeaves");
+
+      if (!sEmployeeId || !sLeaveType || !stotalLeaves) {
+        MessageToast.show("Please fill in all required fields.");
+        return;
+      }
+
+      // Get employee details
+      let aEmployees = oDialogModel.getProperty("/employees");
+      let oEmployee = aEmployees.find(e => e.employeeId === sEmployeeId);
+
+      if (!oEmployee) {
+        MessageToast.show("Invalid employee selection. Please try again.");
+        return;
+      }
+
+      // Show confirmation
+      MessageBox.confirm(
+        `Add ${stotalLeaves} days of ${sLeaveType} leave for ${oEmployee.employeeName}?`,
+        {
+          onClose: (sAction) => {
+            if (sAction === MessageBox.Action.OK) {
+              this._addLeaveBalanceForEmployee(sEmployeeId, oEmployee.employeeName, sLeaveType, stotalLeaves);
+            }
+          }
+        }
+      );
+    },
+
+    // Function to cancel adding leave balance
+    onAddLeaveCancel: function () {
+      this._oAddLeaveDialog.close();
+    },
+
+    // Function to actually add leave balance for employee
+    _addLeaveBalanceForEmployee: function (sEmployeeId, sEmployeeName, sLeaveType, stotalLeaves) {
+      var oModel = this.getOwnerComponent().getModel("adminService");
+      var that = this;
+
+      BusyIndicator.show(0);
+
+      // Create leave balance payload
+      var oPayload = {
+        employeeEmpID: sEmployeeId,
+        employeeName: sEmployeeName,
+        leaveTypeName: sLeaveType,
+        totalLeaves: parseFloat(stotalLeaves),
+        usedLeave: 0,
+        remainingLeaves: parseFloat(stotalLeaves)
+      };
+
+      console.log("Creating leave balance with payload:", oPayload);
+
+      // Create the leave balance in the backend
+      oModel.create("/EmployeeLeaveBalance", oPayload, {
+        success: function (oData) {
+          BusyIndicator.hide();
+          MessageToast.show(`Successfully added ${stotalLeaves} days of ${sLeaveType} leave for ${sEmployeeName}`);
+          console.log("Leave balance creation successful:", oData);
+
+          // Close the dialog
+          that._oAddLeaveDialog.close();
+
+          // Refresh the leave data
+          that._loadLeaveBalances();
+        },
+        error: function (oError) {
+          BusyIndicator.hide();
+          let sErrorMessage = oError.message || "Unknown error";
+          console.error("Leave balance creation error details:", oError);
+
+          // Try to get more specific error message
+          if (oError.response && oError.response.body) {
+            try {
+              let oErrorBody = JSON.parse(oError.response.body);
+              sErrorMessage = oErrorBody.error && oErrorBody.error.message
+                ? oErrorBody.error.message
+                : sErrorMessage;
+            } catch (e) {
+              // If parsing fails, use the original message
+            }
+          }
+
+          MessageBox.error("Failed to add leave balance: " + sErrorMessage);
+        }
+      });
+    },
+
+    // Function to handle edit leave balance button press
+    onEditLeaveBalance: function (oEvent) {
+      var oButton = oEvent.getSource();
+      var oBindingContext = oButton.getBindingContext();
+
+      if (!oBindingContext) {
+        MessageToast.show("Unable to get binding context");
+        return;
+      }
+
+      var oLeaveBalance = oBindingContext.getObject();
+
+      // Create a dialog if it doesn't exist yet
+      // if (!this._oEditLeaveDialog) {
+      //   this._oEditLeaveDialog = sap.ui.xmlfragment(
+      //     this.createId("editLeaveDialogFrag"),
+      //     "admin.fragments.EditLeaveDialog",
+      //     this
+      //   );
+      //   this.getView().addDependent(this._oEditLeaveDialog);
+      // }
+
+      // Create a model for the dialog
+      let oDialogModel = new JSONModel({
+        leaveBalance: oLeaveBalance,
+        totalLeaves: oLeaveBalance.totalLeaves,
+        usedLeave: oLeaveBalance.usedLeave
+      });
+      this._oEditLeaveDialog.setModel(oDialogModel);
+
+      // Open the dialog
+      this._oEditLeaveDialog.open();
+    },
+
+    // Function to confirm editing leave balance
+    onEditLeaveConfirm: function () {
+      let oDialogModel = this._oEditLeaveDialog.getModel();
+      let oLeaveBalance = oDialogModel.getProperty("/leaveBalance");
+      let stotalLeaves = oDialogModel.getProperty("/totalLeaves");
+      let sUsedLeave = oDialogModel.getProperty("/usedLeave");
+
+      if (!stotalLeaves || !sUsedLeave) {
+        MessageToast.show("Please fill in all required fields.");
+        return;
+      }
+
+      // Calculate remaining leave
+      let ftotalLeaves = parseFloat(stotalLeaves);
+      let fUsedLeave = parseFloat(sUsedLeave);
+      let fRemainingLeave = ftotalLeaves - fUsedLeave;
+
+      if (fRemainingLeave < 0) {
+        MessageToast.show("Used leave cannot exceed total leave.");
+        return;
+      }
+
+      // Show confirmation
+      MessageBox.confirm(
+        `Update leave balance for ${oLeaveBalance.leaveType}?`,
+        {
+          onClose: (sAction) => {
+            if (sAction === MessageBox.Action.OK) {
+              this._updateLeaveBalance(oLeaveBalance, ftotalLeaves, fUsedLeave, fRemainingLeave);
+            }
+          }
+        }
+      );
+    },
+
+    // Function to cancel editing leave balance
+    onEditLeaveCancel: function () {
+      this._oEditLeaveDialog.close();
+    },
+
+    // Function to actually update leave balance
+    _updateLeaveBalance: function (oLeaveBalance, ftotalLeaves, fUsedLeave, fRemainingLeave) {
+      var oModel = this.getOwnerComponent().getModel("adminService");
+      var that = this;
+
+      BusyIndicator.show(0);
+
+      // Update leave balance payload
+      var oPayload = {
+        totalLeaves: ftotalLeaves,
+        usedLeave: fUsedLeave,
+        remainingLeaves: fRemainingLeave
+      };
+
+      var sPath = "/EmployeeLeaveBalance('" + oLeaveBalance.id + "')";
+
+      // Update the leave balance in the backend
+      oModel.update(sPath, oPayload, {
+        success: function () {
+          BusyIndicator.hide();
+          MessageToast.show("Leave balance updated successfully");
+
+          // Close the dialog
+          that._oEditLeaveDialog.close();
+
+          // Refresh the leave data
+          that._loadLeaveBalances();
+        },
+        error: function (oError) {
+          BusyIndicator.hide();
+          let sErrorMessage = oError.message || "Unknown error";
+          console.error("Leave balance update error details:", oError);
+
+          // Try to get more specific error message
+          if (oError.response && oError.response.body) {
+            try {
+              let oErrorBody = JSON.parse(oError.response.body);
+              sErrorMessage = oErrorBody.error && oErrorBody.error.message
+                ? oErrorBody.error.message
+                : sErrorMessage;
+            } catch (e) {
+              // If parsing fails, use the original message
+            }
+          }
+
+          MessageBox.error("Failed to update leave balance: " + sErrorMessage);
+        }
+      });
+    },
+
+    // Function to handle delete leave balance button press
+    onDeleteLeaveBalance: function (oEvent) {
+      var oButton = oEvent.getSource();
+      var oBindingContext = oButton.getBindingContext();
+
+      if (!oBindingContext) {
+        MessageToast.show("Unable to get binding context");
+        return;
+      }
+
+      var oLeaveBalance = oBindingContext.getObject();
+
+      MessageBox.confirm(
+        `Are you sure you want to delete this ${oLeaveBalance.leaveType} leave balance?`,
+        {
+          onClose: (sAction) => {
+            if (sAction === MessageBox.Action.OK) {
+              this._deleteLeaveBalance(oLeaveBalance);
+            }
+          }
+        }
+      );
+    },
+
+    // Function to actually delete leave balance
+    _deleteLeaveBalance: function (oLeaveBalance) {
+      var oModel = this.getOwnerComponent().getModel("adminService");
+      var that = this;
+
+      BusyIndicator.show(0);
+
+      var sPath = "/EmployeeLeaveBalance('" + oLeaveBalance.id + "')";
+
+      // Delete the leave balance in the backend
+      oModel.remove(sPath, {
+        success: function () {
+          BusyIndicator.hide();
+          MessageToast.show("Leave balance deleted successfully");
+
+          // Refresh the leave data
+          that._loadLeaveBalances();
+        },
+        error: function (oError) {
+          BusyIndicator.hide();
+          let sErrorMessage = oError.message || "Unknown error";
+          console.error("Leave balance deletion error details:", oError);
+
+          // Try to get more specific error message
+          if (oError.response && oError.response.body) {
+            try {
+              let oErrorBody = JSON.parse(oError.response.body);
+              sErrorMessage = oErrorBody.error && oErrorBody.error.message
+                ? oErrorBody.error.message
+                : sErrorMessage;
+            } catch (e) {
+              // If parsing fails, use the original message
+            }
+          }
+
+          MessageBox.error("Failed to delete leave balance: " + sErrorMessage);
+        }
+      });
+    },
+
+    // Formatter for leave status state
+    formatLeaveStatusState: function (fRemainingLeave) {
+      if (!fRemainingLeave) return "None";
+
+      var fRemaining = parseFloat(fRemainingLeave);
+
+      if (fRemaining <= 0) {
+        return "Error"; // Red for no leave remaining
+      } else if (fRemaining <= 2) {
+        return "Warning"; // Orange for low leave remaining
+      } else {
+        return "Success"; // Green for sufficient leave remaining
+      }
     },
 
     onSearchEmployee: function (oEvent) {
@@ -128,19 +576,21 @@ sap.ui.define([
       var oContext = oItem.getBindingContext();
       var employeeId = oContext.getProperty("userId");
       var employeeName = oContext.getProperty("firstName") + " " + oContext.getProperty("lastName");
-
+ 
       var oModel = this.getView().getModel();
       oModel.setProperty("/selectedEmployee", employeeId);
-      oModel.setProperty("/selectedEmployeeName", employeeName); // Add this line
-
+      oModel.setProperty("/selectedEmployeeName", employeeName);
+ 
       // Store selected employee in localStorage
       localStorage.setItem("selectedEmployeeId", employeeId);
-
+      localStorage.setItem("selectedEmployeeName", employeeName);
+ 
       // Load timesheet for the selected employee
       var weekStart = oModel.getProperty("/currentWeekStart");
       var weekEnd = this._getWeekEnd(weekStart);
       this._loadAdminTimesheetData(employeeId, weekStart, weekEnd);
     },
+ 
 
     // Add this new function to handle "See More" button click
     onSeeMoreEmployees: function () {
@@ -318,109 +768,114 @@ sap.ui.define([
     },
 
     _loadOverallProgress: async function () {
-  var oModel = this.getOwnerComponent().getModel("adminService");
-  var oVM = this.getView().getModel();
+      var oModel = this.getOwnerComponent().getModel("adminService");
+      var oVM = this.getView().getModel();
 
-  BusyIndicator.show(0);
+      BusyIndicator.show(0);
 
-  try {
-    // === 1️⃣ Load Available Managers ===
-    const managersData = await this._readPromise(oModel, "/AvailableManagers");
-    const aManagers = managersData.results?.map(m => ({
-      managerName: (m.firstName + " " + m.lastName) || "",
-      teamSize: m.teamSize || 0,
-      totalProjects: m.totalProjects || 0
-    })) || [];
+      try {
+        // === 1️⃣ Load Available Managers ===
+        const managersData = await this._readPromise(oModel, "/AvailableManagers");
+        const aManagers = managersData.results?.map(m => ({
+          managerName: (m.firstName + " " + m.lastName) || "",
+          teamSize: m.teamSize || 0,
+          totalProjects: m.totalProjects || 0
+        })) || [];
 
-    oVM.setProperty("/managerTeams", aManagers);
-
-
-    // === 2️⃣ Load Overall Project Summary ===
-    const projectData = await this._readPromise(oModel, "/OverallProgressSummary");
-    const aProjects = projectData.results || [];
+        oVM.setProperty("/managerTeams", aManagers);
 
 
-    // ---- Format Project Hours Overview table ----
-    const aProjectHours = aProjects.map(p => ({
-      project: p.projectName || "",
-      allocatedHours: Number(p.allocatedHours || 0),
-      bookedHours: Number(p.bookedHours || 0),
-      remainingHours: Number(p.remainingHours || 0),
-      utilization: Number(p.utilization || 0)
-    }));
-
-    oVM.setProperty("/projectHours", aProjectHours);
+        // === 2️⃣ Load Overall Project Summary ===
+        const projectData = await this._readPromise(oModel, "/OverallProgressSummary");
+        const aProjects = projectData.results || [];
 
 
-    // ---- Format Project Engagement Duration table ----
-    const aProjectDuration = aProjects.map(p => ({
-      projectName: p.projectName || "",
-      startDate: p.startDate ? new Date(p.startDate) : null,
-      endDate: p.endDate ? new Date(p.endDate) : null,
-      durationDays: p.duration || 0,
-      daysRemaining: p.remainingDays || 0,
-      timelineStatus: p.status || "Unknown"
-    }));
+        // ---- Format Project Hours Overview table ----
+        const aProjectHours = aProjects.map(p => ({
+          project: p.projectName || "",
+          allocatedHours: Number(p.allocatedHours || 0),
+          bookedHours: Number(p.bookedHours || 0),
+          remainingHours: Number(p.remainingHours || 0),
+          utilization: Number(p.utilization || 0)
+        }));
 
-    oVM.setProperty("/projectDurations", aProjectDuration);
+        oVM.setProperty("/projectHours", aProjectHours);
 
 
-    // === 3️⃣ Compute overall totals (for your KPI header) ===
-    const totalAllocated = aProjectHours.reduce((s, x) => s + x.allocatedHours, 0);
-    const totalBooked = aProjectHours.reduce((s, x) => s + x.bookedHours, 0);
-    const avgUtil = totalAllocated > 0 ? Math.round((totalBooked / totalAllocated) * 100) : 0;
+        // ---- Format Project Engagement Duration table ----
+        const aProjectDuration = aProjects.map(p => ({
+          projectName: p.projectName || "",
+          startDate: p.startDate ? new Date(p.startDate) : null,
+          endDate: p.endDate ? new Date(p.endDate) : null,
+          durationDays: p.duration || 0,
+          daysRemaining: p.remainingDays || 0,
+          timelineStatus: p.status || "Unknown"
+        }));
 
-    oVM.setProperty("/overallProgress", {
-      totalAllocatedHours: totalAllocated,
-      totalBookedHours: totalBooked,
-      totalRemainingHours: totalAllocated - totalBooked,
-      averageUtilization: avgUtil
-    });
+        oVM.setProperty("/projectDurations", aProjectDuration);
 
-  } catch (e) {
-    console.error("Analytics load failed:", e);
-    MessageToast.show("Failed to load analytics");
 
-    // reset UI on fail
-    oVM.setProperty("/managerTeams", []);
-    oVM.setProperty("/projectHours", []);
-    oVM.setProperty("/projectDurations", []);
-    oVM.setProperty("/overallProgress", {
-      totalAllocatedHours: 0,
-      totalBookedHours: 0,
-      totalRemainingHours: 0,
-      averageUtilization: 0
-    });
-  }
+        // === 3️⃣ Compute overall totals (for your KPI header) ===
+        const totalAllocated = aProjectHours.reduce((s, x) => s + x.allocatedHours, 0);
+        const totalBooked = aProjectHours.reduce((s, x) => s + x.bookedHours, 0);
+        const avgUtil = totalAllocated > 0 ? Math.round((totalBooked / totalAllocated) * 100) : 0;
 
-  BusyIndicator.hide();
-},
-_readPromise: function (oModel, sPath) {
-  return new Promise((resolve, reject) => {
-    oModel.read(sPath, {
-      success: resolve,
-      error: reject
-    });
-  });
-},
- onTabSelect: function (oEvent) {
-            var selectedKey = oEvent.getParameter("key");
+        oVM.setProperty("/overallProgress", {
+          totalAllocatedHours: totalAllocated,
+          totalBookedHours: totalBooked,
+          totalRemainingHours: totalAllocated - totalBooked,
+          averageUtilization: avgUtil
+        });
 
-            if (selectedKey === "analytics") {
-                console.log("Reports tab activated → refreshing data");
+      } catch (e) {
+        console.error("Analytics load failed:", e);
+        MessageToast.show("Failed to load analytics");
 
-                var oModel = this.getOwnerComponent().getModel("adminService");
-                var oView = this.getView();
+        // reset UI on fail
+        oVM.setProperty("/managerTeams", []);
+        oVM.setProperty("/projectHours", []);
+        oVM.setProperty("/projectDurations", []);
+        oVM.setProperty("/overallProgress", {
+          totalAllocatedHours: 0,
+          totalBookedHours: 0,
+          totalRemainingHours: 0,
+          averageUtilization: 0
+        });
+      }
 
-                sap.ui.core.BusyIndicator.show();
+      BusyIndicator.hide();
+    },
+    _readPromise: function (oModel, sPath) {
+      return new Promise((resolve, reject) => {
+        oModel.read(sPath, {
+          success: resolve,
+          error: reject
+        });
+      });
+    },
+    onTabSelect: function (oEvent) {
+      var selectedKey = oEvent.getParameter("key");
 
-                this._loadOverallProgress(oModel, oView);
+      if (selectedKey === "analytics") {
+        console.log("Reports tab activated → refreshing data");
 
-                setTimeout(() => {
-                    sap.ui.core.BusyIndicator.hide();
-                }, 800);
-            }
-        },
+        var oModel = this.getOwnerComponent().getModel("adminService");
+        var oView = this.getView();
+
+        sap.ui.core.BusyIndicator.show();
+
+        this._loadOverallProgress(oModel, oView);
+
+        setTimeout(() => {
+          sap.ui.core.BusyIndicator.hide();
+        }, 800);
+      }
+
+      if (selectedKey === "leave") {
+        console.log("Leave tab activated → loading leave data");
+        this._loadLeaveBalances();
+      }
+    },
 
     // Replace the existing onTaskDetailPress with this improved version
     onTaskDetailPress: function (oEvent) {
@@ -655,107 +1110,116 @@ _readPromise: function (oModel, sPath) {
       return new Date(d.setDate(diff));
     },
 
-   _loadAdminTimesheetData: function (employeeId, weekStart, weekEnd) {
-    let oModel = this.getOwnerComponent().getModel("adminService");
-    let that = this;
-    let oViewModel = this.getView().getModel();
+    _loadAdminTimesheetData: function (employeeId, weekStart, weekEnd) {
+      let oModel = this.getOwnerComponent().getModel("adminService");
+      let that = this;
+      let oViewModel = this.getView().getModel();
 
-    // Show loading indicator
-    BusyIndicator.show(0);
+      // Show loading indicator
+      sap.ui.core.BusyIndicator.show(0);
 
-    // Normalize dates for comparison
-    let normalizeDate = (date) => {
-        if (!date) return "";
-        return new Date(date).toISOString().split('T')[0];
-    };
+      // Normalize dates for comparison
+     let normalizeDate = function(date) {
+    if (!date) return "";
 
-    let weekStartStr = normalizeDate(weekStart);
-    let weekEndStr = normalizeDate(weekEnd);
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
 
-    console.log("Loading timesheet data:", {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+
+    return `${yyyy}-${mm}-${dd}`;   // local YYYY-MM-DD
+};
+
+
+      let weekStartStr = normalizeDate(weekStart);
+      let weekEndStr = normalizeDate(weekEnd);
+
+      console.log("Loading timesheet data:", {
         employeeId,
         weekStart: weekStartStr,
         weekEnd: weekEndStr
-    });
+      });
 
-    // Create filters for employee and date range
-    let aFilters = [
+      // Create filters for employee and date range
+      let aFilters = [
         new Filter("employeeEmpID", FilterOperator.EQ, employeeId),
         new Filter("weekStartDate", FilterOperator.LE, weekEndStr),
         new Filter("weekEndDate", FilterOperator.GE, weekStartStr)
-    ];
+      ];
 
-    oModel.read("/Timesheets", {
+      oModel.read("/Timesheets", {
         filters: aFilters,
         success: function (oData) {
-            let allResults = oData.results || [];
+          let allResults = oData.results || [];
 
-            // Filter by employee and date range
-            let employeeEntries = allResults.filter(item => {
-                // Check if employee matches
-                if (item.employeeEmpID !== employeeId) {
-                    return false;
-                }
+          // Filter by employee and date range
+          let employeeEntries = allResults.filter(item => {
+            // Check if employee matches
+            if (item.employeeEmpID !== employeeId) {
+              return false;
+            }
 
-                // Check if the timesheet entry falls within the selected week
-                let entryWeekStart = normalizeDate(item.weekStartDate);
-                let entryWeekEnd = normalizeDate(item.weekEndDate);
+            // Check if the timesheet entry falls within the selected week
+            let entryWeekStart = normalizeDate(item.weekStartDate);
+            let entryWeekEnd = normalizeDate(item.weekEndDate);
 
-                // Check if the entry's week overlaps with the selected week
-                return entryWeekStart <= weekEndStr && entryWeekEnd >= weekStartStr;
-            });
+            // Check if the entry's week overlaps with the selected week
+            return entryWeekStart <= weekEndStr && entryWeekEnd >= weekStartStr;
+          });
 
-            console.log("Filtered entries:", employeeEntries);
+          console.log("Filtered entries:", employeeEntries);
 
-            // Format table structure
-            let formatted = that._formatAdminTimesheet(employeeEntries);
+          // Format table structure
+          let formatted = that._formatAdminTimesheet(employeeEntries);
 
-            // Bind table data
-            oViewModel.setProperty("/timesheetEntries", formatted);
+          // Bind table data
+          oViewModel.setProperty("/timesheetEntries", formatted);
 
-            // Weekly total
-            let totalWeekHours = formatted.reduce((sum, row) => sum + row.totalHours, 0);
-            oViewModel.setProperty("/totalWeekHours", totalWeekHours);
+          // Weekly total
+          let totalWeekHours = formatted.reduce((sum, row) => sum + row.totalHours, 0);
+          oViewModel.setProperty("/totalWeekHours", totalWeekHours);
 
-            // NEW: Track if there's no data for the selected employee
-            let hasNoData = formatted.length === 0;
-            
-            // Update the hasNoTimesheetData property for the selected employee
-            let aUsers = oViewModel.getProperty("/users");
-            aUsers.forEach(function(user) {
-                if (user.userId === employeeId) {
-                    user.hasNoTimesheetData = hasNoData;
-                }
-            });
-            
-            oViewModel.setProperty("/users", aUsers);
-            oViewModel.setProperty("/hasNoTimesheetData", hasNoData);
+          // NEW: Track if there's no data for the selected employee
+          let hasNoData = formatted.length === 0;
 
-            console.log("Filtered Week Data", formatted, "Has no data:", hasNoData);
+          // Update the hasNoTimesheetData property for the selected employee
+          let aUsers = oViewModel.getProperty("/users");
+          aUsers.forEach(function (user) {
+            if (user.userId === employeeId) {
+              user.hasNoTimesheetData = hasNoData;
+            }
+          });
 
-            // Hide loading indicator
-            BusyIndicator.hide();
+          oViewModel.setProperty("/users", aUsers);
+          oViewModel.setProperty("/hasNoTimesheetData", hasNoData);
+
+          console.log("Filtered Week Data", formatted, "Has no data:", hasNoData);
+
+          // Hide loading indicator
+          BusyIndicator.hide();
         },
         error: function (oError) {
-            console.error("Error loading timesheet data:", oError);
-            MessageToast.show("Error loading timesheet data");
+          console.error("Error loading timesheet data:", oError);
+          MessageToast.show("Error loading timesheet data");
 
-            // NEW: Set hasNoData flag on error as well
-            let aUsers = oViewModel.getProperty("/users");
-            aUsers.forEach(function(user) {
-                if (user.userId === employeeId) {
-                    user.hasNoTimesheetData = true;
-                }
-            });
-            
-            oViewModel.setProperty("/users", aUsers);
-            oViewModel.setProperty("/hasNoTimesheetData", true);
-            oViewModel.setProperty("/timesheetEntries", []);
+          // NEW: Set hasNoData flag on error as well
+          let aUsers = oViewModel.getProperty("/users");
+          aUsers.forEach(function (user) {
+            if (user.userId === employeeId) {
+              user.hasNoTimesheetData = true;
+            }
+          });
 
-            BusyIndicator.hide();
+          oViewModel.setProperty("/users", aUsers);
+          oViewModel.setProperty("/hasNoTimesheetData", true);
+          oViewModel.setProperty("/timesheetEntries", []);
+
+          BusyIndicator.hide();
         }
-    });
-},
+      });
+    },
 
     _formatAdminTimesheet: function (entries) {
       return entries.map(item => {
@@ -1325,170 +1789,172 @@ _readPromise: function (oModel, sPath) {
 
     // Navigate to previous week
     onPreviousWeek: function () {
-    let oModel = this.getView().getModel();
-    let oDatePicker = this.getView().byId("datePicker"); // Make sure to add id="datePicker" to your DatePicker in the view
+      let oModel = this.getView().getModel();
+      let oDatePicker = this.getView().byId("datePicker"); // Make sure to add id="datePicker" to your DatePicker in the view
 
-    // Get current week start
-    let currentWeekStart = new Date(oModel.getProperty("/currentWeekStart"));
+      // Get current week start
+      let currentWeekStart = new Date(oModel.getProperty("/currentWeekStart"));
 
-    if (isNaN(currentWeekStart)) {
+      if (isNaN(currentWeekStart)) {
         console.error("Invalid week start:", oModel.getProperty("/currentWeekStart"));
         return;
-    }
+      }
 
-    // Move week start back by 7 days
-    currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+      // Move week start back by 7 days
+      currentWeekStart.setDate(currentWeekStart.getDate() - 7);
 
-    // Save the updated week start
-    oModel.setProperty("/currentWeekStart", currentWeekStart);
+      // Save the updated week start
+      oModel.setProperty("/currentWeekStart", currentWeekStart);
 
-    // Update the selectedDate in the DatePicker to match the week start
-    oModel.setProperty("/selectedDate", this._formatDateForDatePicker(currentWeekStart));
-    
-    // Explicitly set the date picker value to ensure UI update
-    if (oDatePicker) {
+      // Update the selectedDate in the DatePicker to match the week start
+      oModel.setProperty("/selectedDate", this._formatDateForDatePicker(currentWeekStart));
+
+      // Explicitly set the date picker value to ensure UI update
+      if (oDatePicker) {
         oDatePicker.setDateValue(currentWeekStart);
-    }
+      }
 
-    // Compute clean weekStart & weekEnd
-    let weekStart = new Date(currentWeekStart);
-    let weekEnd = this._getWeekEnd(weekStart);
+      // Compute clean weekStart & weekEnd
+      let weekStart = new Date(currentWeekStart);
+      let weekEnd = this._getWeekEnd(weekStart);
 
-    // Update week days UI
-    this._updateWeekDays(weekStart);
+      // Update week days UI
+      this._updateWeekDays(weekStart);
 
-    // Load Timesheet Records for this week
-    let employeeId = oModel.getProperty("/selectedEmployee");
-    if (employeeId) {
+      // Load Timesheet Records for this week
+      let employeeId = oModel.getProperty("/selectedEmployee");
+      if (employeeId) {
         this._loadAdminTimesheetData(employeeId, weekStart, weekEnd);
-    }
-},
+      }
+    },
 
 
     // Navigate to current week
     onCurrentWeek: function () {
-    let oModel = this.getView().getModel();
-    let oDatePicker = this.getView().byId("datePicker"); // Make sure to add id="datePicker" to your DatePicker in the view
+      let oModel = this.getView().getModel();
+      let oDatePicker = this.getView().byId("datePicker"); // Make sure to add id="datePicker" to your DatePicker in the view
 
-    let weekStart = this._getWeekStart(new Date());
-    oModel.setProperty("/currentWeekStart", weekStart);
+      let weekStart = this._getWeekStart(new Date());
+      oModel.setProperty("/currentWeekStart", weekStart);
 
-    // Update the selectedDate in the DatePicker to match the current week
-    oModel.setProperty("/selectedDate", this._formatDateForDatePicker(weekStart));
-    
-    // Explicitly set the date picker value to ensure UI update
-    if (oDatePicker) {
+      // Update the selectedDate in the DatePicker to match the current week
+      oModel.setProperty("/selectedDate", this._formatDateForDatePicker(weekStart));
+
+      // Explicitly set the date picker value to ensure UI update
+      if (oDatePicker) {
         oDatePicker.setDateValue(weekStart);
-    }
+      }
 
-    let weekEnd = this._getWeekEnd(weekStart);
-    this._updateWeekDays(weekStart);
+      let weekEnd = this._getWeekEnd(weekStart);
+      this._updateWeekDays(weekStart);
 
-    let employeeId = oModel.getProperty("/selectedEmployee");
-    if (employeeId) {
+      let employeeId = oModel.getProperty("/selectedEmployee");
+      if (employeeId) {
         this._loadAdminTimesheetData(employeeId, weekStart, weekEnd);
-    }
-},
+      }
+    },
 
 
     onNextWeek: function () {
-    let oModel = this.getView().getModel();
-    let oDatePicker = this.getView().byId("datePicker"); // Make sure to add id="datePicker" to your DatePicker in the view
+      let oModel = this.getView().getModel();
+      let oDatePicker = this.getView().byId("datePicker"); // Make sure to add id="datePicker" to your DatePicker in the view
 
-    // Get current week start
-    let currentWeekStart = new Date(oModel.getProperty("/currentWeekStart"));
+      // Get current week start
+      let currentWeekStart = new Date(oModel.getProperty("/currentWeekStart"));
 
-    if (isNaN(currentWeekStart)) {
+      if (isNaN(currentWeekStart)) {
         console.error("Invalid week start:", oModel.getProperty("/currentWeekStart"));
         return;
-    }
+      }
 
-    // Move week start forward by 7 days
-    currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+      // Move week start forward by 7 days
+      currentWeekStart.setDate(currentWeekStart.getDate() + 7);
 
-    // Save the updated week start
-    oModel.setProperty("/currentWeekStart", currentWeekStart);
+      // Save the updated week start
+      oModel.setProperty("/currentWeekStart", currentWeekStart);
 
-    // Update the selectedDate in the DatePicker to match the week start
-    oModel.setProperty("/selectedDate", this._formatDateForDatePicker(currentWeekStart));
-    
-    // Explicitly set the date picker value to ensure UI update
-    if (oDatePicker) {
+      // Update the selectedDate in the DatePicker to match the week start
+      oModel.setProperty("/selectedDate", this._formatDateForDatePicker(currentWeekStart));
+
+      // Explicitly set the date picker value to ensure UI update
+      if (oDatePicker) {
         oDatePicker.setDateValue(currentWeekStart);
-    }
+      }
 
-    // Compute clean weekStart & weekEnd
-    let weekStart = new Date(currentWeekStart);
-    let weekEnd = this._getWeekEnd(weekStart);
+      // Compute clean weekStart & weekEnd
+      let weekStart = new Date(currentWeekStart);
+      let weekEnd = this._getWeekEnd(weekStart);
 
-    // Update week days UI
-    this._updateWeekDays(weekStart);
+      // Update week days UI
+      this._updateWeekDays(weekStart);
 
-    let employeeId = oModel.getProperty("/selectedEmployee");
-    if (employeeId) {
+      let employeeId = oModel.getProperty("/selectedEmployee");
+      if (employeeId) {
         this._loadAdminTimesheetData(employeeId, weekStart, weekEnd);
-    }
-},
+      }
+    },
 
 
     // CORRECTED: DatePicker change function with proper week filtering
-    onDatePickerChange: function (oEvent) {
-    BusyIndicator.show(0);
+ onDatePickerChange: function (oEvent) {
+    
 
     let oDatePicker = oEvent.getSource();
     let dateValue = oDatePicker.getDateValue();
-    
+
     if (!dateValue || isNaN(dateValue.getTime())) {
         BusyIndicator.hide();
         return;
     }
 
+    
+    dateValue = new Date(dateValue.getFullYear(), dateValue.getMonth(), dateValue.getDate());
+
     let oModel = this.getView().getModel();
 
-    // Calculate Monday (start of week)
+    // Compute weekStart AFTER fixing date
     let weekStart = this._getWeekStart(dateValue);
 
     // Save weekStart in model
     oModel.setProperty("/currentWeekStart", weekStart);
 
-    // Also update the selectedDate to maintain the DatePicker value
     oModel.setProperty("/selectedDate", this._formatDateForDatePicker(dateValue));
 
-    // Update week days label UI
+    // Update labels
     this._updateWeekDays(weekStart);
 
-    // Compute week end
+    // Compute weekEnd (correct now)
     let weekEnd = this._getWeekEnd(weekStart);
 
     console.log("DatePicker changed:", {
         selectedDate: dateValue,
-        weekStart: weekStart,
-        weekEnd: weekEnd,
-        formattedWeekStart: this._formatDateForOData(weekStart),
-        formattedWeekEnd: this._formatDateForOData(weekEnd)
+        weekStart,
+        weekEnd
     });
 
-    // Load time entries for the selected employee
+    // Load timesheet data
     let employeeId = oModel.getProperty("/selectedEmployee");
+
     if (employeeId) {
         this._loadAdminTimesheetData(employeeId, weekStart, weekEnd);
     } else {
         MessageToast.show("Please select an employee first");
     }
 
-    BusyIndicator.hide();
+    
 },
 
-_formatDateForDatePicker: function(oDate) {
-    if (!oDate) return "";
-    
-    // Format as YYYY-MM-DD which is the standard format for date inputs
-    let year = oDate.getFullYear();
-    let month = String(oDate.getMonth() + 1).padStart(2, '0');
-    let day = String(oDate.getDate()).padStart(2, '0');
-    
-    return `${year}-${month}-${day}`;
-},
+
+    _formatDateForDatePicker: function (oDate) {
+      if (!oDate) return "";
+
+      // Format as YYYY-MM-DD which is the standard format for date inputs
+      let year = oDate.getFullYear();
+      let month = String(oDate.getMonth() + 1).padStart(2, '0');
+      let day = String(oDate.getDate()).padStart(2, '0');
+
+      return `${year}-${month}-${day}`;
+    },
 
     _updateWeekDays: function (weekStart) {
       let oModel = this.getView().getModel();
@@ -1962,28 +2428,28 @@ _formatDateForDatePicker: function(oDate) {
       this._oUserDialog.open();
     },
     _onRoleChange: function (oEvent) {
-  const sRole = oEvent.getSource().getSelectedKey();
-  const oDialog = this._oUserDialog;
-  const oVM = oDialog.getModel();
+      const sRole = oEvent.getSource().getSelectedKey();
+      const oDialog = this._oUserDialog;
+      const oVM = oDialog.getModel();
 
-  // Fetch the Manager Select by ID
-  const oManagerSelect = sap.ui.getCore().byId("managerSelect");
+      // Fetch the Manager Select by ID
+      const oManagerSelect = sap.ui.getCore().byId("managerSelect");
 
-  if (!oManagerSelect) {
-    console.error("Manager Select not found!");
-    return;
-  }
+      if (!oManagerSelect) {
+        console.error("Manager Select not found!");
+        return;
+      }
 
-  if (sRole === "Admin") {
-    // Disable manager field for Admin and Manager roles
-    oVM.setProperty("/userData/managerId", "");
-    oVM.setProperty("/userData/managerName", "");
-    oManagerSelect.setEnabled(false);
-  } else {
-    // Enable manager field for Employees
-    oManagerSelect.setEnabled(true);
-  }
-},
+      if (sRole === "Admin") {
+        // Disable manager field for Admin and Manager roles
+        oVM.setProperty("/userData/managerId", "");
+        oVM.setProperty("/userData/managerName", "");
+        oManagerSelect.setEnabled(false);
+      } else {
+        // Enable manager field for Employees
+        oManagerSelect.setEnabled(true);
+      }
+    },
     _loadAvailableManagers: function () {
       return new Promise((resolve, reject) => {
         const oModel = this.getOwnerComponent().getModel("adminService");
@@ -2487,7 +2953,7 @@ _formatDateForDatePicker: function(oDate) {
                       text: "{firstName} {lastName}"
                     })
                   },
-                  forceSelection:false,
+                  forceSelection: false,
                   change: function (oEvent) {
                     const selectedItem = oEvent.getSource().getSelectedItem();
                     const selectedKey = oEvent.getSource().getSelectedKey();

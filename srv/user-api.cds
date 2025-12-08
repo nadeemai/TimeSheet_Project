@@ -1,10 +1,7 @@
-/**
- * User API Service - For getting current user information
- */
+
 @impl: './user-api.js'
 service UserAPIService @(requires: 'authenticated-user') {
     
-    // Get current authenticated user info
     function getCurrentUser() returns {
         id: String;
         employeeID: String;

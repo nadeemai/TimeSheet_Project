@@ -40,3 +40,5 @@ mta_archives/
 dist/
 gen/
 package-lock.json
+.pdf
+pdf-base64.txt

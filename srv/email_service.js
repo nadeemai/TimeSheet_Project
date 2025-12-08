@@ -30,11 +30,9 @@ async function getOAuth2AccessToken(destinationConfig) {
     const params = new URLSearchParams();
     params.append('grant_type', 'client_credentials');
 
-    // ✅ Send client credentials in BODY (not Basic Auth)
     params.append('client_id', clientId);
     params.append('client_secret', clientSecret);
 
-    // Add scope if provided in destination
     if (destinationConfig.scope) {
       params.append('scope', destinationConfig.scope);
     }
@@ -57,7 +55,6 @@ async function getDestinationConfig() {
   try {
     console.log('🔍 Reading destination configuration from BTP...');
 
-    // 1) Load destination service credentials (xsenv returns credentials directly)
     const services = xsenv.getServices({ dest: { tag: 'destination' } });
     const destCredentials = services.dest;
 
@@ -65,19 +62,17 @@ async function getDestinationConfig() {
       throw new Error('Destination service not bound. Check mta.yaml configuration.');
     }
 
-    console.log('✅ Destination service credentials loaded');
+    console.log('Destination service credentials loaded');
     console.log('   destCredentials.uri:', destCredentials.uri);
     console.log('   destCredentials.url:', destCredentials.url);
 
     const axios = require('axios');
 
-    // 2) Get token for Destination service API
     const destServiceToken = await getDestinationServiceToken(destCredentials);
-    console.log('✅ Destination service token obtained');
+    console.log('Destination service token obtained');
 
-    const destServiceUrl = destCredentials.uri; // IMPORTANT: use "uri"
+    const destServiceUrl = destCredentials.uri;
 
-    // 3) DEBUG: list all destinations visible to this instance
     const listResp = await axios.get(
       `${destServiceUrl}/destination-configuration/v1/destinations`,
       {
@@ -92,7 +87,6 @@ async function getDestinationConfig() {
       console.log(`   - ${d.Name}`);
     }
 
-    // 4) Now fetch the specific destination
     console.log(`🔍 Fetching destination "${DESTINATION_NAME}"...`);
 
     const response = await axios.get(
@@ -105,7 +99,7 @@ async function getDestinationConfig() {
     );
 
     const destination = response.data.destinationConfiguration;
-    console.log('✅ Destination configuration loaded:', DESTINATION_NAME);
+    console.log('Destination configuration loaded:', DESTINATION_NAME);
 
     const config = {
       host: destination['mail.smtp.host'],
@@ -126,7 +120,7 @@ async function getDestinationConfig() {
       throw new Error('OAuth2 credentials not configured in destination');
     }
 
-    console.log('✅ Destination config validated:', {
+    console.log('Destination config validated:', {
       host: config.host,
       port: config.port,
       secure: config.secure,
@@ -137,7 +131,7 @@ async function getDestinationConfig() {
     return config;
 
   } catch (error) {
-    console.error('❌ Failed to read destination configuration:', error.message);
+    console.error('Failed to read destination configuration:', error.message);
     throw error;
   }
 }
@@ -160,13 +154,12 @@ async function getDestinationServiceToken(destCredentials) {
 
     return response.data.access_token;
   } catch (error) {
-    console.error('❌ Failed to get destination service token:', error.message);
+    console.error('Failed to get destination service token:', error.message);
     throw error;
   }
 }
 
 async function getTransporter() {
-  // Simulate emails without actual sending
   if (process.env.NODE_ENV === 'development' || !process.env.VCAP_SERVICES) {
     console.log('📧 [DEV MODE] Email service running in simulation mode');
     console.log('   NODE_ENV:', process.env.NODE_ENV || 'not set');
@@ -191,11 +184,10 @@ async function getTransporter() {
     };
   }
 
-  // Use nodemailer with OAuth2
   console.log('📧 [PRODUCTION MODE] Initializing nodemailer with OAuth2...');
 
   if (initializationError && initializationAttempted) {
-    console.error('❌ Previous initialization failed:', initializationError);
+    console.error('Previous initialization failed:', initializationError);
     throw initializationError;
   }
 
@@ -211,7 +203,6 @@ async function getTransporter() {
 
       console.log('🔧 Creating nodemailer transporter with OAuth2...');
       
-      // Create nodemailer transporter with OAuth2
       transporter = nodemailer.createTransport({
         host: config.host,
         port: config.port,
@@ -222,11 +213,11 @@ async function getTransporter() {
           accessToken: accessToken
         },
         tls: {
-          rejectUnauthorized: false // For self-signed certificates, adjust as needed
+          rejectUnauthorized: false 
         }
       });
 
-      // Verify connection
+  
       await transporter.verify();
       
       console.log(`Nodemailer OAuth2 transporter initialized successfully`);
@@ -272,9 +263,7 @@ async function getTransporter() {
   return transporter;
 }
 
-/**
- * Refresh OAuth2 token and recreate transporter
- */
+
 async function refreshTransporter() {
   console.log('🔄 Refreshing OAuth2 token and transporter...');
   transporter = null;
@@ -283,9 +272,6 @@ async function refreshTransporter() {
   return await getTransporter();
 }
 
-/**
- * Send email with OAuth2 authentication (TEXT ONLY)
- */
 async function sendMail({ subject, body, to, cc, attachment, text }) {
   console.log('📧 sendMail called (OAuth2 via nodemailer)');
   console.log('   To:', to);
@@ -300,7 +286,6 @@ async function sendMail({ subject, body, to, cc, attachment, text }) {
       attachments = Array.isArray(attachment) ? attachment : [attachment];
     }
 
-    // Validation
     if (!recipients.length) {
       throw new Error('At least one recipient email is required');
     }
@@ -311,14 +296,12 @@ async function sendMail({ subject, body, to, cc, attachment, text }) {
       throw new Error('Email body (text) is required');
     }
 
-    console.log('✅ Email parameters validated');
+    console.log('Email parameters validated');
 
-    // Get OAuth2 transporter
     console.log('🔧 Getting OAuth2 nodemailer transporter...');
     let tr = await getTransporter();
-    console.log('✅ OAuth2 Transporter obtained');
+    console.log('OAuth2 Transporter obtained');
 
-    // Prepare mail options (TEXT ONLY)
     const mailOptions = {
       from: FROM_EMAIL,
       to: recipients,
@@ -343,14 +326,12 @@ async function sendMail({ subject, body, to, cc, attachment, text }) {
     console.log('  Attachments:', attachments.length);
     console.log('─────────────────────────────────────────────────');
 
-    // Send email via OAuth2
     console.log('🚀 Calling nodemailer sendMail with OAuth2...');
     
     let result;
     try {
       result = await tr.sendMail(mailOptions);
     } catch (sendError) {
-      // If token expired, refresh and retry once
       if (sendError.message.includes('token') || sendError.message.includes('401') || sendError.message.includes('authentication')) {
         console.log('🔄 Token may be expired, refreshing and retrying...');
         tr = await refreshTransporter();
@@ -389,7 +370,6 @@ async function sendMail({ subject, body, to, cc, attachment, text }) {
     console.error('  Type:', error.constructor.name);
     console.error('  Stack:', error.stack);
     
-    // Check for OAuth2-specific errors
     if (error.message.includes('token') || error.message.includes('OAuth') || error.message.includes('401') || error.message.includes('authentication')) {
       console.error('─────────────────────────────────────────────────');
       console.error('🔐 OAUTH2 AUTHENTICATION ERROR DETECTED:');
@@ -413,9 +393,7 @@ async function sendMail({ subject, body, to, cc, attachment, text }) {
   }
 }
 
-/**
- * Send notification to manager and admin (OAuth2, TEXT ONLY)
- */
+
 async function notifyManagerAndAdmin({ subject, text, body }) {
   const recipients = [MANAGER_EMAIL, ADMIN_EMAIL];
   
@@ -429,9 +407,7 @@ async function notifyManagerAndAdmin({ subject, text, body }) {
   });
 }
 
-/**
- * Notify manager when employee modifies previous timesheet (OAuth2, TEXT ONLY)
- */
+
 async function notifyTimesheetModification({ 
   employeeName, 
   employeeID, 
@@ -446,10 +422,10 @@ async function notifyTimesheetModification({
   console.log('   Employee:', employeeName, `(${employeeID})`);
   console.log('   Manager Email:', managerEmail);
   
-  const subject = `⚠️ Timesheet Modified - ${employeeName} (${employeeID})`;
+  const subject = `Timesheet Modified - ${employeeName} (${employeeID})`;
   
   const text = `
-⚠️ TIMESHEET MODIFIED
+TIMESHEET MODIFIED
 
 ${employeeName} has modified a previously submitted/approved timesheet entry.
 
@@ -478,9 +454,7 @@ Sent: ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })} IST
   });
 }
 
-/**
- * Notify manager when employee creates non-project request (OAuth2, TEXT ONLY)
- */
+
 async function notifyNonProjectRequest({ 
   employeeName, 
   employeeID, 
@@ -498,7 +472,7 @@ async function notifyNonProjectRequest({
   console.log('   Request Type:', requestType);
   console.log('   Manager Email:', managerEmail);
   
-  // Determine icon based on request type
+  
   let icon = '📝';
   
   if (requestType.toLowerCase().includes('leave')) {
@@ -541,7 +515,6 @@ Sent: ${new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })} IST
   });
 }
 
-// ✅ Export all functions
 module.exports = {
   sendMail,
   notifyManagerAndAdmin,

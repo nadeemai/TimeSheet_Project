@@ -19,6 +19,7 @@
                     <DatePicker
                         value="{timeEntryModel>/newEntry/selectedDate}"
                         placeholder="Select any date in the week"
+                        
                         change="onEntryDatePickerChange"
                         width="100%" />
                 </VBox>
@@ -27,6 +28,7 @@
                 <VBox class="sapUiTinyMarginBottom">
                   <Label text="Project:" design="Bold" required="true" class="sapUiTinyMarginBottom" />
 <ComboBox
+    id="projectShow"
     selectedKey="{timeEntryModel>/newEntry/projectId}"
     items="{timeEntryModel>/projectsToShow}"
     placeholder="Select a Project"
@@ -38,22 +40,55 @@
                 </VBox>
 
                 <!-- Task Selection -->
-                <VBox class="sapUiTinyMarginBottom">
-                    <Label text="Task:" design="Bold" required="true" class="sapUiTinyMarginBottom" />
-                   <ComboBox
-    items="{timeEntryModel>/tasksToShow}"
+               <!-- Task / Leave Selection -->
+<VBox class="sapUiTinyMarginBottom">
+
+    <!-- TASK LABEL -->
+    <Label 
+        text="Task:" 
+        design="Bold" 
+        required="true"
+        class="sapUiTinyMarginBottom"
+        visible="{= !${timeEntryModel>/newEntry/isLeaveSelected} }" />
+
+    <!-- TASK DROPDOWN -->
+    <ComboBox
+        visible="{= !${timeEntryModel>/newEntry/isLeaveSelected} }"
+        items="{timeEntryModel>/tasksToShow}"
+         enabled="{= !${timeEntryModel>/isTaskDisabled} }"
+        width="100%"
+        selectedKey="{timeEntryModel>/newEntry/workType}">
+        <core:Item key="{timeEntryModel>type}" text="{timeEntryModel>name}" />
+    </ComboBox>
+
+
+    <!-- LEAVE LABEL -->
+    <Label 
+        text="Leave Type:" 
+        design="Bold" 
+        required="true"
+        class="sapUiTinyMarginBottom"
+        visible="{timeEntryModel>/newEntry/isLeaveSelected}" />
+
+    <!-- LEAVE TYPE DROPDOWN -->
+   <ComboBox
+    visible="{timeEntryModel>/newEntry/isLeaveSelected}"
+    items="{timeEntryModel>/leaveTypes}"
     width="100%"
-    enabled="{= !${timeEntryModel>/isTaskDisabled} }"
-    selectedKey="{timeEntryModel>/newEntry/workType}">
-    <core:Item key="{timeEntryModel>type}" text="{timeEntryModel>name}" />
+    selectedKey="{timeEntryModel>/newEntry/leaveType}"
+    change="onLeaveTypeChange">
+    <core:Item key="{timeEntryModel>id}" text="{timeEntryModel>name}" />
 </ComboBox>
 
-                </VBox>
+
+</VBox>
+
 
                 <!-- Hours -->
                 <VBox class="sapUiTinyMarginBottom">
                     <Label text="Hours:" design="Bold" required="true" class="sapUiTinyMarginBottom" />
                     <ComboBox
+                    editable="{timeEntryModel>/isHoursEditable}"
                         selectedKey="{timeEntryModel>/newEntry/hours}"
                         placeholder="Select Hours"
                         width="100%">

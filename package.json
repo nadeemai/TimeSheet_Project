@@ -16,6 +16,7 @@
     "axios": "^1.13.2",
     "dotenv": "^17.2.3",
     "express": "^4",
+    "jsonwebtoken": "^9.0.3",
     "moment-timezone": "^0.6.0",
     "nodemailer": "^7.0.11",
     "passport": "^0.7",
@@ -56,7 +57,7 @@
               "id": "aditya.mishra@sumodigitech.com",
               "password": "initial",
               "roles": [
-                "Manager"
+                "employee"
               ]
             },
             "nadeem.abbas@sumodigitech.com": {

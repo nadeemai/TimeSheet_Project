@@ -5,7 +5,27 @@ const {
 } = require('./email_service');
 
 module.exports = cds.service.impl(async function() {
-    
+    const { 
+        Employees, 
+        Projects, 
+        Timesheets, 
+        Notifications,
+        Activities,
+        NonProjectTypes,
+        LeaveTypes,           
+        EmployeeLeaveBalance 
+    } = this.entities;
+
+    const { Readable } = require('stream');
+
+async function streamToBuffer(stream) {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
    const getAuthenticatedEmployee = async (req) => {
     const userId = req.user.id;
     
@@ -118,6 +138,74 @@ module.exports = cds.service.impl(async function() {
         return days;
     };
 
+
+const getOrCreateLeaveBalance = async (employeeID, leaveTypeID, year) => {
+    let balance = await SELECT.one
+        .from('my.timesheet.EmployeeLeaveBalance')
+        .where({ employee_ID: employeeID, leaveType_ID: leaveTypeID, year: year });
+    
+    if (!balance) {
+
+        await INSERT.into('my.timesheet.EmployeeLeaveBalance').entries({
+            employee_ID: employeeID,
+            leaveType_ID: leaveTypeID,
+            year: year,
+            totalLeaves: 10,
+            usedLeaves: 0,
+            remainingLeaves: 10
+        });
+        
+        balance = await SELECT.one
+            .from('my.timesheet.EmployeeLeaveBalance')
+            .where({ employee_ID: employeeID, leaveType_ID: leaveTypeID, year: year });
+        
+        console.log(`Created leave balance for employee ${employeeID}, leave type ${leaveTypeID}, year ${year}`);
+    }
+    
+    return balance;
+};
+
+
+const updateLeaveBalance = async (employeeID, leaveTypeID, year, hoursUsed) => {
+    const daysUsed = hoursUsed / 8; 
+    
+    const balance = await getOrCreateLeaveBalance(employeeID, leaveTypeID, year);
+    
+    const newUsedLeaves = parseFloat(balance.usedLeaves || 0) + daysUsed;
+    const newRemainingLeaves = parseFloat(balance.totalLeaves || 10) - newUsedLeaves;
+    
+    await UPDATE('my.timesheet.EmployeeLeaveBalance')
+        .set({
+            usedLeaves: newUsedLeaves,
+            remainingLeaves: newRemainingLeaves
+        })
+        .where({ 
+            employee_ID: employeeID, 
+            leaveType_ID: leaveTypeID, 
+            year: year 
+        });
+    
+    console.log(`Updated leave balance: Used ${daysUsed} days, Remaining: ${newRemainingLeaves}`);
+    
+    return { usedLeaves: newUsedLeaves, remainingLeaves: newRemainingLeaves };
+};
+
+const validateLeaveAvailability = async (employeeID, leaveTypeID, year, hoursRequested) => {
+    const balance = await getOrCreateLeaveBalance(employeeID, leaveTypeID, year);
+    
+    const daysRequested = hoursRequested / 8;
+    const remainingLeaves = parseFloat(balance.remainingLeaves || 10);
+    
+    if (daysRequested > remainingLeaves) {
+        return {
+            valid: false,
+            message: `Insufficient leave balance. Requested: ${daysRequested} days, Available: ${remainingLeaves} days`
+        };
+    }
+    
+    return { valid: true, message: 'Leave available' };
+};
+
 this.on('READ', 'MyTimesheets', async (req) => {
     console.log('📊 MyTimesheets READ - Start');
     console.log('📊 User ID:', req.user.id);
@@ -145,23 +233,22 @@ for (const ts of timesheets) {
     ts.employee_ID = employee.ID;
     ts.employeeName = `${employee.firstName} ${employee.lastName}`;
     
-    // Get project info - ALWAYS set projectName field (even if null)
     if (ts.project_ID) {
         console.log('🔍 Enriching project for ID:', ts.project_ID);
         
-        // Try UUID first
+
         let project = await SELECT.one
             .from('my.timesheet.Projects')
             .where({ ID: ts.project_ID });
         
-        // Fallback to projectID code if UUID fails
+
         if (!project && typeof ts.project_ID === 'string' && !ts.project_ID.includes('-')) {
             console.log('⚠️ Trying projectID code lookup');
             project = await SELECT.one
                 .from('my.timesheet.Projects')
                 .where({ projectID: ts.project_ID });
             
-            // If found, update the ID to UUID for consistency
+
             if (project) {
                 ts.project_ID = project.ID;
             }
@@ -170,20 +257,19 @@ for (const ts of timesheets) {
         if (project) {
             ts.projectName = project.projectName;
             ts.projectRole = project.projectRole;
-            console.log(`✅ Enriched timesheet ${ts.timesheetID} with project: ${project.projectName}`);
+            console.log(`Enriched timesheet ${ts.timesheetID} with project: ${project.projectName}`);
         } else {
-            console.log(`⚠️ Project not found for ID: ${ts.project_ID}`);
+            console.log(`Project not found for ID: ${ts.project_ID}`);
             ts.projectName = null;
             ts.projectRole = null;
         }
     } else {
-        // ✅ CRITICAL FIX: Always include projectName field even when null
         ts.projectName = null;
         ts.projectRole = null;
         console.log(`📝 Timesheet ${ts.timesheetID} has no project (non-project activity)`);
     }
     
-    // Get activity info - ALWAYS set activityName field
+
     if (ts.activity_ID) {
         const activity = await SELECT.one
             .from('my.timesheet.Activities')
@@ -198,7 +284,6 @@ for (const ts of timesheets) {
         ts.activityName = null;
     }
     
-    // Get non-project type info - ALWAYS set nonProjectTypeName field
     if (ts.nonProjectType_ID) {
         const npt = await SELECT.one
             .from('my.timesheet.NonProjectTypes')
@@ -206,7 +291,6 @@ for (const ts of timesheets) {
         
         if (npt) {
             ts.nonProjectTypeName = npt.typeName;
-            // Also add the code for reference
             ts.nonProjectTypeID = npt.nonProjectTypeID;
         } else {
             ts.nonProjectTypeName = null;
@@ -217,7 +301,7 @@ for (const ts of timesheets) {
         ts.nonProjectTypeID = null;
     }
     
-    // Get approver info - ALWAYS set approvedByName field
+
     if (ts.approvedBy_ID) {
         const approver = await SELECT.one
             .from('my.timesheet.Employees')
@@ -233,46 +317,174 @@ for (const ts of timesheets) {
     }
 }
         
-        console.log('✅ Successfully enriched all timesheets');
+        console.log('Successfully enriched all timesheets');
         return timesheets;
         
     } catch (error) {
-        console.error('❌ Error in MyTimesheets READ:', error);
+        console.error('Error in MyTimesheets READ:', error);
         console.error('Stack trace:', error.stack);
         return [];
     }
 });
 
-// FULL CREATE handler — performs the INSERT and returns the created record
+this.on('READ', 'AvailableLeaveTypes', async (req) => {
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) return [];
+
+    console.log('📋 AvailableLeaveTypes READ - Start');
+
+    const leaveTypes = await SELECT.from('my.timesheet.LeaveTypes')
+        .where({ isActive: true })
+        .orderBy('leaveTypeID asc');
+
+    console.log('Found', leaveTypes.length, 'active leave types');
+    return leaveTypes;
+});
+
+this.on('READ', 'MyLeaveBalance', async (req) => {
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) return [];
+
+    console.log('📊 MyLeaveBalance READ - Start for employee:', employee.employeeID);
+
+    const employeeID = employee.ID;
+    const currentYear = new Date().getFullYear();
+
+    const leaveTypes = await SELECT.from('my.timesheet.LeaveTypes')
+        .where({ isActive: true });
+
+    const balances = [];
+
+    for (const leaveType of leaveTypes) {
+        let balance = await SELECT.one
+            .from('my.timesheet.EmployeeLeaveBalance')
+            .where({ 
+                employee_ID: employeeID, 
+                leaveType_ID: leaveType.ID, 
+                year: currentYear 
+            });
+
+        if (!balance) {
+            await INSERT.into('my.timesheet.EmployeeLeaveBalance').entries({
+                employee_ID: employeeID,
+                leaveType_ID: leaveType.ID,
+                year: currentYear,
+                totalLeaves: 10,
+                usedLeaves: 0,
+                remainingLeaves: 10
+            });
+
+            balance = await SELECT.one
+                .from('my.timesheet.EmployeeLeaveBalance')
+                .where({ 
+                    employee_ID: employeeID, 
+                    leaveType_ID: leaveType.ID, 
+                    year: currentYear 
+                });
+
+            console.log(`Created leave balance for ${leaveType.typeName}`);
+        }
+
+        balances.push({
+            ID: balance.ID,
+            employee_ID: employeeID,
+            employeeCode: employee.employeeID,
+            employeeName: `${employee.firstName} ${employee.lastName}`,
+            leaveType_ID: leaveType.ID,
+            leaveTypeCode: leaveType.leaveTypeID,
+            leaveTypeName: leaveType.typeName,
+            defaultHours: leaveType.defaultHours,
+            year: currentYear,
+            totalLeaves: balance.totalLeaves || 10,
+            usedLeaves: balance.usedLeaves || 0,
+            remainingLeaves: balance.remainingLeaves || 10
+        });
+    }
+
+    console.log('MyLeaveBalance returning', balances.length, 'leave types');
+    return balances;
+});
+
 this.on('CREATE', 'MyTimesheets', async (req) => {
     console.log('🔧 === Full CREATE MyTimesheets Handler START ===');
     console.log('🔧 User:', req.user && req.user.id);
-    // authenticate employee
+    
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return req.reject(401, 'Employee not authenticated');
 
     const employeeID = employee.ID;
-    // copy incoming data (avoid mutating original unexpectedly)
     const payload = Object.assign({}, req.data);
 
-    // --- basic validations (task, hours, details) ---
-    const validTasks = ['Designing', 'Developing', 'Testing', 'Bug Fix', 'Deployment', 'Client Call', 'Leave'];
-    if (payload.task && !validTasks.includes(payload.task)) {
-        return req.error(400, `Invalid task type. Must be one of: ${validTasks.join(', ')}`);
+    const leaveTypes = ['Personal Leave', 'Sick Leave', 'Half Day Leave'];
+    const isLeaveRequest = leaveTypes.includes(payload.task);
+    const validProjectTasks = ['Designing', 'Developing', 'Testing', 'Bug Fix', 'Deployment', 'Client Call'];
+    
+    if (!isLeaveRequest && payload.task && !validProjectTasks.includes(payload.task)) {
+        return req.error(400, `Invalid task type. Must be one of: ${validProjectTasks.join(', ')} or a leave type`);
     }
 
-    // ensure week boundaries exist (use incoming weekStartDate or date fallback)
+    // ✅ If it's a leave request, validate leave type and balance
+    if (isLeaveRequest) {
+        if (!payload.leaveType_ID) {
+            return req.error(400, 'Leave Type is required when requesting leave.');
+        }
+
+        const leaveType = await SELECT.one
+            .from('my.timesheet.LeaveTypes')
+            .where({ ID: payload.leaveType_ID });
+
+        if (!leaveType) {
+            return req.error(404, 'Leave Type not found');
+        }
+
+        if (!leaveType.isActive) {
+            return req.error(400, 'This leave type is not active');
+        }
+
+        // Ensure task matches leave type name
+        if (payload.task !== leaveType.typeName) {
+            payload.task = leaveType.typeName;
+        }
+
+        console.log('✅ Leave type:', leaveType.typeName, 'Default hours:', leaveType.defaultHours);
+
+        // Calculate total leave hours
+        const totalLeaveHours = 
+            parseFloat(payload.mondayHours || 0) +
+            parseFloat(payload.tuesdayHours || 0) +
+            parseFloat(payload.wednesdayHours || 0) +
+            parseFloat(payload.thursdayHours || 0) +
+            parseFloat(payload.fridayHours || 0) +
+            parseFloat(payload.saturdayHours || 0) +
+            parseFloat(payload.sundayHours || 0);
+
+        // Validate leave balance
+        const currentYear = new Date().getFullYear();
+        const leaveValidation = await validateLeaveAvailability(
+            employeeID, 
+            leaveType.ID, 
+            currentYear, 
+            totalLeaveHours
+        );
+
+        if (!leaveValidation.valid) {
+            return req.error(400, leaveValidation.message);
+        }
+
+        console.log('✅ Leave validation passed');
+    }
+
+    // Set week boundaries
     const inputDateForWeek = payload.date || payload.weekStartDate || new Date().toISOString().split('T')[0];
     let weekBoundaries;
     try {
         weekBoundaries = getWeekBoundaries(inputDateForWeek);
     } catch (e) {
-        console.error('Invalid date for week boundaries:', inputDateForWeek, e);
+        console.error('❌ Invalid date for week boundaries:', inputDateForWeek, e);
         return req.error(400, `Invalid date provided for week calculation: ${inputDateForWeek}`);
     }
     const weekDates = getWeekDates(weekBoundaries.weekStart);
 
-    // set canonical week fields
     payload.weekStartDate = weekBoundaries.weekStart;
     payload.weekEndDate = weekBoundaries.weekEnd;
 
@@ -284,7 +496,6 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
     payload.saturdayDate = weekDates[5].date; payload.saturdayDay = weekDates[5].day;
     payload.sundayDate = weekDates[6].date; payload.sundayDay = weekDates[6].day;
 
-    // default numeric fields
     payload.mondayHours = payload.mondayHours || 0;
     payload.tuesdayHours = payload.tuesdayHours || 0;
     payload.wednesdayHours = payload.wednesdayHours || 0;
@@ -293,7 +504,6 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
     payload.saturdayHours = payload.saturdayHours || 0;
     payload.sundayHours = payload.sundayHours || 0;
 
-    // default details
     payload.mondayTaskDetails = payload.mondayTaskDetails || '';
     payload.tuesdayTaskDetails = payload.tuesdayTaskDetails || '';
     payload.wednesdayTaskDetails = payload.wednesdayTaskDetails || '';
@@ -302,7 +512,6 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
     payload.saturdayTaskDetails = payload.saturdayTaskDetails || '';
     payload.sundayTaskDetails = payload.sundayTaskDetails || '';
 
-    // total week hours (recalculate to avoid trusting client)
     payload.totalWeekHours =
         parseFloat(payload.mondayHours || 0) +
         parseFloat(payload.tuesdayHours || 0) +
@@ -312,7 +521,7 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
         parseFloat(payload.saturdayHours || 0) +
         parseFloat(payload.sundayHours || 0);
 
-    // per-day limits & detail presence
+    // Validate daily limits
     const dayChecks = [
         { day: 'Monday', hours: payload.mondayHours, details: payload.mondayTaskDetails },
         { day: 'Tuesday', hours: payload.tuesdayHours, details: payload.tuesdayTaskDetails },
@@ -322,23 +531,28 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
         { day: 'Saturday', hours: payload.saturdayHours, details: payload.saturdayTaskDetails },
         { day: 'Sunday', hours: payload.sundayHours, details: payload.sundayTaskDetails }
     ];
+    
     for (const d of dayChecks) {
         if (d.hours > 15) return req.error(400, `${d.day} hours cannot exceed 15. Current: ${d.hours}`);
-        if (d.hours > 0 && (!d.details || d.details.trim() === '')) return req.error(400, `${d.day}: Task details are required when hours are entered.`);
+        if (d.hours > 0 && (!d.details || d.details.trim() === '')) {
+            return req.error(400, `${d.day}: Task details are required when hours are entered.`);
+        }
     }
 
-    // project / non-project rules
-    if (!payload.project_ID && payload.task !== 'Leave' && !payload.nonProjectType_ID) {
-        return req.error(400, 'Project is required for project-related tasks. Please select a project or choose a non-project task like Leave.');
+    // Validate project requirement
+    if (!payload.project_ID && !isLeaveRequest && !payload.nonProjectType_ID) {
+        return req.error(400, 'Project is required for project-related tasks. Please select a project or choose leave.');
     }
 
-    // activity / non-project existence checks
+    // Activity validation
     if (payload.activity_ID) {
         const activity = await SELECT.one.from('my.timesheet.Activities').where({ ID: payload.activity_ID });
         if (!activity) return req.error(404, 'Activity not found');
         if (activity.status !== 'Active') return req.error(400, 'This activity is not active');
         payload.project_ID = activity.project_ID || null;
     }
+    
+    // Non-project type validation
     if (payload.nonProjectType_ID) {
         const npt = await SELECT.one.from('my.timesheet.NonProjectTypes').where({ ID: payload.nonProjectType_ID });
         if (!npt) return req.error(404, 'Non-Project Type not found');
@@ -346,32 +560,33 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
     }
 
     payload.employee_ID = employeeID;
-    payload.status = payload.status || 'Submitted';
+    payload.status = 'Submitted';
 
-    // ensure timesheetID exists (generate if not)
+    // Generate timesheet ID
     if (!payload.timesheetID) {
         const existingForEmployee = await SELECT.from('my.timesheet.Timesheets').where({ employee_ID: employeeID });
         payload.timesheetID = `TS${String(existingForEmployee.length + 1).padStart(4, '0')}`;
-        console.log('✅ Generated timesheetID (CREATE handler):', payload.timesheetID);
+        console.log('✅ Generated timesheetID:', payload.timesheetID);
     }
 
-    // Duplicate check (same employee, same week, same task+project)
+    // Check for duplicates
     const dupWhere = {
         employee_ID: employeeID,
         weekStartDate: payload.weekStartDate,
-        task: payload.task
+        task: payload.task // This will include leave type name
     };
     if (payload.project_ID) dupWhere.project_ID = payload.project_ID;
+    if (payload.leaveType_ID) dupWhere.leaveType_ID = payload.leaveType_ID;
 
     const existing = await SELECT.from('my.timesheet.Timesheets').where(dupWhere);
     if (existing.length > 0) {
-        return req.error(400, `A timesheet entry for this ${payload.project_ID ? 'project/' : ''}task already exists for week starting ${payload.weekStartDate}. Please update the existing entry instead.`);
+        return req.error(400, `A timesheet entry for this task already exists for week starting ${payload.weekStartDate}. Please update the existing entry instead.`);
     }
 
-    // --- PERFORM THE INSERT EXPLICITLY ---
+    // Perform INSERT
     try {
         await INSERT.into('my.timesheet.Timesheets').entries(payload);
-        // SELECT back the inserted row using stable unique key (timesheetID + employee_ID)
+        
         const created = await SELECT.one.from('my.timesheet.Timesheets')
             .where({ timesheetID: payload.timesheetID, employee_ID: employeeID });
 
@@ -380,62 +595,119 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
             return req.error(500, 'Failed to verify created timesheet.');
         }
 
-       // enrich returned object - ALWAYS include all fields even if null
-if (created.project_ID) {
-    const project = await SELECT.one.from('my.timesheet.Projects').columns('projectName','projectRole').where({ ID: created.project_ID });
-    if (project) { 
-        created.projectName = project.projectName; 
-        created.projectRole = project.projectRole; 
-    } else {
-        created.projectName = null;
-        created.projectRole = null;
-    }
-} else {
-    created.projectName = null;
-    created.projectRole = null;
-}
+        // ✅ If it's a leave request, update leave balance
+        if (isLeaveRequest && created.leaveType_ID) {
+            const currentYear = new Date().getFullYear();
+            await updateLeaveBalance(
+                employeeID, 
+                created.leaveType_ID, 
+                currentYear, 
+                created.totalWeekHours
+            );
 
-if (created.employee_ID) {
-    const emp = await SELECT.one.from('my.timesheet.Employees').columns('firstName','lastName','employeeID').where({ ID: created.employee_ID });
-    if (emp) {
-        created.employeeName = `${emp.firstName} ${emp.lastName}`;
-    } else {
-        created.employeeName = null;
-    }
-} else {
-    created.employeeName = null;
-}
+            console.log('✅ Leave balance updated');
 
-if (created.activity_ID) {
-    const act = await SELECT.one.from('my.timesheet.Activities').columns('activity').where({ ID: created.activity_ID });
-    if (act) {
-        created.activityName = act.activity;
-    } else {
-        created.activityName = null;
-    }
-} else {
-    created.activityName = null;
-}
+            // Send notification to manager
+            if (employee.managerID_ID) {
+                const leaveType = await SELECT.one
+                    .from('my.timesheet.LeaveTypes')
+                    .where({ ID: created.leaveType_ID });
 
-if (created.nonProjectType_ID) {
-    const npt = await SELECT.one.from('my.timesheet.NonProjectTypes').columns('typeName', 'nonProjectTypeID').where({ ID: created.nonProjectType_ID });
-    if (npt) {
-        created.nonProjectTypeName = npt.typeName;
-        created.nonProjectTypeID = npt.nonProjectTypeID;
-    } else {
-        created.nonProjectTypeName = null;
-        created.nonProjectTypeID = null;
-    }
-} else {
-    created.nonProjectTypeName = null;
-    created.nonProjectTypeID = null;
-}
+                const notificationCount = await SELECT.from('my.timesheet.Notifications');
+                
+                const totalDays = (created.totalWeekHours / 8).toFixed(1);
+                
+                await INSERT.into('my.timesheet.Notifications').entries({
+                    notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
+                    recipient_ID: employee.managerID_ID,
+                    message: `${employee.firstName} ${employee.lastName} has requested ${leaveType.typeName} for ${totalDays} day(s) (Week: ${created.weekStartDate} to ${created.weekEndDate}). Total hours: ${created.totalWeekHours}. Please review and approve/reject.`,
+                    notificationType: 'Leave Request',
+                    isRead: false,
+                    relatedEntity: 'Timesheet',
+                    relatedEntityID: created.ID
+                });
 
-        // make sure OData Location header contains DB ID (CAP will still set HTTP status)
+                console.log('✅ Leave request notification sent to manager');
+            }
+        }
+
+        // Enrich response with related data
+        if (created.project_ID) {
+            const project = await SELECT.one.from('my.timesheet.Projects').columns('projectName','projectRole').where({ ID: created.project_ID });
+            if (project) { 
+                created.projectName = project.projectName; 
+                created.projectRole = project.projectRole; 
+            } else {
+                created.projectName = null;
+                created.projectRole = null;
+            }
+        } else {
+            created.projectName = null;
+            created.projectRole = null;
+        }
+
+        if (created.employee_ID) {
+            const emp = await SELECT.one.from('my.timesheet.Employees').columns('firstName','lastName','employeeID').where({ ID: created.employee_ID });
+            if (emp) {
+                created.employeeName = `${emp.firstName} ${emp.lastName}`;
+            } else {
+                created.employeeName = null;
+            }
+        } else {
+            created.employeeName = null;
+        }
+
+        if (created.activity_ID) {
+            const act = await SELECT.one.from('my.timesheet.Activities').columns('activity').where({ ID: created.activity_ID });
+            if (act) {
+                created.activityName = act.activity;
+            } else {
+                created.activityName = null;
+            }
+        } else {
+            created.activityName = null;
+        }
+
+        if (created.nonProjectType_ID) {
+            const npt = await SELECT.one.from('my.timesheet.NonProjectTypes').columns('typeName', 'nonProjectTypeID').where({ ID: created.nonProjectType_ID });
+            if (npt) {
+                created.nonProjectTypeName = npt.typeName;
+                created.nonProjectTypeID = npt.nonProjectTypeID;
+            } else {
+                created.nonProjectTypeName = null;
+                created.nonProjectTypeID = null;
+            }
+        } else {
+            created.nonProjectTypeName = null;
+            created.nonProjectTypeID = null;
+        }
+
+        // ✅ Enrich with leave type info
+        if (created.leaveType_ID) {
+            const leaveType = await SELECT.one.from('my.timesheet.LeaveTypes')
+                .columns('typeName', 'leaveTypeID', 'defaultHours')
+                .where({ ID: created.leaveType_ID });
+            
+            if (leaveType) {
+                created.leaveTypeName = leaveType.typeName;
+                created.leaveTypeCode = leaveType.leaveTypeID;
+                created.leaveDefaultHours = leaveType.defaultHours;
+            } else {
+                created.leaveTypeName = null;
+                created.leaveTypeCode = null;
+                created.leaveDefaultHours = null;
+            }
+        } else {
+            created.leaveTypeName = null;
+            created.leaveTypeCode = null;
+            created.leaveDefaultHours = null;
+        }
+
         try { req._.res.set('location', `MyTimesheets(${created.ID})`); } catch(e) { /* ignore */ }
 
         console.log('🔧 === Full CREATE MyTimesheets Handler END ===');
-        // returning the created object will make OData return it in response body (201/200)
+        console.log('✅ Created timesheet with task:', created.task);
+        
         return created;
 
     } catch (err) {
@@ -444,7 +716,6 @@ if (created.nonProjectType_ID) {
     }
 });
 
-// MyProjects Handler - Shows ALL active projects (not just assigned ones)
 this.on('READ', 'MyProjects', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return [];
@@ -453,7 +724,6 @@ this.on('READ', 'MyProjects', async (req) => {
 
     const employeeID = employee.ID;
 
-    //Get ALL active projects from the system
     const allProjects = await SELECT.from('my.timesheet.Projects')
         .where({ status: 'Active' });
 
@@ -464,7 +734,6 @@ this.on('READ', 'MyProjects', async (req) => {
         return [];
     }
 
-    // Enrich with project owner names and calculate THIS employee's booked hours
     for (const project of allProjects) {
         if (project.projectOwner_ID) {
             const owner = await SELECT.one
@@ -476,8 +745,6 @@ this.on('READ', 'MyProjects', async (req) => {
                 project.projectOwnerName = `${owner.firstName} ${owner.lastName}`;
             }
         }
-
-        // Calculate THIS employee's booked hours on this project
         const projectTimesheets = await SELECT.from('my.timesheet.Timesheets')
             .where({ employee_ID: employeeID, project_ID: project.ID });
         
@@ -493,42 +760,39 @@ this.on('READ', 'MyProjects', async (req) => {
             : 0;
     }
 
-    console.log('✅ MyProjects returning:', allProjects.length, 'projects');
+    console.log('MyProjects returning:', allProjects.length, 'projects');
     return allProjects;
 });
 
-// Helper entity for UI - Get ALL active projects for dropdown
 this.on('READ', 'AssignedProjectsList', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return [];
 
     console.log('📋 AssignedProjectsList - Showing ALL active projects');
 
-    // ✅ Return ALL active projects, not just assigned ones
+
     const projects = await SELECT.from('my.timesheet.Projects')
         .columns('ID', 'projectID', 'projectName', 'projectRole', 'status')
         .where({ status: 'Active' });
 
-    console.log('✅ Found', projects.length, 'active projects for dropdown');
+    console.log('Found', projects.length, 'active projects for dropdown');
     return projects;
 });
 
-    // BookedHoursOverview Handler
-// BookedHoursOverview Handler - Shows ALL active projects with employee's hours
+
 this.on('READ', 'BookedHoursOverview', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return [];
 
     const employeeID = employee.ID;
 
-    // Get ALL active projects
     const allProjects = await SELECT.from('my.timesheet.Projects')
         .where({ status: 'Active' });
 
     const overview = [];
 
     for (const project of allProjects) {
-        // Get employee's timesheets for this project
+
         const timesheets = await SELECT.from('my.timesheet.Timesheets')
             .where({ employee_ID: employeeID, project_ID: project.ID });
 
@@ -666,14 +930,110 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
     if (!employee) return;
 
     const employeeID = employee.ID;
-    const { task, project_ID, activity_ID, nonProjectType_ID, isBillable } = req.data;
+    const { task, project_ID, activity_ID, nonProjectType_ID, leaveType_ID } = req.data;
 
-    if (project_ID) {
+    // ✅ NEW: If BOTH nonProjectType_ID AND leaveType_ID are provided
+    // This means: User selected "Leave" from NonProjectType, then selected specific leave type
+    if (nonProjectType_ID && leaveType_ID) {
+        console.log('🍃 Processing leave request with both NonProjectType and LeaveType');
         
+        // Validate NonProjectType is "Leave"
+        const nonProjectType = await SELECT.one
+            .from('my.timesheet.NonProjectTypes')
+            .where({ ID: nonProjectType_ID });
+
+        if (!nonProjectType) {
+            return req.error(404, 'Non-Project Type not found');
+        }
+
+        if (!nonProjectType.isActive) {
+            return req.error(400, 'This non-project type is not active');
+        }
+
+        // Verify it's the "Leave" type
+        if (nonProjectType.typeName !== 'Leave') {
+            return req.error(400, 'NonProjectType must be "Leave" when using LeaveType');
+        }
+
+        console.log('✅ NonProjectType validated: Leave');
+
+        // Fetch the specific leave type
+        const leaveType = await SELECT.one
+            .from('my.timesheet.LeaveTypes')
+            .where({ ID: leaveType_ID });
+
+        if (!leaveType) {
+            return req.error(404, 'Leave Type not found');
+        }
+
+        if (!leaveType.isActive) {
+            return req.error(400, 'This leave type is not active');
+        }
+
+        // ✅ STORE LEAVE TYPE NAME IN TASK FIELD
+        req.data.task = leaveType.typeName; // "Personal Leave", "Sick Leave", or "Half Day Leave"
+        
+        console.log('✅ Leave type stored in task field:', leaveType.typeName);
+        console.log('✅ NonProjectType remains:', nonProjectType.typeName);
+
+        // Validate leave balance
+        const totalLeaveHours = 
+            parseFloat(req.data.mondayHours || 0) +
+            parseFloat(req.data.tuesdayHours || 0) +
+            parseFloat(req.data.wednesdayHours || 0) +
+            parseFloat(req.data.thursdayHours || 0) +
+            parseFloat(req.data.fridayHours || 0) +
+            parseFloat(req.data.saturdayHours || 0) +
+            parseFloat(req.data.sundayHours || 0);
+
+        const currentYear = new Date().getFullYear();
+        const leaveValidation = await validateLeaveAvailability(
+            employeeID, 
+            leaveType.ID, 
+            currentYear, 
+            totalLeaveHours
+        );
+
+        if (!leaveValidation.valid) {
+            return req.error(400, leaveValidation.message);
+        }
+
+        console.log('✅ Leave validation passed');
+    }
+    // ✅ If only leaveType_ID (without nonProjectType_ID) - also support this
+    else if (leaveType_ID && !nonProjectType_ID) {
+        const leaveType = await SELECT.one
+            .from('my.timesheet.LeaveTypes')
+            .where({ ID: leaveType_ID });
+
+        if (!leaveType) {
+            return req.error(404, 'Leave Type not found');
+        }
+
+        if (!leaveType.isActive) {
+            return req.error(400, 'This leave type is not active');
+        }
+
+        // Store leave type name in task field
+        req.data.task = leaveType.typeName;
+        
+        console.log('✅ Leave type stored in task field (without NonProjectType):', leaveType.typeName);
+    }
+
+    // Validate task for project work
+    const validProjectTasks = ['Designing', 'Developing', 'Testing', 'Bug Fix', 'Deployment', 'Client Call'];
+    const leaveTypeNames = ['Personal Leave', 'Sick Leave', 'Half Day Leave'];
+    
+    // Allow task if it's a valid project task OR a leave type name
+    if (task && !leaveType_ID && !validProjectTasks.includes(task) && !leaveTypeNames.includes(task)) {
+        return req.error(400, `Invalid task type. Must be one of: ${validProjectTasks.join(', ')}`);
+    }
+
+    // Convert project code to UUID if needed
+    if (project_ID) {
         const isUUID = project_ID.includes('-');
         
         if (!isUUID) {
-            
             console.log('⚠️ Converting project code to UUID:', project_ID);
             const project = await SELECT.one
                 .from('my.timesheet.Projects')
@@ -684,37 +1044,22 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
                 return req.error(404, `Project with code ${project_ID} not found`);
             }
             
-            req.data.project_ID = project.ID; 
-            console.log('Converted to UUID:', project.ID);
-        } else {
-            const project = await SELECT.one
-                .from('my.timesheet.Projects')
-                .columns('ID')
-                .where({ ID: project_ID });
-            
-            if (!project) {
-                return req.error(404, `Project with ID ${project_ID} not found`);
-            }
+            req.data.project_ID = project.ID;
+            console.log('✅ Converted to UUID:', project.ID);
         }
     }
 
-    const validTasks = ['Designing', 'Developing', 'Testing', 'Bug Fix', 'Deployment', 'Client Call', 'Leave'];
-    if (task && !validTasks.includes(task)) {
-        return req.error(400, `Invalid task type. Must be one of: ${validTasks.join(', ')}`);
-    }
-
+    // Set week boundaries
     const inputDateForWeek = req.data.date || req.data.weekStartDate || new Date().toISOString().split('T')[0];
     let weekBoundaries;
     try {
         weekBoundaries = getWeekBoundaries(inputDateForWeek);
     } catch (e) {
-        console.error('Invalid date for week boundaries:', inputDateForWeek, e);
+        console.error('❌ Invalid date for week boundaries:', inputDateForWeek, e);
         return req.error(400, `Invalid date provided for week calculation: ${inputDateForWeek}`);
     }
     const weekDates = getWeekDates(weekBoundaries.weekStart);
    
-
-    
     req.data.weekStartDate = weekBoundaries.weekStart;
     req.data.weekEndDate   = weekBoundaries.weekEnd;
 
@@ -733,6 +1078,7 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
     req.data.sundayDate    = weekDates[6].date;
     req.data.sundayDay     = weekDates[6].day;
 
+    // Default hours
     req.data.mondayHours = req.data.mondayHours || 0;
     req.data.tuesdayHours = req.data.tuesdayHours || 0;
     req.data.wednesdayHours = req.data.wednesdayHours || 0;
@@ -749,6 +1095,7 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
     req.data.saturdayTaskDetails = req.data.saturdayTaskDetails || '';
     req.data.sundayTaskDetails = req.data.sundayTaskDetails || '';
 
+    // Calculate total hours
     req.data.totalWeekHours =
         parseFloat(req.data.mondayHours || 0) +
         parseFloat(req.data.tuesdayHours || 0) +
@@ -758,6 +1105,7 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         parseFloat(req.data.saturdayHours || 0) +
         parseFloat(req.data.sundayHours || 0);
 
+    // Validate daily hours
     const dailyHours = [
         { day: 'Monday', hours: req.data.mondayHours },
         { day: 'Tuesday', hours: req.data.tuesdayHours },
@@ -774,6 +1122,7 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         }
     }
 
+    // Validate task details
     const dailyData = [
         { day: 'Monday', hours: req.data.mondayHours, details: req.data.mondayTaskDetails },
         { day: 'Tuesday', hours: req.data.tuesdayHours, details: req.data.tuesdayTaskDetails },
@@ -790,34 +1139,33 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         }
     }
 
+    // Check for duplicates
     const whereClause = {
         employee_ID: employeeID,
-        task: task,
+        task: req.data.task,
         weekStartDate: weekBoundaries.weekStart
     };
 
-if (project_ID) {
-    whereClause.project_ID = project_ID;
-
-    const projectExists = await SELECT.one
-        .from('my.timesheet.Projects')
-        .where({ ID: project_ID, status: 'Active' });
-    
-    if (!projectExists) {
-        return req.error(404, 'Project not found or is not active. Please select an active project.');
+    if (project_ID) {
+        whereClause.project_ID = project_ID;
+        
+        const projectExists = await SELECT.one
+            .from('my.timesheet.Projects')
+            .where({ ID: project_ID, status: 'Active' });
+        
+        if (!projectExists) {
+            return req.error(404, 'Project not found or is not active.');
+        }
+    } else if (!leaveType_ID && !nonProjectType_ID) {
+        return req.error(400, 'Project or Leave is required.');
     }
-    
-    console.log('Employee can work on any active project:', projectExists.projectName);
-} else if (task !== 'Leave' && !nonProjectType_ID) {
-    return req.error(400, 'Project is required for project-related tasks. Please select a project or choose a non-project task like Leave.');
-}
 
     const existing = await SELECT.from('my.timesheet.Timesheets').where(whereClause);
-
     if (existing.length > 0) {
-        return req.error(400, `A timesheet entry for this ${project_ID ? 'project/' : ''}task already exists for week starting ${weekBoundaries.weekStart}. Please update the existing entry instead.`);
+        return req.error(400, `A timesheet entry for this task already exists for week starting ${weekBoundaries.weekStart}.`);
     }
 
+    // Handle activity
     if (activity_ID) {
         const activity = await SELECT.one.from('my.timesheet.Activities').where({ ID: activity_ID });
         if (!activity) {
@@ -829,19 +1177,10 @@ if (project_ID) {
         req.data.project_ID = activity.project_ID || null;
     }
 
-    if (nonProjectType_ID) {
-        const nonProjectType = await SELECT.one.from('my.timesheet.NonProjectTypes').where({ ID: nonProjectType_ID });
-        if (!nonProjectType) {
-            return req.error(404, 'Non-Project Type not found');
-        }
-        if (!nonProjectType.isActive) {
-            return req.error(400, 'This non-project type is not active');
-        }
-    }
-
     req.data.employee_ID = employeeID;
-    req.data.status = req.data.status ||'Submitted';
+    req.data.status = 'Submitted';
 
+    // Generate timesheet ID
     if (!req.data.timesheetID) {
         const employeeTimesheets = await SELECT.from('my.timesheet.Timesheets').where({ employee_ID: employeeID });
         req.data.timesheetID = `TS${String(employeeTimesheets.length + 1).padStart(4, '0')}`;
@@ -853,16 +1192,16 @@ this.after('CREATE', 'MyTimesheets', async (result, req) => {
     console.log('🔧 After CREATE - Start enrichment');
 
     try {
-        // ... your existing enrichment code ...
+
         
-        console.log('✅ After CREATE - Enrichment complete, returning enriched timesheet');
+        console.log('After CREATE - Enrichment complete, returning enriched timesheet');
         
-        // ✅ NEW: CHECK FOR NON-PROJECT REQUEST EMAIL NOTIFICATION
+ 
         if (timesheet.nonProjectType_ID && !timesheet.project_ID) {
             console.log('📧 Non-project timesheet CREATED - checking for email notification');
             
             try {
-                // Get employee who created this
+
                 const employee = await SELECT.one
                     .from('my.timesheet.Employees')
                     .columns('ID', 'employeeID', 'firstName', 'lastName', 'email', 'managerID_ID')
@@ -1494,4 +1833,153 @@ this.on('READ', 'AssignedProjectsList', async (req) => {
 
     return projects;
 });
+// ========================================
+// DOCUMENT HANDLERS - Add to employee-service.js
+// ========================================
+
+this.on('READ', 'AvailableDocuments', async (req) => {
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) return [];
+
+    console.log('📄 AvailableDocuments READ for employee:', employee.employeeID);
+
+    try {
+        const documents = await SELECT.from('my.timesheet.Documents')
+            .where({ isActive: true });
+
+        console.log('Found', documents.length, 'active documents');
+
+        for (const doc of documents) {
+            if (doc.uploadedBy_ID) {
+                const uploader = await SELECT.one
+                    .from('my.timesheet.Employees')
+                    .columns('firstName', 'lastName')
+                    .where({ ID: doc.uploadedBy_ID });
+                
+                if (uploader) {
+                    doc.uploadedByName = `${uploader.firstName} ${uploader.lastName}`;
+                }
+            }
+            
+            // Remove content from list view
+            delete doc.content;
+        }
+
+        return documents;
+
+    } catch (error) {
+        console.error('Error reading documents:', error);
+        return [];
+    }
+});
+this.on('downloadDocument', async (req) => {
+  const employee = await getAuthenticatedEmployee(req);
+  if (!employee) {
+    return req.error(401, 'Employee not authenticated');
+  }
+
+  console.log('📥 Download Document - Employee:', employee.employeeID);
+  const { documentID } = req.data;
+
+  if (!documentID) {
+    return req.error(400, 'Document ID is required');
+  }
+
+  try {
+    console.log('🔍 Fetching document:', documentID);
+
+    const db = await cds.connect.to('db');
+
+    const documents = await db.run(
+      SELECT.from('my.timesheet.Documents')
+        .columns(
+          'documentID',
+          'documentName',
+          'fileName',
+          'mimeType',
+          'fileSize',
+          'content',
+          'isActive'
+        )
+        .where({ documentID, isActive: true })
+    );
+
+    if (!documents || documents.length === 0) {
+      console.log('❌ Document not found');
+      return req.error(404, 'Document not found');
+    }
+
+    const document = documents[0];
+    console.log('✅ Document found:', document.documentName);
+    console.log('📊 Has content:', !!document.content);
+
+    const c = document.content;
+    console.log('📦 Raw content type:', typeof c, 'ctor:', c && c.constructor && c.constructor.name);
+
+    if (!c) {
+      console.error('❌ Document content is missing');
+      return req.error(500, 'Document content is missing');
+    }
+
+    // 🔥 Normalize to Buffer, handling Buffer, string, Uint8Array and Readable stream
+    let buffer;
+
+    if (Buffer.isBuffer(c)) {
+      console.log('✅ Content is Buffer');
+      buffer = c;
+
+    } else if (typeof c === 'string') {
+      console.log('✅ Content is base64 string, decoding...');
+      buffer = Buffer.from(c, 'base64');
+
+    } else if (c instanceof Uint8Array) {
+      console.log('✅ Content is Uint8Array, wrapping as Buffer...');
+      buffer = Buffer.from(c);
+
+    } else if (c instanceof Readable || (c && typeof c.read === 'function' && typeof c.pipe === 'function')) {
+      console.log('✅ Content is Readable stream, collecting into Buffer...');
+      buffer = await streamToBuffer(c);
+
+    } else if (typeof c === 'object') {
+      // Last-chance generic object handling
+      if (c.data && (Buffer.isBuffer(c.data) || c.data instanceof Uint8Array || Array.isArray(c.data))) {
+        console.log('✅ Content has .data, converting...');
+        buffer = Buffer.from(c.data);
+      } else if (c.buffer && c.byteLength !== undefined) {
+        console.log('✅ Content has .buffer/.byteLength, converting...');
+        buffer = Buffer.from(c.buffer);
+      } else {
+        console.error('❌ Unsupported content object shape, keys:', Object.keys(c || {}));
+        return req.error(500, 'Invalid document content format (object not convertible).');
+      }
+
+    } else {
+      console.error('❌ Unsupported content type:', typeof c);
+      return req.error(500, 'Invalid document content format (unsupported type).');
+    }
+
+    if (!buffer || !Buffer.isBuffer(buffer)) {
+      console.error('❌ Failed to normalize content to Buffer');
+      return req.error(500, 'Failed to normalize document content.');
+    }
+
+    console.log('💾 Final buffer size:', (buffer.length / 1024).toFixed(2), 'KB');
+
+    // 👉 Return JSON with base64 so UI can handle download
+    const base64Content = buffer.toString('base64');
+    console.log('✅ Returning base64 content, length:', base64Content.length);
+
+    return {
+      fileName: document.fileName || document.documentName || 'document.pdf',
+      mimeType: document.mimeType || 'application/pdf',
+      content: base64Content
+    };
+
+  } catch (error) {
+    console.error('❌ Error downloading document:', error);
+    console.error('Stack:', error.stack);
+    return req.error(500, 'Failed to download document: ' + error.message);
+  }
+});
+
 });

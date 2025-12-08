@@ -1,5 +1,4 @@
-### Employee Service Test File
-### Base URL: http://localhost:4004
+
 GET http://localhost:41857/odata/v4/user-api/getCurrentUser
 Authorization: Basic aditya.mishra@sumodigitech.com:initial
 
@@ -97,16 +96,16 @@ Content-Type: application/json
 ###
 
 ### 10. POST - Create Timesheet for Different Project
-POST http://localhost:7373/odata/v4/employee/MyTimesheets
+POST http://localhost:2390/odata/v4/employee/MyTimesheets
 Authorization: Basic nadeem.abbas@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "weekStartDate": "2025-09-15",
-  "weekEndDate": "2025-09-21",
-  "project_ID": "967eeb86-01be-4d12-a66c-6f2653e7a7ec",
+  "weekStartDate": "2025-12-01",
+  "weekEndDate": "2025-12-07",
+  "nonProjectType_ID": "n47ac10b-58cc-4372-a567-0e02b2c3d562",
   "activity_ID": "",
-  "task": "Deployment",
+  "task": "Personal Leave",
   "taskDetails": "Weekly UI/UX design work for Cordys workmodule",
   "status": "Draft",
   "isBillable": true,
@@ -143,19 +142,26 @@ Content-Type: application/json
 ###
 
 ### 11. POST - Create Non-Project Timesheet (Leave)
-POST http://localhost:7376/odata/v4/employee/MyTimesheets
+POST http://localhost:4006/odata/v4/employee/MyTimesheets
 Authorization: Basic nadeem.abbas@sumodigitech.com:initial
 Content-Type: application/json
 
 {
   "employee_ID": "a47ac10b-58cc-4372-a567-0e02b2c3d491",
-  "weekStartDate": "2025-09-15",
+  "weekStartDate": "2025-12-15",
   "weekEndDate": "2025-09-21",
-  "nonProjectType_ID": "n47ac10b-58cc-4372-a567-0e02b2c3d561",
-  "task": "",
-  "taskDetails": "solutate",
-  "isBillable": false,
-  "status": "Draft"
+  "nonProjectType_ID": "n47ac10b-58cc-4372-a567-0e02b2c3d562",
+  "leaveType_ID": "01234567-89ab-cdef-0123-456789abcde2",
+  "mondayHours": 8,
+  "mondayTaskDetails": "Sick Leave - Fever and cold",
+  "tuesdayHours": 8,
+  "tuesdayTaskDetails": "Sick Leave - Medical rest",
+  "wednesdayHours": 0,
+  "thursdayHours": 0,
+  "fridayHours": 0,
+  "saturdayHours": 0,
+  "sundayHours": 0,
+  "isBillable": false
 }
 
 ###
@@ -186,12 +192,12 @@ Content-Type: application/json
 ###
 
 ### 14. POST - Submit Timesheet Action  
-POST http://localhost:4004/odata/v4/employee/submitTimesheet
+POST http://localhost:37209/odata/v4/employee/submitTimesheet
 Authorization: Basic aditya.mishra@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "timesheetID": "TS002"
+  "timesheetID": "TS0007"
 }
 
 ###
@@ -322,3 +328,52 @@ Content-Type: application/json
 }
 
 ###
+### Create Leave Timesheet Entry (Sick Leave - Full Week)
+POST /odata/v4/employee/MyTimesheets
+Content-Type: application/json
+Authorization: Basic nadeem.abbas@sumodigitech.com:initial
+
+{
+  "task": "Leave",
+  "weekStartDate": "2025-12-08",
+  "weekEndDate": "2025-12-14",
+  "taskDetails": "Sick Leave - Fever and cold",
+  "nonProjectType_ID": "SICK_LEAVE_NPT_UUID_HERE",
+  "mondayHours": 8,
+  "mondayTaskDetails": "Sick Leave",
+  "tuesdayHours": 8,
+  "tuesdayTaskDetails": "Sick Leave",
+  "wednesdayHours": 8,
+  "wednesdayTaskDetails": "Sick Leave",
+  "thursdayHours": 8,
+  "thursdayTaskDetails": "Sick Leave",
+  "fridayHours": 8,
+  "fridayTaskDetails": "Sick Leave",
+  "saturdayHours": 0,
+  "saturdayTaskDetails": "",
+  "sundayHours": 0,
+  "sundayTaskDetails": "",
+  "totalWeekHours": 40,
+  "isBillable": false,
+  "status": "Submitted"
+}
+
+POST http://localhost:5007/odata/v4/employee/MyTimesheets
+Authorization: Basic aditya.mishra@sumodigitech.com:initial
+Content-Type: application/json
+
+{
+  "date": "2025-12-29",
+  "nonProjectType_ID": "n47ac10b-58cc-4372-a567-0e02b2c3d562",
+  "leaveType_ID": "01234567-89ab-cdef-0123-456789abcde2",
+  "mondayHours": 8,
+  "mondayTaskDetails": "Sick Leave - Fever and cold",
+  "tuesdayHours": 8,
+  "tuesdayTaskDetails": "Sick Leave - Medical rest",
+  "wednesdayHours": 0,
+  "thursdayHours": 0,
+  "fridayHours": 0,
+  "saturdayHours": 0,
+  "sundayHours": 0,
+  "isBillable": false
+}

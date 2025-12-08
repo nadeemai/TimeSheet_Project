@@ -77,9 +77,30 @@ sap.ui.define([
 
       // Initialize selection tracking
       this._selectedEmployeesByProject = {};
+
+      var storedEmployeeId = localStorage.getItem("selectedEmployeeId");
+      if (storedEmployeeId) {
+        oVM.setProperty("/selectedEmployee", storedEmployeeId);
+      }
     },
     
-    
+    onSearchProject: function (oEvent) {
+      var sQuery = oEvent.getParameter("query") || oEvent.getParameter("newValue");
+      var oVBox = this.byId("projectVBox");
+      var oBinding = oVBox.getBinding("items");
+ 
+      if (sQuery) {
+        var oFilter = new sap.ui.model.Filter({
+          path: "projectName",
+          operator: sap.ui.model.FilterOperator.Contains,
+          value1: sQuery,
+          caseSensitive: false
+        });
+        oBinding.filter([oFilter]);
+      } else {
+        oBinding.filter([]);
+      }
+    },
 
     onAssignProject: function() {
       // Create a dialog if it doesn't exist yet
@@ -944,43 +965,52 @@ _formatDate: function (d) {
     },
 
     onDatePickerChange: function (oEvent) {
-      BusyIndicator.show(0);
-      let oDatePicker = oEvent.getSource();
-      let dateValue = oDatePicker.getDateValue();
+    
 
-      if (!dateValue || isNaN(dateValue.getTime())) {
+    let oDatePicker = oEvent.getSource();
+    let dateValue = oDatePicker.getDateValue();
+
+    if (!dateValue || isNaN(dateValue.getTime())) {
         BusyIndicator.hide();
         return;
-      }
+    }
 
-      let oModel = this.getView().getModel();
-      // Calculate Monday (start of week)
-      let weekStart = this._getWeekStart(dateValue);
+    
+    dateValue = new Date(dateValue.getFullYear(), dateValue.getMonth(), dateValue.getDate());
 
-      // Save weekStart in model
-      oModel.setProperty("/currentWeekStart", weekStart);
+    let oModel = this.getView().getModel();
 
-      // Update week days label UI
-      this._updateWeekDays(weekStart);
+    // Compute weekStart AFTER fixing date
+    let weekStart = this._getWeekStart(dateValue);
 
-      // Compute week end
-      let weekEnd = this._getWeekEnd(weekStart);
+    // Save weekStart in model
+    oModel.setProperty("/currentWeekStart", weekStart);
 
-      console.log("DatePicker changed:", {
+    oModel.setProperty("/selectedDate", this._formatDateForDatePicker(dateValue));
+
+    // Update labels
+    this._updateWeekDays(weekStart);
+
+    // Compute weekEnd (correct now)
+    let weekEnd = this._getWeekEnd(weekStart);
+
+    console.log("DatePicker changed:", {
         selectedDate: dateValue,
-        weekStart: weekStart,
-        weekEnd: weekEnd
-      });
+        weekStart,
+        weekEnd
+    });
 
-      // Load time entries for the selected employee
-      let employeeId = oModel.getProperty("/selectedEmployee");
-      if (employeeId) {
+    // Load timesheet data
+    let employeeId = oModel.getProperty("/selectedEmployee");
+
+    if (employeeId) {
         this._loadAdminTimesheetData(employeeId, weekStart, weekEnd);
-      } else {
+    } else {
         MessageToast.show("Please select an employee first");
-      }
-      BusyIndicator.hide();
-    },
+    }
+
+    
+},
 
     onProfilePress: function () {
       let oDataModel = this.getOwnerComponent().getModel("timesheetServiceV2");
@@ -1042,7 +1072,18 @@ _formatDate: function (d) {
       let that = this;
       BusyIndicator.show(0);
 
-      let normalize = date => date ? new Date(date).toISOString().split("T")[0] : "";
+       let normalize = function(date) {
+    if (!date) return "";
+
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+
+    return `${yyyy}-${mm}-${dd}`;   // local YYYY-MM-DD
+};
       let start = normalize(weekStart);
       let end = normalize(weekEnd);
 

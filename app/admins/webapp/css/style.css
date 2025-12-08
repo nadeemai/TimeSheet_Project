@@ -21,3 +21,6 @@
 .sapMITBTab{
     width: 7.5rem !important;
 }
+.sapUiSizeCompact .sapMPanel {
+    min-height: 3rem;
+}

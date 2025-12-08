@@ -1,0 +1,52 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+
+    <Dialog
+        id="leaveBalanceDialog"
+        title="Leave Balance"
+        class="leaveDialog sapUiContentPadding"
+        contentHeight="250px"
+        contentWidth="480px">
+
+        <VBox class="leaveContainer">
+
+            <!-- EMPLOYEE NAME & YEAR -->
+            <!-- <Text text="{leaveBalanceModel>/employeeName}" design="Bold" class="employeeName" /> -->
+            <!-- <Text text="{leaveBalanceModel>/year}" class="employeeYear" /> -->
+
+            <!-- TABLE -->
+            <Table
+                class="leaveTable"
+                items="{
+                    path: 'leaveBalanceModel>/leaves'
+                }">
+
+                <columns>
+                    <Column><Text text="Type" class="columnHeader" /></Column>
+                    <Column hAlign="Center"><Text text="Total" class="columnHeader" /></Column>
+                    <Column hAlign="Center"><Text text="Used" class="columnHeader" /></Column>
+                    <Column hAlign="Center"><Text text="Remaining" class="columnHeader" /></Column>
+                </columns>
+
+                <items>
+                    <ColumnListItem class="tableRow">
+                        <cells>
+                            <Text text="{leaveBalanceModel>leaveTypeName}" class="cellText" />
+                            <Text text="{leaveBalanceModel>totalLeaves}" class="cellNumber" />
+                            <Text text="{leaveBalanceModel>usedLeaves}" class="cellNumber" />
+                            <Text text="{leaveBalanceModel>remainingLeaves}" class="cellNumber remainingCell" />
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+
+        </VBox>
+
+        <endButton>
+            <Button text="Close" press=".onCloseLeaveBalance" class="closeButton" />
+        </endButton>
+
+    </Dialog>
+
+</core:FragmentDefinition>

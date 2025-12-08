@@ -30,9 +30,9 @@
                 <headerToolbar>
                     <Toolbar>
                         <ToolbarSpacer/>
-                        <Button text="Previous Week" icon="sap-icon://navigation-left-arrow" press="onPreviousWeek"/>
-                        <Button text="Current Week" type="Emphasized" press="onCurrentWeek"/>
-                        <Button text="Next Week" press="onNextWeek"/>
+                        <Button  icon="sap-icon://navigation-left-arrow" press="onPreviousWeek"/>
+                        <Button  text="Current Week" type="Default" press="onCurrentWeek"/>
+                        <Button icon="sap-icon://navigation-right-arrow"  press="onNextWeek"/>
                         <DatePicker 
                             id="datePicker" 
                             value="{
@@ -98,29 +98,29 @@
                                     <Column width="8%" hAlign="Center">
                                         <Text text="Task Details"/>
                                     </Column>
-                                    <Column width="8%" hAlign="Center">
+                                    <Column width="5%" hAlign="Center">
                                         <Text text="Total Hours"/>
                                     </Column>
                                     <!-- Day Columns -->
-                                    <Column width="6%" hAlign="Center">
+                                    <Column width="5%" hAlign="Center">
                                         <Text text="{/weekDays/0}"/>
                                     </Column>
-                                    <Column width="6%" hAlign="Center">
+                                    <Column width="5%" hAlign="Center">
                                         <Text text="{/weekDays/1}"/>
                                     </Column>
-                                    <Column width="6%" hAlign="Center">
+                                    <Column width="5%" hAlign="Center">
                                         <Text text="{/weekDays/2}"/>
                                     </Column>
-                                    <Column width="6%" hAlign="Center">
+                                    <Column width="5%" hAlign="Center">
                                         <Text text="{/weekDays/3}"/>
                                     </Column>
-                                    <Column width="6%" hAlign="Center">
+                                    <Column width="5%" hAlign="Center">
                                         <Text text="{/weekDays/4}"/>
                                     </Column>
-                                    <Column width="6%" hAlign="Center">
+                                    <Column width="5%" hAlign="Center">
                                         <Text text="{/weekDays/5}"/>
                                     </Column>
-                                    <Column width="6%" hAlign="Center">
+                                    <Column width="5%" hAlign="Center">
                                         <Text text="{/weekDays/6}"/>
                                     </Column>
                                     <Column width="13%" hAlign="Center">
@@ -184,6 +184,11 @@
     <ScrollContainer height="100%" vertical="true" class="sapUiResponsiveMargin">
         <!-- Assign Project Button -->
         <Toolbar class="sapUiTinyMarginBottom">
+        <SearchField
+                id="projectSearchField"
+                placeholder="Search Project..."
+                width="250px"
+                liveChange="onSearchProject"/>
             <ToolbarSpacer/>
             <Button 
                 text="Assign Project" 
@@ -194,7 +199,7 @@
         </Toolbar>
         
         <!-- Dynamic Project Panels -->
-        <VBox items="{/projectsData}">
+        <VBox id="projectVBox" items="{/projectsData}">
             <items>
                 <Panel expandable="true" expanded="false" headerText="{projectName}">
                     <headerToolbar>

@@ -78,6 +78,24 @@ entity NonProjectTypes : cuid, managed {
     isActive        : Boolean @title: 'Active Status' default true;
 }
 
+
+entity LeaveTypes : cuid, managed {
+    leaveTypeID     : String(10) @title: 'Leave Type ID';
+    typeName        : String(50) @title: 'Leave Type Name' @mandatory; // Personal Leave, Sick Leave, Half Day
+    defaultHours    : Decimal(4,2) @title: 'Default Hours' @mandatory; // 8 for PL/SL, 4 for Half Day
+    description     : String(500) @title: 'Description';
+    isActive        : Boolean @title: 'Active Status' default true;
+}
+
+entity EmployeeLeaveBalance : cuid, managed {
+    employee        : Association to Employees @title: 'Employee' @mandatory;
+    leaveType       : Association to LeaveTypes @title: 'Leave Type' @mandatory;
+    year            : Integer @title: 'Year' @mandatory; // e.g., 2025
+    totalLeaves     : Integer @title: 'Total Leaves Allocated' default 10;
+    usedLeaves      : Decimal(5,2) @title: 'Leaves Used' default 0;
+    remainingLeaves : Decimal(5,2) @title: 'Remaining Leaves' default 10;
+}
+
 entity Activities : cuid, managed {
     activityID      : String(10) @title: 'Activity ID';
     activity        : String(100) @title: 'Activity Name' @mandatory;
@@ -96,7 +114,7 @@ entity Timesheets : cuid, managed {
     activity        : Association to Activities @title: 'Activity';
     project         : Association to Projects @title: 'Project';
     nonProjectType  : Association to NonProjectTypes @title: 'Non-Project Type';
-    
+    leaveType       : Association to LeaveTypes @title: 'Leave Type';
  
     weekStartDate   : Date @title: 'Week Start Date' @mandatory; 
     weekEndDate     : Date @title: 'Week End Date' @mandatory; 
@@ -154,7 +172,25 @@ entity Timesheets : cuid, managed {
     approvalDate    : DateTime @title: 'Approval Date';
     isBillable      : Boolean @title: 'Billable' default true;
 }
-
+entity Documents : cuid, managed {
+    documentID      : String(10) @title: 'Document ID';
+    documentName    : String(200) @title: 'Document Name' @mandatory;
+    documentType    : String(50) @title: 'Document Type';
+    description     : String(500) @title: 'Description';
+    fileName        : String(200) @title: 'File Name' @mandatory;
+    mimeType        : String(100) @title: 'MIME Type' @mandatory;
+    fileSize        : Integer @title: 'File Size (bytes)';
+    
+    @Core.MediaType: mimeType
+    @Core.ContentDisposition.Filename: fileName
+    content         : LargeBinary @title: 'File Content';
+    
+    category        : String(50) @title: 'Category';
+    version         : String(20) @title: 'Version' default '1.0';
+    isActive        : Boolean @title: 'Active Status' default true;
+    uploadedBy      : Association to Employees @title: 'Uploaded By';
+    accessLevel     : String(20) @title: 'Access Level' default 'All';
+}
 entity Notifications : cuid, managed {
     notificationID  : String(10) @title: 'Notification ID';
     recipient       : Association to Employees @title: 'Recipient';

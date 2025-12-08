@@ -1,9 +1,9 @@
 const cds = require('@sap/cds');
 
 module.exports = cds.service.impl(async function() {
-    const { Employees, UserRoles, Activities, NonProjectTypes, Projects, Timesheets, Notifications } = this.entities;
+    const { Employees, UserRoles, Activities, NonProjectTypes, Projects, Timesheets, Notifications, LeaveTypes, EmployeeLeaveBalance } = this.entities;
 
-    //Helper to get and validate admin with better error handling
+
     const getAuthenticatedAdmin = async (req) => {
     const userId = req.user.id;
     
@@ -111,7 +111,62 @@ module.exports = cds.service.impl(async function() {
         console.log('Admin validation passed for UPDATE/DELETE');
     });
 
-    // Action: Create Employee with manager assignment
+
+this.on('initializeLeaveTypes', async (req) => {
+    console.log('🔧 Initializing Leave Types...');
+    
+    const admin = await getAuthenticatedAdmin(req);
+    if (!admin) return 'Admin authentication failed';
+
+    try {
+
+        const existingLeaveTypes = await SELECT.from('my.timesheet.LeaveTypes');
+        
+        if (existingLeaveTypes.length > 0) {
+            console.log('⚠️ Leave types already exist:', existingLeaveTypes.length);
+            return `Leave types already initialized. Found ${existingLeaveTypes.length} leave types.`;
+        }
+
+        const leaveTypesToCreate = [
+            {
+                leaveTypeID: 'LT001',
+                typeName: 'Personal Leave',
+                defaultHours: 8,
+                description: 'Full day personal leave - 8 hours',
+                isActive: true
+            },
+            {
+                leaveTypeID: 'LT002',
+                typeName: 'Sick Leave',
+                defaultHours: 8,
+                description: 'Full day sick leave - 8 hours',
+                isActive: true
+            },
+            {
+                leaveTypeID: 'LT003',
+                typeName: 'Half Day Leave',
+                defaultHours: 4,
+                description: 'Half day leave - 4 hours',
+                isActive: true
+            }
+        ];
+
+
+        await INSERT.into('my.timesheet.LeaveTypes').entries(leaveTypesToCreate);
+
+        console.log('Successfully created 3 leave types');
+        
+        const createdLeaveTypes = await SELECT.from('my.timesheet.LeaveTypes');
+        
+        return `Successfully initialized ${createdLeaveTypes.length} leave types: Personal Leave (8hrs), Sick Leave (8hrs), Half Day Leave (4hrs)`;
+        
+    } catch (error) {
+        console.error('Error initializing leave types:', error);
+        return req.error(500, 'Failed to initialize leave types: ' + error.message);
+    }
+});
+
+
     this.on('createEmployee', async (req) => {
         const { employeeID, firstName, lastName, email, managerEmployeeID, roleID } = req.data;
 
@@ -728,6 +783,65 @@ console.log('Enhanced notifications created for project assignment');
         }
     });
 
+
+this.before('CREATE', 'LeaveTypes', async (req) => {
+    if (!req.data.leaveTypeID) {
+        const count = await SELECT.from('my.timesheet.LeaveTypes');
+        req.data.leaveTypeID = `LT${String(count.length + 1).padStart(3, '0')}`;
+        console.log(' Generated leaveTypeID:', req.data.leaveTypeID);
+    }
+});
+
+
+this.before('CREATE', 'EmployeeLeaveBalance', async (req) => {
+    const admin = await getAuthenticatedAdmin(req);
+    if (!admin) return req.reject(403, 'Admin access required');
+
+    if (!req.data.year) {
+        req.data.year = new Date().getFullYear();
+    }
+
+    if (req.data.totalLeaves === undefined) {
+        req.data.totalLeaves = 10;
+    }
+    if (req.data.usedLeaves === undefined) {
+        req.data.usedLeaves = 0;
+    }
+    if (req.data.remainingLeaves === undefined) {
+        req.data.remainingLeaves = req.data.totalLeaves;
+    }
+
+    console.log('Employee Leave Balance validated');
+});
+
+
+this.before('UPDATE', 'EmployeeLeaveBalance', async (req) => {
+    const admin = await getAuthenticatedAdmin(req);
+    if (!admin) return req.reject(403, 'Admin access required');
+
+
+    if (req.data.usedLeaves !== undefined || req.data.totalLeaves !== undefined) {
+        const balanceID = req.data.ID;
+        const currentBalance = await SELECT.one
+            .from('my.timesheet.EmployeeLeaveBalance')
+            .where({ ID: balanceID });
+
+        if (currentBalance) {
+            const totalLeaves = req.data.totalLeaves !== undefined 
+                ? req.data.totalLeaves 
+                : currentBalance.totalLeaves;
+            
+            const usedLeaves = req.data.usedLeaves !== undefined 
+                ? req.data.usedLeaves 
+                : currentBalance.usedLeaves;
+
+            req.data.remainingLeaves = totalLeaves - usedLeaves;
+
+            console.log('Recalculated remaining leaves:', req.data.remainingLeaves);
+        }
+    }
+});
+
     this.before('CREATE', 'Projects', async (req) => {
         if (!req.data.projectID) {
             const count = await SELECT.from(Projects);
@@ -952,10 +1066,82 @@ const createNotification = async (recipientID, message, type, entityType, entity
         relatedEntityID: entityID
     });
     
-    console.log(`✅ Notification created: ${type} for recipient ${recipientID}`);
+    console.log(`Notification created: ${type} for recipient ${recipientID}`);
 };
 
-    // Action 1: Delete all timesheets for a specific employee
+
+this.on('READ', 'LeaveSummary', async (req) => {
+    console.log('LeaveSummary READ - Start');
+    
+    const admin = await getAuthenticatedAdmin(req);
+    if (!admin) return [];
+
+    const currentYear = new Date().getFullYear();
+
+
+    const employees = await SELECT.from('my.timesheet.Employees')
+        .where({ isActive: true });
+
+    const leaveTypes = await SELECT.from('my.timesheet.LeaveTypes')
+        .where({ isActive: true });
+
+    const summaryData = [];
+
+    for (const employee of employees) {
+        for (const leaveType of leaveTypes) {
+
+            let balance = await SELECT.one
+                .from('my.timesheet.EmployeeLeaveBalance')
+                .where({ 
+                    employee_ID: employee.ID, 
+                    leaveType_ID: leaveType.ID, 
+                    year: currentYear 
+                });
+
+            if (!balance) {
+                await INSERT.into('my.timesheet.EmployeeLeaveBalance').entries({
+                    employee_ID: employee.ID,
+                    leaveType_ID: leaveType.ID,
+                    year: currentYear,
+                    totalLeaves: 10,
+                    usedLeaves: 0,
+                    remainingLeaves: 10
+                });
+
+                balance = await SELECT.one
+                    .from('my.timesheet.EmployeeLeaveBalance')
+                    .where({ 
+                        employee_ID: employee.ID, 
+                        leaveType_ID: leaveType.ID, 
+                        year: currentYear 
+                    });
+
+                console.log(`Created leave balance for ${employee.employeeID} - ${leaveType.typeName}`);
+            }
+
+            summaryData.push({
+                ID: balance.ID,
+                employeeID: employee.ID,
+                empID: employee.employeeID,
+                employeeName: `${employee.firstName} ${employee.lastName}`,
+                employeeEmail: employee.email,
+                leaveTypeID: leaveType.leaveTypeID,
+                leaveTypeName: leaveType.typeName,
+                defaultHours: leaveType.defaultHours,
+                year: currentYear,
+                totalLeaves: balance.totalLeaves || 10,
+                usedLeaves: balance.usedLeaves || 0,
+                remainingLeaves: balance.remainingLeaves || 10,
+                createdAt: balance.createdAt,
+                modifiedAt: balance.modifiedAt
+            });
+        }
+    }
+
+    console.log('LeaveSummary generated for', summaryData.length, 'records');
+    return summaryData;
+});
+
     this.on('deleteEmployeeTimesheets', async (req) => {
         const { employeeID } = req.data;
         
@@ -1269,4 +1455,109 @@ const createNotification = async (recipientID, message, type, entityType, entity
             return req.error(500, 'Failed to change employee role: ' + error.message);
         }
     });
+    // ========================================
+// DOCUMENT MANAGEMENT - Add to admin-service.js
+// ========================================
+
+this.on('READ', 'Documents', async (req) => {
+    console.log('📄 Documents READ (Admin)');
+
+    try {
+        const documents = await SELECT.from('my.timesheet.Documents');
+
+        for (const doc of documents) {
+            if (doc.uploadedBy_ID) {
+                const uploader = await SELECT.one
+                    .from('my.timesheet.Employees')
+                    .columns('firstName', 'lastName')
+                    .where({ ID: doc.uploadedBy_ID });
+                
+                if (uploader) {
+                    doc.uploadedByName = `${uploader.firstName} ${uploader.lastName}`;
+                }
+            }
+            
+            delete doc.content;
+        }
+
+        return documents;
+
+    } catch (error) {
+        console.error('Error reading documents:', error);
+        return [];
+    }
+});
+
+this.on('uploadDocument', async (req) => {
+    console.log('📤 Upload Document (Admin)');
+    const { 
+        documentName, 
+        documentType, 
+        description, 
+        fileName, 
+        mimeType, 
+        content, 
+        category, 
+        version, 
+        accessLevel 
+    } = req.data;
+
+    if (!documentName || !fileName || !mimeType || !content) {
+        return req.error(400, 'Required fields: documentName, fileName, mimeType, content');
+    }
+
+    try {
+        const existingDocs = await SELECT.from('my.timesheet.Documents');
+        const documentID = `DOC${String(existingDocs.length + 1).padStart(4, '0')}`;
+
+        let fileSize = 0;
+        if (typeof content === 'string') {
+            fileSize = Math.ceil((content.length * 3) / 4);
+        } else if (Buffer.isBuffer(content)) {
+            fileSize = content.length;
+        }
+
+        await INSERT.into('my.timesheet.Documents').entries({
+            documentID: documentID,
+            documentName: documentName,
+            documentType: documentType || 'General',
+            description: description || '',
+            fileName: fileName,
+            mimeType: mimeType,
+            fileSize: fileSize,
+            content: content,
+            category: category || 'Manual',
+            version: version || '1.0',
+            isActive: true,
+            accessLevel: accessLevel || 'All'
+        });
+
+        console.log('✅ Document uploaded:', documentID);
+        return `Document uploaded successfully with ID: ${documentID}`;
+
+    } catch (error) {
+        console.error('Error uploading document:', error);
+        return req.error(500, 'Failed to upload document');
+    }
+});
+
+this.on('deleteDocument', async (req) => {
+    const { documentID } = req.data;
+
+    if (!documentID) {
+        return req.error(400, 'Document ID is required');
+    }
+
+    try {
+        await UPDATE('my.timesheet.Documents')
+            .set({ isActive: false })
+            .where({ documentID: documentID });
+
+        return `Document ${documentID} deleted successfully`;
+
+    } catch (error) {
+        console.error('Error deleting document:', error);
+        return req.error(500, 'Failed to delete document');
+    }
+});
 });

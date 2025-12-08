@@ -657,7 +657,7 @@ await INSERT.into('my.timesheet.Notifications').entries({
             })
             .where({ ID: timesheet.ID });
 
-        console.log(`Timesheet ${timesheetID} rejected by manager ${manager.employeeID}`);
+        console.log(`🚫 Timesheet ${timesheetID} rejected by manager ${manager.employeeID}`);
 
         // Send notification to employee
        const notificationCount = await SELECT.from('my.timesheet.Notifications');

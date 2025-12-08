@@ -210,7 +210,7 @@
                 <Button icon="sap-icon://navigation-right-arrow" press="onNextWeek"/>
                 <DatePicker 
     id="datePicker" 
-     
+    value="{path: '/selectedDate', type: 'sap.ui.model.type.Date'}"
     change="onDatePickerChange" 
     width="150px"
     />
@@ -507,6 +507,79 @@
               </content>
             </Panel>
           </IconTabFilter>
+          
+          <!-- Leave Management Tab -->
+<IconTabFilter id="leaveManagementTab" key="leave" text="Leave Management" icon="sap-icon://calendar">
+  <Panel headerText="Leave Management">
+    <headerToolbar>
+      <Toolbar>
+       
+        <ToolbarSpacer/>
+        <SearchField
+          id="employeeLeaveSearch"
+          placeholder="Search Employee..."
+          width="250px"
+          liveChange="onSearchEmployeeLeave"/>
+      </Toolbar>
+    </headerToolbar>
+    <content>
+      <!-- Dynamic Employee Leave Panels -->
+      <VBox id="employeeLeaveVBox" items="{path: '/leaveBalancesByEmployee'}">
+        <items>
+          <Panel expandable="true" expanded="false" headerText="{employeeName}">
+            <headerToolbar>
+              <Toolbar>
+                <Title text="{employeeName}" level="H4"/>
+                <ToolbarSpacer/>
+              </Toolbar>
+            </headerToolbar>
+           
+            <content>
+              <!-- Leave Types Table -->
+              <table:Table
+                rows="{path: 'leaveTypes', templateShareable: false}"
+                visibleRowCount="5"
+                width="100%"
+                class="sapUiSmallMarginTop">
+                <table:columns>
+                  <table:Column width="15%">
+                    <Label text="Leave Type"/>
+                    <table:template>
+                      <Text text="{leaveType}"/>
+                    </table:template>
+                  </table:Column>
+                 
+                  <table:Column width="15%">
+                    <Label text="Total Leave"/>
+                    <table:template>
+                      <Text text="{totalLeaves}"/>
+                    </table:template>
+                  </table:Column>
+                 
+                  <table:Column width="15%">
+                    <Label text="Used Leave"/>
+                    <table:template>
+                      <Text text="{usedLeave}"/>
+                    </table:template>
+                  </table:Column>
+                 
+                  <table:Column width="15%">
+                    <Label text="Remaining Leave"/>
+                    <table:template>
+                      <ObjectStatus
+                        text="{remainingLeave}"
+                        state="{path: 'remainingLeave', formatter: '.formatLeaveStatusState'}"/>
+                    </table:template>
+                  </table:Column>
+                </table:columns>
+              </table:Table>
+            </content>
+          </Panel>
+        </items>
+      </VBox>
+    </content>
+  </Panel>
+</IconTabFilter>
         </items>
       </IconTabBar>
     </content>

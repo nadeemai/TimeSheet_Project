@@ -11,7 +11,10 @@
     <Page id="mainPage" title="Weekly Timesheet" showHeader="true">
         <headerContent>
             <Button id="profileButton" icon="sap-icon://person-placeholder" tooltip="My Profile" press="onProfilePress" class="sapUiTinyMarginEnd"/>
-            <Button id="infoButton" icon="sap-icon://action-settings" tooltip="Add Comments" press="onInfoPress" class="sapUiTinyMarginEnd"/>
+            <Button icon="sap-icon://activity-items"
+        press=".onOpenLeaveBalance"
+        tooltip="View Leave Balance"
+        type="Transparent" />
             <Button id="settingsBtn" icon="sap-icon://information" tooltip="Settings" press="onSettingsPress"/>
             <Button id="reportsBtn" icon="sap-icon://business-objects-experience" tooltip="View Reports" press="onViewReports"/>
             <!-- <Button id="logoutBtn" icon="sap-icon://log" tooltip="Logout" press="onLogoutPress"/> -->
@@ -88,12 +91,18 @@
                 press="onAddEntry"
                 type="Emphasized"
                 class="sapUiTinyMarginEnd"/>
+<Button 
+    text="PDF"
+    icon="sap-icon://download"
+    press=".onDownloadDocument">
 
-        <!-- Download Button -->
-        <!-- <Button icon="sap-icon://download"
-                text="PDF"
-                press="onDownloadPDF"
-                class="sapUiTinyMarginEnd"/> -->
+   
+
+</Button>
+
+
+
+
     </HBox>
 </HBox>
 
@@ -331,7 +340,10 @@
         <Text text="{bookedHoursModel>AllocatedHours}"/>
         <Text text="{bookedHoursModel>BookedHours}"/>
         <Text text="{bookedHoursModel>RemainingHours}"/>
-        <Text text="{bookedHoursModel>Utilization}"/>
+          <ProgressIndicator id="_IDGenProgressIndicator" 
+                                displayValue="{bookedHoursModel>Utilization}%"
+                                percentValue="{bookedHoursModel>Utilization}"
+                                state="{= ${bookedHoursModel>Utilization} > 90 ? 'Error' : ${bookedHoursModel>Utilization} > 75 ? 'Warning' : 'Success' }"/>
     </cells>
 </ColumnListItem>
 

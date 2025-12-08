@@ -67,6 +67,34 @@ service EmployeeService @(requires: 'authenticated-user') {
     where
       isActive = true;
 
+ 
+  @readonly
+  entity AvailableLeaveTypes as
+    select from timesheet.LeaveTypes {
+      *
+    }
+    where
+      isActive = true;
+
+  @readonly
+  entity MyLeaveBalance as
+    select from timesheet.EmployeeLeaveBalance {
+      key ID,
+          employee.ID                                as employee_ID    : UUID,
+          employee.employeeID                        as employeeCode   : String,
+          employee.firstName || ' ' || employee.lastName as employeeName : String,
+          leaveType.ID                               as leaveType_ID   : UUID,
+          leaveType.leaveTypeID                      as leaveTypeCode  : String,
+          leaveType.typeName                         as leaveTypeName  : String,
+          leaveType.defaultHours                     as defaultHours   : Decimal(4,2),
+          year,
+          totalLeaves,
+          usedLeaves,
+          remainingLeaves
+    }
+    where
+      employee.email = $user.id;
+
   @readonly
   entity AvailableTaskTypes {
     key code          : String  @title: 'Task Code';
@@ -104,6 +132,12 @@ service EmployeeService @(requires: 'authenticated-user') {
 
           nonProjectType.ID                                  as nonProjectType_ID  : UUID,
           nonProjectType.typeName                            as nonProjectTypeName : String,
+
+           leaveType.ID                                       as leaveType_ID       : UUID,
+        leaveType.typeName                                 as leaveTypeName      : String,
+        leaveType.leaveTypeID                              as leaveTypeCode      : String,
+        leaveType.defaultHours                             as leaveDefaultHours  : Decimal(4,2),
+
 
           approvedBy.ID                                      as approvedBy_ID      : UUID,
           approvedBy.firstName || ' ' || approvedBy.lastName as approvedByName     : String,
@@ -213,12 +247,37 @@ service EmployeeService @(requires: 'authenticated-user') {
     where
       employee.email = $user.id; 
 
+     @readonly
+  entity AvailableDocuments as
+    select from timesheet.Documents {
+      key ID,
+          documentID,
+          documentName,
+          documentType,
+          description,
+          fileName,
+          mimeType,
+          fileSize,
+          category,
+          version,
+          isActive,
+          createdAt,
+          modifiedAt,
+          uploadedBy.firstName || ' ' || uploadedBy.lastName as uploadedByName : String
+    }
+    where isActive = true;
+
   action   submitTimesheet(timesheetID: String) returns String;
   action   updateTimesheet(timesheetID: String, weekData: String) returns String;
   function validateDailyHours(date: Date) returns Decimal;
   function getWeekBoundaries(date: Date) returns {
     weekStart : Date;
     weekEnd   : Date;
+  };
+  function downloadDocument(documentID: String) returns {
+    fileName    : String;
+    mimeType    : String;
+    content     : LargeBinary;
   };
 }
 
@@ -451,6 +510,41 @@ entity OverallProgressSummary as projection on timesheet.Projects;
     };
 
   @readonly
+  entity LeaveSummary as
+    select from timesheet.EmployeeLeaveBalance {
+      key ID,
+          employee.ID                                    as employeeID       : UUID,
+          employee.employeeID                            as empID            : String,
+          employee.firstName || ' ' || employee.lastName as employeeName     : String,
+          employee.email                                 as employeeEmail    : String,
+          leaveType.leaveTypeID                          as leaveTypeID      : String,
+          leaveType.typeName                             as leaveTypeName    : String,
+          leaveType.defaultHours                         as defaultHours     : Decimal(4,2),
+          year,
+          totalLeaves,
+          usedLeaves,
+          remainingLeaves,
+          createdAt,
+          modifiedAt
+    };
+
+  @cds.redirection.target
+  entity LeaveTypes as
+    select from timesheet.LeaveTypes {
+      *
+    };
+
+  @cds.redirection.target
+  entity EmployeeLeaveBalance as
+    select from timesheet.EmployeeLeaveBalance {
+      *,
+      employee.firstName || ' ' || employee.lastName     as employeeName     : String,
+      employee.employeeID                                as employeeEmpID    : String,
+      leaveType.typeName                                 as leaveTypeName    : String,
+      leaveType.leaveTypeID                              as leaveTypeCode    : String
+    };
+
+  @readonly
   entity AvailableManagers as
     select from timesheet.Employees {
       *,
@@ -459,7 +553,26 @@ entity OverallProgressSummary as projection on timesheet.Projects;
     where
           isActive          = true
       and userRole.roleName = 'Manager';
+    
+    @cds.redirection.target
+  entity Documents as
+    select from timesheet.Documents {
+      *,
+      uploadedBy.firstName || ' ' || uploadedBy.lastName as uploadedByName : String
+    };
 
+  action uploadDocument(
+    documentName: String,
+    documentType: String,
+    description: String,
+    fileName: String,
+    mimeType: String,
+    content: LargeBinary,
+    category: String,
+    version: String,
+    accessLevel: String
+  ) returns String;
+  action deleteDocument(documentID: String) returns String;
   action createEmployee(employeeID: String, firstName: String, lastName: String, email: String, managerEmployeeID: String, roleID: String) returns String;
   action createRole(roleID: String, roleName: String, description: String) returns String;
   action createActivity(activityID: String, activity: String, activityType: String, projectID: String, isBillable: Boolean, plannedHours: Integer, startDate: Date, endDate: Date) returns String;
@@ -484,4 +597,5 @@ entity OverallProgressSummary as projection on timesheet.Projects;
   action unassignProjectFromEmployee(employeeID: String, projectID: String) returns String;
   action deleteEmployee(employeeID: String) returns String;
   action changeEmployeeRole(employeeID: String, newRoleID: String) returns String;
+  action initializeLeaveBalances(year: Integer) returns String;
 }
