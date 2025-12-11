@@ -399,7 +399,10 @@ _formatDate: function (d) {
             }
           }
           
-          MessageBox.error("Failed to assign project: " + sErrorMessage);
+          MessageBox.error("Project is Already Assigned");
+          if(that._oAssignProjectDialog){
+            that._oAssignProjectDialog.close();
+          }
         }
       });
     },

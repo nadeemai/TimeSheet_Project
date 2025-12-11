@@ -91,6 +91,17 @@
                 press="onAddEntry"
                 type="Emphasized"
                 class="sapUiTinyMarginEnd"/>
+<Button 
+    text="PDF"
+    icon="sap-icon://download"
+    press=".onDownloadDocument">
+
+   
+
+</Button>
+
+
+
 
     </HBox>
 </HBox>

@@ -167,40 +167,61 @@ sap.ui.define([
     },
 
     // Function to group leave balances by employee
-    _groupLeaveBalancesByEmployee: function (aLeaveBalances) {
-      var oGroupedData = {};
+   _groupLeaveBalancesByEmployee: function (aLeaveBalances) {
 
-      // Group by employee
-      aLeaveBalances.forEach(function (leaveBalance) {
-        // Handle different possible field names for employee ID
-        var sEmployeeId = leaveBalance.employeeEmpID || leaveBalance.employeeId || leaveBalance.employeeID;
-        var sEmployeeName = leaveBalance.employeeName || (leaveBalance.firstName + " " + leaveBalance.lastName);
+    var oGroupedData = {};
 
-        if (!oGroupedData[sEmployeeId]) {
-          oGroupedData[sEmployeeId] = {
-            employeeId: sEmployeeId,
-            employeeName: sEmployeeName,
-            leaveTypes: []
-          };
+    aLeaveBalances.forEach(function (leaveBalance) {
+
+        // Extract Employee ID
+        var sEmployeeId =
+            leaveBalance.employeeEmpID ||
+            leaveBalance.employeeId ||
+            leaveBalance.employeeID;
+
+        // Extract Employee Name
+        var sEmployeeName =
+            leaveBalance.employeeName ||
+            (leaveBalance.firstName + " " + leaveBalance.lastName);
+
+        var sUserRole = leaveBalance.userRoleName || "";  // 🔥 Role field
+
+        // ❌ Skip Managers — only include non-managers
+        if (sUserRole.toLowerCase() === "manager") {
+            console.log("Skipping manager:", sEmployeeName);
+            return;
         }
 
-        // Add leave type to the employee
-        oGroupedData[sEmployeeId].leaveTypes.push({
-          id: leaveBalance.ID,
-          leaveType: leaveBalance.leaveTypeName || leaveBalance.leaveType || "Sick Leave",
-          totalLeaves: parseFloat(leaveBalance.totalLeaves || leaveBalance.totalLeavesDays || 0).toFixed(2),
-          usedLeave: parseFloat(leaveBalance.usedLeaves || leaveBalance.usedLeaveDays || 0).toFixed(2),
-          remainingLeave: parseFloat(leaveBalance.remainingLeaves || leaveBalance.remainingLeave || leaveBalance.remainingLeaveDays || 0).toFixed(2),
-          createdDate: leaveBalance.createdAt || leaveBalance.createdDate,
-          createdBy: leaveBalance.createdBy || leaveBalance.creatorEmail
-        });
-      });
+        // Create group if doesn't exist
+        if (!oGroupedData[sEmployeeId]) {
+            oGroupedData[sEmployeeId] = {
+                employeeId: sEmployeeId,
+                employeeName: sEmployeeName,
+                leaveTypes: []
+            };
+        }
 
-      // Convert to array for binding
-      return Object.keys(oGroupedData).map(function (employeeId) {
+        // Add leave type entry
+        oGroupedData[sEmployeeId].leaveTypes.push({
+            id: leaveBalance.ID,
+            leaveType: leaveBalance.leaveTypeName || leaveBalance.leaveType || "Sick Leave",
+            totalLeaves: parseFloat(leaveBalance.totalLeaves || leaveBalance.totalLeavesDays || 0).toFixed(2),
+            usedLeave: parseFloat(leaveBalance.usedLeaves || leaveBalance.usedLeaveDays || 0).toFixed(2),
+            remainingLeave: parseFloat(
+                leaveBalance.remainingLeaves || leaveBalance.remainingLeave || leaveBalance.remainingLeaveDays || 0
+            ).toFixed(2),
+            createdDate: leaveBalance.createdAt || leaveBalance.createdDate,
+            createdBy: leaveBalance.createdBy || leaveBalance.creatorEmail
+        });
+
+    });
+
+    // Convert object → array
+    return Object.keys(oGroupedData).map(function (employeeId) {
         return oGroupedData[employeeId];
-      });
-    },
+    });
+},
+
 
     // Function to handle add leave balance button press
     onAddLeaveBalance: function () {

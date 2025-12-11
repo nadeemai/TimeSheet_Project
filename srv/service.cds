@@ -86,7 +86,6 @@ service EmployeeService @(requires: 'authenticated-user') {
           leaveType.ID                               as leaveType_ID   : UUID,
           leaveType.leaveTypeID                      as leaveTypeCode  : String,
           leaveType.typeName                         as leaveTypeName  : String,
-          leaveType.defaultHours                     as defaultHours   : Decimal(4,2),
           year,
           totalLeaves,
           usedLeaves,
@@ -136,7 +135,6 @@ service EmployeeService @(requires: 'authenticated-user') {
            leaveType.ID                                       as leaveType_ID       : UUID,
         leaveType.typeName                                 as leaveTypeName      : String,
         leaveType.leaveTypeID                              as leaveTypeCode      : String,
-        leaveType.defaultHours                             as leaveDefaultHours  : Decimal(4,2),
 
 
           approvedBy.ID                                      as approvedBy_ID      : UUID,
@@ -266,6 +264,16 @@ service EmployeeService @(requires: 'authenticated-user') {
           uploadedBy.firstName || ' ' || uploadedBy.lastName as uploadedByName : String
     }
     where isActive = true;
+
+  // NEW: Approval Flow Entity
+  @readonly
+  entity ApprovalFlow {
+    key category        : String  @title: 'Category';
+        weekStartDate   : Date    @title: 'Week Start Date';
+        weekEndDate     : Date    @title: 'Week End Date';
+        totalHours      : Decimal(10,2) @title: 'Total Hours Pending Approval';
+        timesheetCount  : Integer @title: 'Number of Timesheets';
+  };
 
   action   submitTimesheet(timesheetID: String) returns String;
   action   updateTimesheet(timesheetID: String, weekData: String) returns String;
@@ -519,7 +527,6 @@ entity OverallProgressSummary as projection on timesheet.Projects;
           employee.email                                 as employeeEmail    : String,
           leaveType.leaveTypeID                          as leaveTypeID      : String,
           leaveType.typeName                             as leaveTypeName    : String,
-          leaveType.defaultHours                         as defaultHours     : Decimal(4,2),
           year,
           totalLeaves,
           usedLeaves,
@@ -534,15 +541,15 @@ entity OverallProgressSummary as projection on timesheet.Projects;
       *
     };
 
-  @cds.redirection.target
-  entity EmployeeLeaveBalance as
-    select from timesheet.EmployeeLeaveBalance {
-      *,
-      employee.firstName || ' ' || employee.lastName     as employeeName     : String,
-      employee.employeeID                                as employeeEmpID    : String,
-      leaveType.typeName                                 as leaveTypeName    : String,
-      leaveType.leaveTypeID                              as leaveTypeCode    : String
-    };
+@cds.redirection.target
+entity EmployeeLeaveBalance as
+  select from timesheet.EmployeeLeaveBalance {
+    *,
+    employee.firstName || ' ' || employee.lastName as employeeName     : String,
+    employee.employeeID                            as employeeEmpID    : String,
+    employee.userRole.roleName                     as userRoleName     : String,
+    employee.userRole.roleID                       as userRoleID       : String
+  };
 
   @readonly
   entity AvailableManagers as

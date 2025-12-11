@@ -329,7 +329,7 @@ Content-Type: application/json
 
 ###
 ### Create Leave Timesheet Entry (Sick Leave - Full Week)
-POST /odata/v4/employee/MyTimesheets
+POST /odata/v4/employee/c
 Content-Type: application/json
 Authorization: Basic nadeem.abbas@sumodigitech.com:initial
 

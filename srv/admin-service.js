@@ -16,21 +16,18 @@ module.exports = cds.service.impl(async function() {
         return null;
     }
 
-    // Check if user has Admin role in authentication system
     const hasAdminRole = req.user.is('Admin');
-    console.log('🔍 Admin Auth - Has Admin role in BTP:', hasAdminRole);
+    console.log('Admin Auth - Has Admin role in BTP:', hasAdminRole);
     
     if (!hasAdminRole) {
-        console.log('❌ User does not have Admin role in BTP');
+        console.log('User does not have Admin role in BTP');
         req.error(403, 'Admin role required. Please ensure you are logged in with Admin credentials.');
         return null;
     }
 
-    // STRATEGY 1: Try to find by email directly
     let admin = await SELECT.one.from('my.timesheet.Employees')
         .where({ email: userId, isActive: true });
 
-    // STRATEGY 2: If userId is not a full email, try appending domain
     if (!admin && !userId.includes('@')) {
         console.log('⚠️ User ID is not an email, trying with @sumodigitech.com domain...');
         const emailWithDomain = `${userId}@sumodigitech.com`;
@@ -38,7 +35,6 @@ module.exports = cds.service.impl(async function() {
             .where({ email: emailWithDomain, isActive: true });
     }
 
-    // STRATEGY 3: Case-insensitive email search
     if (!admin) {
         console.log('⚠️ Trying case-insensitive email search...');
         const allEmployees = await SELECT.from('my.timesheet.Employees')
@@ -51,8 +47,7 @@ module.exports = cds.service.impl(async function() {
     }
 
     if (!admin) {
-        console.log('⚠️ Admin profile not found in database, but has Admin role in BTP');
-        // Return a minimal admin object to allow operation
+        console.log(' Admin profile not found in database, but has Admin role in BTP');
         return { 
             ID: userId, 
             isAdmin: true,
@@ -61,15 +56,14 @@ module.exports = cds.service.impl(async function() {
         };
     }
 
-    // Verify user has admin role in database
     if (admin.userRole_ID) {
         const role = await SELECT.one.from('my.timesheet.UserRoles')
             .where({ ID: admin.userRole_ID });
             
-        console.log('🔍 Admin Auth - Database role:', role?.roleName);
+        console.log('Admin Auth - Database role:', role?.roleName);
         
         if (role && role.roleName !== 'Admin') {
-            console.log('❌ User role in database is not Admin');
+            console.log(' User role in database is not Admin');
             req.error(403, 'Access denied. Admin role required in database.');
             return null;
         }
@@ -78,19 +72,16 @@ module.exports = cds.service.impl(async function() {
     console.log('Admin authenticated successfully:', admin.employeeID, 'Email:', admin.email);
     return admin;
 };
-    //Separate validation - more lenient for CREATE
     this.before('CREATE', 'Employees', async (req) => {
-        console.log('🔍 Before CREATE Employee - Start validation');
+        console.log('Before CREATE Employee - Start validation');
         
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) {
-            console.log('❌ Admin validation failed for CREATE');
+            console.log(' Admin validation failed for CREATE');
             return req.reject(403, 'Admin access required');
         }
         
         console.log('Admin validation passed for CREATE');
-        
-        // Auto-generate employeeID if not provided
         if (!req.data.employeeID) {
             const count = await SELECT.from(Employees);
             req.data.employeeID = `EMP${String(count.length + 1).padStart(4, '0')}`;
@@ -98,9 +89,8 @@ module.exports = cds.service.impl(async function() {
         }
     });
 
-    // Validate admin for UPDATE and DELETE on sensitive entities
     this.before(['UPDATE', 'DELETE'], ['Employees', 'UserRoles', 'Activities', 'NonProjectTypes'], async (req) => {
-        console.log('🔍 Before UPDATE/DELETE - Start validation');
+        console.log(' Before UPDATE/DELETE - Start validation');
         
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) {
@@ -123,7 +113,7 @@ this.on('initializeLeaveTypes', async (req) => {
         const existingLeaveTypes = await SELECT.from('my.timesheet.LeaveTypes');
         
         if (existingLeaveTypes.length > 0) {
-            console.log('⚠️ Leave types already exist:', existingLeaveTypes.length);
+            console.log('Leave types already exist:', existingLeaveTypes.length);
             return `Leave types already initialized. Found ${existingLeaveTypes.length} leave types.`;
         }
 
@@ -142,13 +132,7 @@ this.on('initializeLeaveTypes', async (req) => {
                 description: 'Full day sick leave - 8 hours',
                 isActive: true
             },
-            {
-                leaveTypeID: 'LT003',
-                typeName: 'Half Day Leave',
-                defaultHours: 4,
-                description: 'Half day leave - 4 hours',
-                isActive: true
-            }
+            
         ];
 
 
@@ -158,7 +142,7 @@ this.on('initializeLeaveTypes', async (req) => {
         
         const createdLeaveTypes = await SELECT.from('my.timesheet.LeaveTypes');
         
-        return `Successfully initialized ${createdLeaveTypes.length} leave types: Personal Leave (8hrs), Sick Leave (8hrs), Half Day Leave (4hrs)`;
+        return `Successfully initialized ${createdLeaveTypes.length} leave types: Personal Leave (8hrs), Sick Leave (8hrs)`;
         
     } catch (error) {
         console.error('Error initializing leave types:', error);
@@ -170,9 +154,8 @@ this.on('initializeLeaveTypes', async (req) => {
     this.on('createEmployee', async (req) => {
         const { employeeID, firstName, lastName, email, managerEmployeeID, roleID } = req.data;
 
-        console.log('🔍 createEmployee action called');
+        console.log('createEmployee action called');
         
-        // Validate admin
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) {
             console.log('createEmployee: Admin authentication failed');
@@ -202,8 +185,6 @@ this.on('initializeLeaveTypes', async (req) => {
             if (!manager) {
                 return req.error(404, 'Manager not found');
             }
-
-            // Verify that the selected manager has Manager role
             if (manager.userRole_ID) {
                 const managerRole = await SELECT.one.from(UserRoles)
                     .where({ ID: manager.userRole_ID });
@@ -228,11 +209,10 @@ this.on('initializeLeaveTypes', async (req) => {
         return `Employee ${firstName} ${lastName} created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}`;
     });
 
-    // Action: Create Role
     this.on('createRole', async (req) => {
         const { roleID, roleName, description } = req.data;
 
-        // Validate admin
+  
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -250,11 +230,9 @@ this.on('initializeLeaveTypes', async (req) => {
         return `Role ${roleName} created successfully`;
     });
 
-    // Action: Create Activity
     this.on('createActivity', async (req) => {
         const { activityID, activity, activityType, projectID, isBillable, plannedHours, startDate, endDate } = req.data;
 
-        //Validate admin
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -263,12 +241,9 @@ this.on('initializeLeaveTypes', async (req) => {
             return req.error(400, 'Activity ID already exists');
         }
 
-        // Validate activity type
         if (!['Project', 'NonProject', 'Mixed'].includes(activityType)) {
             return req.error(400, 'Activity type must be Project, NonProject, or Mixed');
         }
-
-        // Verify project exists if provided
         let project_ID = null;
         if (projectID) {
             const project = await SELECT.one.from(Projects).where({ projectID });
@@ -293,11 +268,9 @@ this.on('initializeLeaveTypes', async (req) => {
         return `Activity ${activity} created successfully`;
     });
 
-    // Action: Update Activity
     this.on('updateActivity', async (req) => {
         const { activityID, activity, activityType, projectID, isBillable, plannedHours, startDate, endDate, status } = req.data;
 
-        // Validate admin
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -305,18 +278,12 @@ this.on('initializeLeaveTypes', async (req) => {
         if (!activityRecord) {
             return req.error(404, 'Activity not found');
         }
-
-        // Validate activity type if provided
         if (activityType && !['Project', 'NonProject', 'Mixed'].includes(activityType)) {
             return req.error(400, 'Activity type must be Project, NonProject, or Mixed');
         }
-
-        // Validate status if provided
         if (status && !['Active', 'Inactive', 'Completed'].includes(status)) {
             return req.error(400, 'Status must be Active, Inactive, or Completed');
         }
-
-        // Verify project exists if provided
         let project_ID = activityRecord.project_ID;
         if (projectID) {
             const project = await SELECT.one.from(Projects).where({ projectID });
@@ -342,11 +309,9 @@ this.on('initializeLeaveTypes', async (req) => {
         return `Activity ${activity} updated successfully`;
     });
 
-    // Action: Create Non-Project Type
     this.on('createNonProjectType', async (req) => {
         const { nonProjectTypeID, typeName, description, isBillable } = req.data;
 
-        //Validate admin
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -366,11 +331,9 @@ this.on('initializeLeaveTypes', async (req) => {
         return `Non-Project Type ${typeName} created successfully`;
     });
 
-    // Action: Update Non-Project Type
     this.on('updateNonProjectType', async (req) => {
         const { nonProjectTypeID, typeName, description, isBillable, isActive } = req.data;
 
-        // Validate admin
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -386,11 +349,9 @@ this.on('initializeLeaveTypes', async (req) => {
         return `Non-Project Type ${typeName} updated successfully`;
     });
 
-    // Action: Create Project
     this.on('createProject', async (req) => {
         const { projectID, projectName, description, startDate, endDate, projectRole, budget, allocatedHours, projectOwnerID, isBillable } = req.data;
 
-        //Validate admin
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -399,12 +360,10 @@ this.on('initializeLeaveTypes', async (req) => {
             return req.error(400, 'Project ID already exists');
         }
 
-        // Validate project role
         if (projectRole && !['Designing', 'Developing', 'Testing', 'Deployment'].includes(projectRole)) {
             return req.error(400, 'Project role must be Designing, Developing, Testing, or Deployment');
         }
 
-        // Verify project owner exists
         let projectOwner_ID = null;
         if (projectOwnerID) {
             const owner = await SELECT.one.from(Employees).where({ employeeID: projectOwnerID });
@@ -431,11 +390,9 @@ this.on('initializeLeaveTypes', async (req) => {
         return `Project ${projectName} created successfully`;
     });
 
-    // Action: Update Project
     this.on('updateProject', async (req) => {
         const { projectID, projectName, description, projectRole, budget, allocatedHours, status } = req.data;
 
-        // Validate admin
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -444,12 +401,10 @@ this.on('initializeLeaveTypes', async (req) => {
             return req.error(404, 'Project not found');
         }
 
-        // Validate project role if provided
         if (projectRole && !['Designing', 'Developing', 'Testing', 'Deployment'].includes(projectRole)) {
             return req.error(400, 'Project role must be Designing, Developing, Testing, or Deployment');
         }
 
-        // Validate status if provided
         if (status && !['Active', 'Completed', 'On Hold'].includes(status)) {
             return req.error(400, 'Status must be Active, Completed, or On Hold');
         }
@@ -461,11 +416,10 @@ this.on('initializeLeaveTypes', async (req) => {
         return `Project ${projectName} updated successfully`;
     });
 
-    //  Action: Assign Employee to Manager (only Managers can be assigned)
     this.on('assignEmployeeToManager', async (req) => {
         const { employeeID, managerEmployeeID } = req.data;
 
-        //Validate admin
+
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -483,7 +437,6 @@ this.on('initializeLeaveTypes', async (req) => {
             return req.error(400, 'Cannot assign to inactive manager');
         }
 
-        //Verify that the selected manager has Manager role
         if (manager.userRole_ID) {
             const managerRole = await SELECT.one.from(UserRoles)
                 .where({ ID: manager.userRole_ID });
@@ -522,7 +475,7 @@ this.on('assignProjectToEmployee', async (req) => {
         return req.error(400, `Employee is already assigned to project ${project.projectName}`);
     }
 
-    // Create ProjectAssignment entry (this is the source of truth)
+
     const assignmentCount = await SELECT.from('my.timesheet.ProjectAssignments');
     await INSERT.into('my.timesheet.ProjectAssignments').entries({
         employee_ID: employee.ID,
@@ -534,7 +487,7 @@ this.on('assignProjectToEmployee', async (req) => {
 
     console.log(` Created ProjectAssignment for ${employee.employeeID} → ${project.projectID}`);
 
-    // Create placeholder timesheet for the current week
+
     const timesheetsForProject = await SELECT.from(Timesheets)
         .where({ employee_ID: employee.ID, project_ID: project.ID });
 
@@ -641,11 +594,11 @@ console.log('Enhanced notifications created for project assignment');
 
     return `Project ${project.projectName} assigned to ${employee.firstName} ${employee.lastName} successfully`;
 });
-    // Action: Deactivate Employee
+
     this.on('deactivateEmployee', async (req) => {
         const { employeeID } = req.data;
 
-        //Validate admin
+
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -663,11 +616,10 @@ console.log('Enhanced notifications created for project assignment');
         return `Employee ${employee.firstName} ${employee.lastName} deactivated successfully`;
     });
 
-    // Action: Deactivate Manager
+
     this.on('deactivateManager', async (req) => {
         const { employeeID } = req.data;
 
-        // Validate admin
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -699,11 +651,11 @@ console.log('Enhanced notifications created for project assignment');
         return `Manager ${employee.firstName} ${employee.lastName} deactivated successfully`;
     });
 
-    // Action: Update Employee Details
+
     this.on('updateEmployeeDetails', async (req) => {
         const { employeeID, firstName, lastName, email } = req.data;
 
-        // Validate admin
+
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -727,11 +679,11 @@ console.log('Enhanced notifications created for project assignment');
         return `Employee ${firstName} ${lastName} updated successfully`;
     });
 
-    // Action: Update Role Details
+
     this.on('updateRoleDetails', async (req) => {
         const { roleID, roleName, description } = req.data;
 
-        //  Validate admin
+
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
 
@@ -747,9 +699,9 @@ console.log('Enhanced notifications created for project assignment');
         return `Role ${roleName} updated successfully`;
     });
 
-    // Before DELETE - Cascade delete validation
+
     this.before('DELETE', 'Employees', async (req) => {
-        //Validate admin
+
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return req.reject(403, 'Admin access required');
 
@@ -849,13 +801,12 @@ this.before('UPDATE', 'EmployeeLeaveBalance', async (req) => {
         }
     });
 
-    // Approve Timesheet Handler
     this.on("approveTimesheet", async (req) => {
         const { timesheetID } = req.data;
-        if (!timesheetID) return req.reject(400, "❌ Missing timesheetID");
+        if (!timesheetID) return req.reject(400, "Missing timesheetID");
 
         const timesheet = await SELECT.one.from(Timesheets).where({ timesheetID });
-        if (!timesheet) return req.reject(404, `❌ Timesheet ${timesheetID} not found`);
+        if (!timesheet) return req.reject(404, `Timesheet ${timesheetID} not found`);
 
         await UPDATE(Timesheets)
             .set({
@@ -865,16 +816,15 @@ this.before('UPDATE', 'EmployeeLeaveBalance', async (req) => {
             })
             .where({ timesheetID });
 
-        return `✅ Timesheet ${timesheetID} approved successfully`;
+        return `Timesheet ${timesheetID} approved successfully`;
     });
 
-    // Reject Timesheet Handler
     this.on("rejectTimesheet", async (req) => {
         const { timesheetID, reason } = req.data;
-        if (!timesheetID) return req.reject(400, "❌ Missing timesheetID");
+        if (!timesheetID) return req.reject(400, "Missing timesheetID");
 
         const timesheet = await SELECT.one.from(Timesheets).where({ timesheetID });
-        if (!timesheet) return req.reject(404, `❌ Timesheet ${timesheetID} not found`);
+        if (!timesheet) return req.reject(404, `Timesheet ${timesheetID} not found`);
 
         await UPDATE(Timesheets)
             .set({
@@ -890,7 +840,7 @@ this.before('UPDATE', 'EmployeeLeaveBalance', async (req) => {
    
 
 this.on('READ', 'AvailableManagers', async (req) => {
-    console.log('📊 AvailableManagers READ - Start with enhancements');
+    console.log('AvailableManagers READ - Start with enhancements');
     
     const admin = await getAuthenticatedAdmin(req);
     if (!admin) return [];
@@ -934,12 +884,11 @@ this.on('READ', 'AvailableManagers', async (req) => {
 });
 
 this.on('READ', 'OverallProgressSummary', async (req) => {
-    console.log('📊 OverallProgressSummary READ - Start');
+    console.log('OverallProgressSummary READ - Start');
     
     const admin = await getAuthenticatedAdmin(req);
     if (!admin) return [];
 
-    // Get all projects
     const projects = await SELECT.from('my.timesheet.Projects');
 
     const summaryData = [];
@@ -1081,11 +1030,28 @@ this.on('READ', 'LeaveSummary', async (req) => {
 
     const employees = await SELECT.from('my.timesheet.Employees')
         .where({ isActive: true });
+         const summaryData = [];
+
+    for (const employee of employees) {
+        let userRoleID = null;
+        let userRoleName = 'No Role';
+        let roleDescription = 'No role assigned';
+        
+        if (employee.userRole_ID) {
+            const role = await SELECT.one
+                .from('my.timesheet.UserRoles')
+                .where({ ID: employee.userRole_ID });
+            
+            if (role) {
+                userRoleID = role.roleID;
+                userRoleName = role.roleName;
+                roleDescription = role.description || '';
+            }
+        }
+    
 
     const leaveTypes = await SELECT.from('my.timesheet.LeaveTypes')
         .where({ isActive: true });
-
-    const summaryData = [];
 
     for (const employee of employees) {
         for (const leaveType of leaveTypes) {
@@ -1095,6 +1061,7 @@ this.on('READ', 'LeaveSummary', async (req) => {
                 .where({ 
                     employee_ID: employee.ID, 
                     leaveType_ID: leaveType.ID, 
+                    leaveTypeName: leaveType.typeName,
                     year: currentYear 
                 });
 
@@ -1102,6 +1069,7 @@ this.on('READ', 'LeaveSummary', async (req) => {
                 await INSERT.into('my.timesheet.EmployeeLeaveBalance').entries({
                     employee_ID: employee.ID,
                     leaveType_ID: leaveType.ID,
+                    leaveTypeName: leaveType.typeName,
                     year: currentYear,
                     totalLeaves: 10,
                     usedLeaves: 0,
@@ -1113,6 +1081,7 @@ this.on('READ', 'LeaveSummary', async (req) => {
                     .where({ 
                         employee_ID: employee.ID, 
                         leaveType_ID: leaveType.ID, 
+                        leaveTypeName: leaveType.typeName,
                         year: currentYear 
                     });
 
@@ -1129,6 +1098,9 @@ this.on('READ', 'LeaveSummary', async (req) => {
                 leaveTypeName: leaveType.typeName,
                 defaultHours: leaveType.defaultHours,
                 year: currentYear,
+                userRoleID: userRoleID,
+                userRoleName: userRoleName,
+                roleDescription: roleDescription,
                 totalLeaves: balance.totalLeaves || 10,
                 usedLeaves: balance.usedLeaves || 0,
                 remainingLeaves: balance.remainingLeaves || 10,
@@ -1140,12 +1112,12 @@ this.on('READ', 'LeaveSummary', async (req) => {
 
     console.log('LeaveSummary generated for', summaryData.length, 'records');
     return summaryData;
-});
+}});
 
     this.on('deleteEmployeeTimesheets', async (req) => {
         const { employeeID } = req.data;
         
-        console.log('🗑️ deleteEmployeeTimesheets called for:', employeeID);
+        console.log('deleteEmployeeTimesheets called for:', employeeID);
         
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
@@ -1160,28 +1132,25 @@ this.on('READ', 'LeaveSummary', async (req) => {
         }
 
         try {
-            // Count timesheets before deletion
+
             const timesheets = await SELECT.from(Timesheets).where({ employee_ID: employee.ID });
             const count = timesheets.length;
-            
-            // Delete timesheets
             await DELETE.from(Timesheets).where({ employee_ID: employee.ID });
             
-            // Delete related notifications
+
             await DELETE.from(Notifications).where({ 
                 relatedEntity: 'Timesheet',
                 recipient_ID: employee.ID 
             });
             
-            console.log(`✅ Deleted ${count} timesheets for employee ${employeeID}`);
+            console.log(`Deleted ${count} timesheets for employee ${employeeID}`);
             return `Successfully deleted ${count} timesheet(s) for ${employee.firstName} ${employee.lastName}`;
         } catch (error) {
-            console.error('❌ Error deleting timesheets:', error);
+            console.error('Error deleting timesheets:', error);
             return req.error(500, 'Failed to delete timesheets: ' + error.message);
         }
     });
 
-    // Action 2: Delete timesheets by status for an employee
     this.on('deleteEmployeeTimesheetsByStatus', async (req) => {
         const { employeeID, status } = req.data;
         
@@ -1207,15 +1176,14 @@ this.on('READ', 'LeaveSummary', async (req) => {
             await DELETE.from(Timesheets)
                 .where({ employee_ID: employee.ID, status: status });
             
-            console.log(`✅ Deleted ${count} ${status} timesheets`);
+            console.log(`Deleted ${count} ${status} timesheets`);
             return `Successfully deleted ${count} ${status} timesheet(s) for ${employee.firstName} ${employee.lastName}`;
         } catch (error) {
-            console.error('❌ Error:', error);
+            console.error('Error:', error);
             return req.error(500, 'Failed to delete timesheets: ' + error.message);
         }
     });
 
-    // Action 3: Delete specific timesheet by ID
     this.on('deleteTimesheet', async (req) => {
         const { timesheetID } = req.data;
         
@@ -1236,15 +1204,14 @@ this.on('READ', 'LeaveSummary', async (req) => {
         try {
             await DELETE.from(Timesheets).where({ ID: timesheet.ID });
             
-            console.log(`✅ Deleted timesheet ${timesheetID}`);
+            console.log(`Deleted timesheet ${timesheetID}`);
             return `Timesheet ${timesheetID} deleted successfully`;
         } catch (error) {
-            console.error('❌ Error:', error);
+            console.error('Error:', error);
             return req.error(500, 'Failed to delete timesheet: ' + error.message);
         }
     });
 
-    // Action 4: Delete timesheets for a specific week
     this.on('deleteTimesheetsByWeek', async (req) => {
         const { employeeID, weekStartDate } = req.data;
         
@@ -1270,15 +1237,15 @@ this.on('READ', 'LeaveSummary', async (req) => {
             await DELETE.from(Timesheets)
                 .where({ employee_ID: employee.ID, weekStartDate: weekStartDate });
             
-            console.log(`✅ Deleted ${count} timesheets for week ${weekStartDate}`);
+            console.log(`Deleted ${count} timesheets for week ${weekStartDate}`);
             return `Successfully deleted ${count} timesheet(s) for week starting ${weekStartDate}`;
         } catch (error) {
-            console.error('❌ Error:', error);
+            console.error('Error:', error);
             return req.error(500, 'Failed to delete timesheets: ' + error.message);
         }
     });
 
-    // Action 5: Delete ALL timesheets (all employees) - USE WITH CAUTION!
+
     this.on('deleteAllTimesheets', async (req) => {
         console.log('🗑️ deleteAllTimesheets called - DELETING ALL TIMESHEETS!');
         
@@ -1286,28 +1253,27 @@ this.on('READ', 'LeaveSummary', async (req) => {
         if (!admin) return 'Admin authentication failed';
 
         try {
-            // Count before deletion
+  
             const timesheets = await SELECT.from(Timesheets);
             const count = timesheets.length;
             
-            // Delete all timesheets
+
             await DELETE.from(Timesheets);
             
-            // Delete all timesheet-related notifications
             await DELETE.from(Notifications).where({ relatedEntity: 'Timesheet' });
             
-            console.log(`✅ Deleted all ${count} timesheets`);
+            console.log(`Deleted all ${count} timesheets`);
             return `Successfully deleted all ${count} timesheet records from the system`;
         } catch (error) {
-            console.error('❌ Error deleting all timesheets:', error);
+            console.error(' Error deleting all timesheets:', error);
             return req.error(500, 'Failed to delete timesheets: ' + error.message);
         }
     });
-    // Action: Delete Employee (Permanent Deletion)
+
     this.on('deleteEmployee', async (req) => {
         const { employeeID } = req.data;
         
-        console.log('🗑️ deleteEmployee called for:', employeeID);
+        console.log('deleteEmployee called for:', employeeID);
         
         const admin = await getAuthenticatedAdmin(req);
         if (!admin) return 'Admin authentication failed';
@@ -1322,46 +1288,40 @@ this.on('READ', 'LeaveSummary', async (req) => {
         }
 
         try {
-            // Check if employee has any timesheets
+
             const timesheets = await SELECT.from(Timesheets).where({ employee_ID: employee.ID });
             if (timesheets.length > 0) {
                 return req.error(400, `Cannot delete employee with ${timesheets.length} existing timesheet(s). Please delete timesheets first or use deactivate instead.`);
             }
 
-            // Check if employee is a manager with active employees
             const managedEmployees = await SELECT.from(Employees)
                 .where({ managerID_ID: employee.ID, isActive: true });
             if (managedEmployees.length > 0) {
                 return req.error(400, `Cannot delete employee who is managing ${managedEmployees.length} active employee(s). Please reassign them first.`);
             }
 
-            // Check if employee owns any projects
             const ownedProjects = await SELECT.from(Projects)
                 .where({ projectOwner_ID: employee.ID });
             if (ownedProjects.length > 0) {
                 return req.error(400, `Cannot delete employee who owns ${ownedProjects.length} project(s). Please reassign project ownership first.`);
             }
 
-            // Delete project assignments
             await DELETE.from('my.timesheet.ProjectAssignments')
                 .where({ employee_ID: employee.ID });
 
-            // Delete notifications related to this employee
             await DELETE.from(Notifications)
                 .where({ recipient_ID: employee.ID });
 
-            // Delete the employee
             await DELETE.from(Employees).where({ ID: employee.ID });
             
-            console.log(`✅ Employee ${employeeID} deleted successfully`);
+            console.log(`Employee ${employeeID} deleted successfully`);
             return `Employee ${employee.firstName} ${employee.lastName} (${employeeID}) has been permanently deleted from the system`;
         } catch (error) {
-            console.error('❌ Error deleting employee:', error);
+            console.error('Error deleting employee:', error);
             return req.error(500, 'Failed to delete employee: ' + error.message);
         }
     });
 
-    // Action: Change Employee Role
     this.on('changeEmployeeRole', async (req) => {
         const { employeeID, newRoleID } = req.data;
         
@@ -1384,16 +1344,13 @@ this.on('READ', 'LeaveSummary', async (req) => {
             return req.error(404, 'New role not found');
         }
 
-        // Get current role
         const currentRole = employee.userRole_ID ? 
             await SELECT.one.from(UserRoles).where({ ID: employee.userRole_ID }) : null;
         
         const currentRoleName = currentRole ? currentRole.roleName : 'None';
 
         try {
-            // Special validation: If changing FROM Manager role
             if (currentRoleName === 'Manager' && newRole.roleName !== 'Manager') {
-                // Check if manager has any employees assigned
                 const managedEmployees = await SELECT.from(Employees)
                     .where({ managerID_ID: employee.ID, isActive: true });
                 
@@ -1404,8 +1361,6 @@ this.on('READ', 'LeaveSummary', async (req) => {
                         `Please reassign these employees to another manager first.`
                     );
                 }
-
-                // Check if manager owns any active projects
                 const ownedProjects = await SELECT.from(Projects)
                     .where({ projectOwner_ID: employee.ID, status: 'Active' });
                 
@@ -1418,11 +1373,11 @@ this.on('READ', 'LeaveSummary', async (req) => {
                 }
             }
 
-            // Special validation: If changing TO Employee role from Manager/Admin
+
             if (newRole.roleName === 'Employee' && 
                 (currentRoleName === 'Manager' || currentRoleName === 'Admin')) {
                 
-                // Ensure they have a manager assigned
+
                 if (!employee.managerID_ID) {
                     return req.error(400, 
                         `Cannot change role to Employee without a manager assigned. ` +
@@ -1431,12 +1386,10 @@ this.on('READ', 'LeaveSummary', async (req) => {
                 }
             }
 
-            // Update the role
             await UPDATE(Employees)
                 .set({ userRole_ID: newRoleID })
                 .where({ ID: employee.ID });
 
-            // Create notification for the employee
             const notificationCount = await SELECT.from(Notifications);
             await INSERT.into(Notifications).entries({
                 notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
@@ -1448,19 +1401,17 @@ this.on('READ', 'LeaveSummary', async (req) => {
                 relatedEntityID: employee.ID
             });
 
-            console.log(`✅ Role changed: ${employeeID} from ${currentRoleName} to ${newRole.roleName}`);
+            console.log(`Role changed: ${employeeID} from ${currentRoleName} to ${newRole.roleName}`);
             return `Successfully changed role for ${employee.firstName} ${employee.lastName} from ${currentRoleName} to ${newRole.roleName}`;
         } catch (error) {
-            console.error('❌ Error changing employee role:', error);
+            console.error('Error changing employee role:', error);
             return req.error(500, 'Failed to change employee role: ' + error.message);
         }
     });
-    // ========================================
-// DOCUMENT MANAGEMENT - Add to admin-service.js
-// ========================================
+
 
 this.on('READ', 'Documents', async (req) => {
-    console.log('📄 Documents READ (Admin)');
+    console.log('Documents READ (Admin)');
 
     try {
         const documents = await SELECT.from('my.timesheet.Documents');
@@ -1489,7 +1440,7 @@ this.on('READ', 'Documents', async (req) => {
 });
 
 this.on('uploadDocument', async (req) => {
-    console.log('📤 Upload Document (Admin)');
+    console.log('Upload Document (Admin)');
     const { 
         documentName, 
         documentType, 
@@ -1532,7 +1483,7 @@ this.on('uploadDocument', async (req) => {
             accessLevel: accessLevel || 'All'
         });
 
-        console.log('✅ Document uploaded:', documentID);
+        console.log('Document uploaded:', documentID);
         return `Document uploaded successfully with ID: ${documentID}`;
 
     } catch (error) {

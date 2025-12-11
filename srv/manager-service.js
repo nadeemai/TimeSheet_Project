@@ -3,32 +3,29 @@ const cds = require('@sap/cds');
 module.exports = cds.service.impl(async function() {
     const { Employees, Projects, Timesheets, Notifications } = this.entities;
 
-    // Helper to get and validate manager
+
     const getAuthenticatedManager = async (req) => {
         const userId = req.user.id;
         
-        console.log('🔍 Manager Auth - User ID from BTP:', userId);
+        console.log('Manager Auth - User ID from BTP:', userId);
         
         if (!userId) {
             req.error(401, 'User not authenticated');
             return null;
         }
 
-        // STRATEGY 1: Try to find by email directly
         let manager = await SELECT.one.from('my.timesheet.Employees')
             .where({ email: userId, isActive: true });
 
-        // STRATEGY 2: If userId is not a full email, try appending domain
         if (!manager && !userId.includes('@')) {
-            console.log('⚠️ User ID is not an email, trying with @sumodigitech.com domain...');
+            console.log('User ID is not an email, trying with @sumodigitech.com domain...');
             const emailWithDomain = `${userId}@sumodigitech.com`;
             manager = await SELECT.one.from('my.timesheet.Employees')
                 .where({ email: emailWithDomain, isActive: true });
         }
 
-        // STRATEGY 3: Case-insensitive email search
         if (!manager) {
-            console.log('⚠️ Trying case-insensitive email search...');
+            console.log('Trying case-insensitive email search...');
             const allEmployees = await SELECT.from('my.timesheet.Employees')
                 .where({ isActive: true });
             
@@ -39,30 +36,29 @@ module.exports = cds.service.impl(async function() {
         }
 
         if (!manager) {
-            console.log('❌ Manager profile not found for email:', userId);
+            console.log('Manager profile not found for email:', userId);
             req.error(404, 'Manager profile not found or inactive. Please contact administrator.');
             return null;
         }
 
-        // Verify user has manager role
         if (manager.userRole_ID) {
             const role = await SELECT.one.from('my.timesheet.UserRoles')
                 .where({ ID: manager.userRole_ID });
             
-            console.log('🎭 User role:', role ? role.roleName : 'None');
+            console.log('User role:', role ? role.roleName : 'None');
             
             if (role && role.roleName !== 'Manager') {
-                console.log('❌ User does not have Manager role');
+                console.log(' User does not have Manager role');
                 req.error(403, 'Access denied. Manager role required.');
                 return null;
             }
         } else {
-            console.log('❌ User has no role assigned');
+            console.log('User has no role assigned');
             req.error(403, 'Access denied. No role assigned.');
             return null;
         }
 
-        console.log('✅ Manager authenticated:', manager.employeeID, 'Email:', manager.email);
+        console.log('Manager authenticated:', manager.employeeID, 'Email:', manager.email);
         return manager;
     };
 
@@ -75,7 +71,6 @@ module.exports = cds.service.impl(async function() {
 
         if (!managerProfile) return [];
 
-        // Enrich with role name
         if (managerProfile.userRole_ID) {
             const role = await SELECT.one.from('my.timesheet.UserRoles')
                 .columns('roleName', 'roleID', 'description')
@@ -88,7 +83,6 @@ module.exports = cds.service.impl(async function() {
             }
         }
 
-        // Enrich with manager name if manager has a manager
         if (managerProfile.managerID_ID) {
             const seniorManager = await SELECT.one.from('my.timesheet.Employees')
                 .columns('firstName', 'lastName', 'email')
@@ -100,7 +94,7 @@ module.exports = cds.service.impl(async function() {
             }
         }
 
-        console.log('✅ MyManagerProfile enriched with roleName:', managerProfile.roleName);
+        console.log('MyManagerProfile enriched with roleName:', managerProfile.roleName);
         return [managerProfile];
     });
 
@@ -170,7 +164,6 @@ this.after('READ', 'MyNotifications', async (data, req) => {
     }
 });
 
-    // Validate manager access before READ operations
     this.before('READ', ['MyTeam', 'MyProjects', 'TeamTimesheets'], async (req) => {
         const manager = await getAuthenticatedManager(req);
         if (!manager) {
@@ -185,7 +178,6 @@ this.after('READ', 'MyNotifications', async (data, req) => {
         
         const managerID = manager.ID;
 
-        // Validate project role if provided
         if (req.data.projectRole) {
             if (!['Designing', 'Developing', 'Testing', 'Deployment'].includes(req.data.projectRole)) {
                 return req.error(400, 'Project role must be Designing, Developing, Testing, or Deployment');
@@ -203,13 +195,11 @@ this.after('READ', 'MyNotifications', async (data, req) => {
             req.data.projectID = `PRJ${String(count.length + 1).padStart(4, '0')}`;
         }
 
-        // Set isBillable to true by default if not provided
         if (req.data.isBillable === undefined) {
             req.data.isBillable = true;
         }
     });
 
-    // Before UPDATE Project - Verify ownership and validate project role
     this.before('UPDATE', 'MyProjects', async (req) => {
         const manager = await getAuthenticatedManager(req);
         if (!manager) return;
@@ -226,7 +216,6 @@ this.after('READ', 'MyNotifications', async (data, req) => {
             return req.error(403, 'You can only update your own projects');
         }
 
-        // Validate project role if being updated
         if (req.data.projectRole) {
             if (!['Designing', 'Developing', 'Testing', 'Deployment'].includes(req.data.projectRole)) {
                 return req.error(400, 'Project role must be Designing, Developing, Testing, or Deployment');
@@ -234,7 +223,6 @@ this.after('READ', 'MyNotifications', async (data, req) => {
         }
     });
 
-    // Before DELETE Project - Verify ownership and check dependencies
     this.before('DELETE', 'MyProjects', async (req) => {
         const manager = await getAuthenticatedManager(req);
         if (!manager) return;
@@ -242,19 +230,17 @@ this.after('READ', 'MyNotifications', async (data, req) => {
         const projectID = req.data.ID;
         const managerID = manager.ID;
 
-        console.log('🗑️ Manager attempting to delete project:', projectID);
+        console.log('Manager attempting to delete project:', projectID);
 
         const project = await SELECT.one.from(Projects).where({ ID: projectID });
         if (!project) {
             return req.error(404, 'Project not found');
         }
 
-        // Only project owner can delete
         if (project.projectOwner_ID !== managerID) {
             return req.error(403, 'You can only delete your own projects');
         }
 
-        // Check if project has any timesheets
         const timesheets = await SELECT.from('my.timesheet.Timesheets')
             .where({ project_ID: projectID });
 
@@ -265,7 +251,6 @@ this.after('READ', 'MyNotifications', async (data, req) => {
             );
         }
 
-        // Check if project has any active assignments
         const assignments = await SELECT.from('my.timesheet.ProjectAssignments')
             .where({ project_ID: projectID, isActive: true });
 
@@ -276,38 +261,36 @@ this.after('READ', 'MyNotifications', async (data, req) => {
             );
         }
 
-        console.log('✅ Project can be deleted - no dependencies found');
+        console.log('Project can be deleted - no dependencies found');
     });
 
 
 this.on('READ', 'ProjectSummary', async (req) => {
-    console.log('📊 ProjectSummary READ - Enhanced with timeline metrics');
+    console.log('ProjectSummary READ - Enhanced with timeline metrics');
     
     const manager = await getAuthenticatedManager(req);
     if (!manager) return [];
 
     const managerID = manager.ID;
 
-    // Get projects owned by this manager
     const projects = await SELECT.from('my.timesheet.Projects')
         .where({ projectOwner_ID: managerID });
 
     const summaryData = [];
 
     for (const project of projects) {
-        // Calculate duration (total days of project)
+
         const startDate = new Date(project.startDate);
         const endDate = new Date(project.endDate);
         const durationMs = endDate - startDate;
         const duration = Math.ceil(durationMs / (1000 * 60 * 60 * 24));
 
-        // Calculate remaining days (end date - current date)
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const remainingMs = endDate - today;
         const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
 
-        // Determine status (on track or delayed)
         let projectStatus = 'On Track';
         if (remainingDays < 0) {
             projectStatus = 'Delayed';
@@ -338,7 +321,7 @@ this.on('READ', 'ProjectSummary', async (req) => {
   
 
 this.on('READ', 'TeamProgressReport', async (req) => {
-    console.log('📊 TeamProgressReport READ - Enhanced with utilization metrics');
+    console.log('TeamProgressReport READ - Enhanced with utilization metrics');
     
     const manager = await getAuthenticatedManager(req);
     if (!manager) return [];
@@ -406,7 +389,6 @@ this.on('READ', 'TeamProgressReport', async (req) => {
         const manager = await getAuthenticatedManager(req);
         if (!manager) return 'Manager not found';
 
-        // Verify employee exists and belongs to manager's team
         const employee = await SELECT.one.from('my.timesheet.Employees').where({ employeeID });
         if (!employee) {
             return req.error(404, 'Employee not found');
@@ -416,13 +398,11 @@ this.on('READ', 'TeamProgressReport', async (req) => {
             return req.error(403, 'You can only assign projects to your team members');
         }
 
-        // Verify project exists
         const project = await SELECT.one.from('my.timesheet.Projects').where({ projectID });
         if (!project) {
             return req.error(404, 'Project not found');
         }
 
-        // Check if assignment already exists in ProjectAssignments
         const existingAssignment = await SELECT.one
             .from('my.timesheet.ProjectAssignments')
             .where({ employee_ID: employee.ID, project_ID: project.ID, isActive: true });
@@ -431,7 +411,6 @@ this.on('READ', 'TeamProgressReport', async (req) => {
             return req.error(400, `Employee is already assigned to project ${project.projectName}`);
         }
 
-        // Create ProjectAssignment entry (source of truth for assignments)
         await INSERT.into('my.timesheet.ProjectAssignments').entries({
             employee_ID: employee.ID,
             project_ID: project.ID,
@@ -440,14 +419,13 @@ this.on('READ', 'TeamProgressReport', async (req) => {
             isActive: true
         });
 
-        console.log(`✅ Created ProjectAssignment: ${employee.employeeID} → ${project.projectID}`);
+        console.log(`Created ProjectAssignment: ${employee.employeeID} → ${project.projectID}`);
 
-        // Check if placeholder timesheet exists
         const existingTimesheet = await SELECT.from('my.timesheet.Timesheets')
             .where({ employee_ID: employee.ID, project_ID: project.ID });
 
         if (existingTimesheet.length === 0) {
-            // Create placeholder timesheet for current week
+
             const now = new Date();
             const currentWeekStart = new Date(now);
             currentWeekStart.setDate(now.getDate() - now.getDay() + 1);
@@ -519,10 +497,9 @@ this.on('READ', 'TeamProgressReport', async (req) => {
                 sundayTaskDetails: ''
             });
             
-            console.log(`✅ Created placeholder timesheet ${timesheetID}`);
+            console.log(`Created placeholder timesheet ${timesheetID}`);
         }
 
-        // Create notification for employee
        const notificationCount = await SELECT.from('my.timesheet.Notifications');
 await INSERT.into('my.timesheet.Notifications').entries({
     notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
@@ -540,7 +517,7 @@ await INSERT.into('my.timesheet.Notifications').entries({
     this.on('approveTimesheet', async (req) => {
         const { timesheetID } = req.data;
         
-        console.log('✅ Approve timesheet called for:', timesheetID);
+        console.log('Approve timesheet called for:', timesheetID);
         
         const manager = await getAuthenticatedManager(req);
         if (!manager) return 'Manager not found';
@@ -551,7 +528,6 @@ await INSERT.into('my.timesheet.Notifications').entries({
             return req.error(400, 'Timesheet ID is required');
         }
 
-        // Get timesheet with employee details
         const timesheet = await SELECT.one.from('my.timesheet.Timesheets')
             .where({ timesheetID });
 
@@ -559,7 +535,6 @@ await INSERT.into('my.timesheet.Notifications').entries({
             return req.error(404, `Timesheet ${timesheetID} not found`);
         }
 
-        // Get employee to verify they belong to manager's team
         const employee = await SELECT.one.from('my.timesheet.Employees')
             .where({ ID: timesheet.employee_ID });
 
@@ -567,17 +542,17 @@ await INSERT.into('my.timesheet.Notifications').entries({
             return req.error(404, 'Employee not found for this timesheet');
         }
 
-        // Check if employee belongs to this manager's team
+
         if (employee.managerID_ID !== managerID) {
             return req.error(403, 'You can only approve timesheets of your team members');
         }
 
-        // Validate timesheet status - can approve Submitted or Modified
+
         if (timesheet.status !== 'Submitted' && timesheet.status !== 'Modified') {
             return req.error(400, `Only Submitted or Modified timesheets can be approved. Current status: ${timesheet.status}`);
         }
 
-        // Update timesheet to Approved status
+
         await UPDATE('my.timesheet.Timesheets')
             .set({
                 status: 'Approved',
@@ -586,9 +561,9 @@ await INSERT.into('my.timesheet.Notifications').entries({
             })
             .where({ ID: timesheet.ID });
 
-        console.log(`✅ Timesheet ${timesheetID} approved by manager ${manager.employeeID}`);
+        console.log(`Timesheet ${timesheetID} approved by manager ${manager.employeeID}`);
 
-        // Send notification to employee
+
        const notificationCount = await SELECT.from('my.timesheet.Notifications');
 await INSERT.into('my.timesheet.Notifications').entries({
     notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
@@ -606,7 +581,7 @@ await INSERT.into('my.timesheet.Notifications').entries({
     this.on('rejectTimesheet', async (req) => {
         const { timesheetID, reason } = req.data;
         
-        console.log('🚫 Reject timesheet called for:', timesheetID);
+        console.log('Reject timesheet called for:', timesheetID);
         
         const manager = await getAuthenticatedManager(req);
         if (!manager) return 'Manager not found';
@@ -621,7 +596,7 @@ await INSERT.into('my.timesheet.Notifications').entries({
             return req.error(400, 'Rejection reason is required');
         }
 
-        // Get timesheet
+
         const timesheet = await SELECT.one.from('my.timesheet.Timesheets')
             .where({ timesheetID });
 
@@ -629,7 +604,7 @@ await INSERT.into('my.timesheet.Notifications').entries({
             return req.error(404, `Timesheet ${timesheetID} not found`);
         }
 
-        // Get employee to verify they belong to manager's team
+
         const employee = await SELECT.one.from('my.timesheet.Employees')
             .where({ ID: timesheet.employee_ID });
 
@@ -637,17 +612,15 @@ await INSERT.into('my.timesheet.Notifications').entries({
             return req.error(404, 'Employee not found for this timesheet');
         }
 
-        // Check if employee belongs to this manager's team
         if (employee.managerID_ID !== managerID) {
             return req.error(403, 'You can only reject timesheets of your team members');
         }
 
-        // Validate timesheet status - can reject Submitted or Modified
         if (timesheet.status !== 'Submitted' && timesheet.status !== 'Modified') {
             return req.error(400, `Only Submitted or Modified timesheets can be rejected. Current status: ${timesheet.status}`);
         }
 
-        // Update timesheet to Rejected status
+
         await UPDATE('my.timesheet.Timesheets')
             .set({
                 status: 'Rejected',
@@ -657,9 +630,9 @@ await INSERT.into('my.timesheet.Notifications').entries({
             })
             .where({ ID: timesheet.ID });
 
-        console.log(`🚫 Timesheet ${timesheetID} rejected by manager ${manager.employeeID}`);
+        console.log(`Timesheet ${timesheetID} rejected by manager ${manager.employeeID}`);
 
-        // Send notification to employee
+
        const notificationCount = await SELECT.from('my.timesheet.Notifications');
 await INSERT.into('my.timesheet.Notifications').entries({
     notificationID: `NOT${String(notificationCount.length + 1).padStart(4, '0')}`,
@@ -674,7 +647,7 @@ await INSERT.into('my.timesheet.Notifications').entries({
         return `Timesheet ${timesheetID} for week ${timesheet.weekStartDate} rejected. Reason: ${reason}`;
     });
 
-    // After READ notifications - Mark as read
+ 
     this.after('READ', 'MyNotifications', async (data, req) => {
         if (Array.isArray(data)) {
             const unreadIds = data.filter(n => !n.isRead).map(n => n.ID);

@@ -3,6 +3,8 @@ const {
   notifyTimesheetModification,
   notifyNonProjectRequest 
 } = require('./email_service');
+const { getPackedSettings } = require('http2');
+const { waitForDebugger } = require('inspector');
 
 module.exports = cds.service.impl(async function() {
     const { 
@@ -29,7 +31,7 @@ async function streamToBuffer(stream) {
    const getAuthenticatedEmployee = async (req) => {
     const userId = req.user.id;
     
-    console.log('🔍 Employee Auth - User ID from BTP:', userId);
+    console.log('Employee Auth - User ID from BTP:', userId);
     
     if (!userId) {
         req.error(401, 'User not authenticated');
@@ -42,14 +44,14 @@ async function streamToBuffer(stream) {
 
 
     if (!employee && !userId.includes('@')) {
-        console.log('⚠️ User ID is not an email, trying with @sumodigitech.com domain...');
+        console.log('User ID is not an email, trying with @sumodigitech.com domain...');
         const emailWithDomain = `${userId}@sumodigitech.com`;
         employee = await SELECT.one.from('my.timesheet.Employees')
             .where({ email: emailWithDomain, isActive: true });
     }
 
     if (!employee) {
-        console.log('⚠️ Trying case-insensitive email search...');
+        console.log('Trying case-insensitive email search...');
         const allEmployees = await SELECT.from('my.timesheet.Employees')
             .where({ isActive: true });
         
@@ -207,25 +209,24 @@ const validateLeaveAvailability = async (employeeID, leaveTypeID, year, hoursReq
 };
 
 this.on('READ', 'MyTimesheets', async (req) => {
-    console.log('📊 MyTimesheets READ - Start');
-    console.log('📊 User ID:', req.user.id);
+    console.log(' MyTimesheets READ - Start');
+    console.log('User ID:', req.user.id);
     
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) {
-        console.log('❌ Employee not found, returning empty array');
+        console.log(' Employee not found, returning empty array');
         return [];
     }
 
-    console.log('✅ Employee found:', employee.employeeID, 'ID:', employee.ID);
+    console.log('Employee found:', employee.employeeID, 'ID:', employee.ID);
 
     try {
         const timesheets = await SELECT.from('my.timesheet.Timesheets')
             .where({ employee_ID: employee.ID });
-
-        console.log('📋 Found timesheets:', timesheets.length);
+        console.log('Found timesheets:', timesheets.length);
         
         if (timesheets.length === 0) {
-            console.log('⚠️ No timesheets found for employee');
+            console.log('No timesheets found for employee');
             return [];
         }
         
@@ -234,7 +235,7 @@ for (const ts of timesheets) {
     ts.employeeName = `${employee.firstName} ${employee.lastName}`;
     
     if (ts.project_ID) {
-        console.log('🔍 Enriching project for ID:', ts.project_ID);
+        console.log('Enriching project for ID:', ts.project_ID);
         
 
         let project = await SELECT.one
@@ -243,7 +244,7 @@ for (const ts of timesheets) {
         
 
         if (!project && typeof ts.project_ID === 'string' && !ts.project_ID.includes('-')) {
-            console.log('⚠️ Trying projectID code lookup');
+            console.log('Trying projectID code lookup');
             project = await SELECT.one
                 .from('my.timesheet.Projects')
                 .where({ projectID: ts.project_ID });
@@ -266,7 +267,7 @@ for (const ts of timesheets) {
     } else {
         ts.projectName = null;
         ts.projectRole = null;
-        console.log(`📝 Timesheet ${ts.timesheetID} has no project (non-project activity)`);
+        console.log(`Timesheet ${ts.timesheetID} has no project (non-project activity)`);
     }
     
 
@@ -331,7 +332,7 @@ this.on('READ', 'AvailableLeaveTypes', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return [];
 
-    console.log('📋 AvailableLeaveTypes READ - Start');
+    console.log('AvailableLeaveTypes READ - Start');
 
     const leaveTypes = await SELECT.from('my.timesheet.LeaveTypes')
         .where({ isActive: true })
@@ -345,7 +346,7 @@ this.on('READ', 'MyLeaveBalance', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return [];
 
-    console.log('📊 MyLeaveBalance READ - Start for employee:', employee.employeeID);
+    console.log('MyLeaveBalance READ - Start for employee:', employee.employeeID);
 
     const employeeID = employee.ID;
     const currentYear = new Date().getFullYear();
@@ -393,7 +394,6 @@ this.on('READ', 'MyLeaveBalance', async (req) => {
             leaveType_ID: leaveType.ID,
             leaveTypeCode: leaveType.leaveTypeID,
             leaveTypeName: leaveType.typeName,
-            defaultHours: leaveType.defaultHours,
             year: currentYear,
             totalLeaves: balance.totalLeaves || 10,
             usedLeaves: balance.usedLeaves || 0,
@@ -423,7 +423,6 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
         return req.error(400, `Invalid task type. Must be one of: ${validProjectTasks.join(', ')} or a leave type`);
     }
 
-    // ✅ If it's a leave request, validate leave type and balance
     if (isLeaveRequest) {
         if (!payload.leaveType_ID) {
             return req.error(400, 'Leave Type is required when requesting leave.');
@@ -441,14 +440,12 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
             return req.error(400, 'This leave type is not active');
         }
 
-        // Ensure task matches leave type name
         if (payload.task !== leaveType.typeName) {
             payload.task = leaveType.typeName;
         }
 
-        console.log('✅ Leave type:', leaveType.typeName, 'Default hours:', leaveType.defaultHours);
+        console.log('Leave type:', leaveType.typeName);
 
-        // Calculate total leave hours
         const totalLeaveHours = 
             parseFloat(payload.mondayHours || 0) +
             parseFloat(payload.tuesdayHours || 0) +
@@ -458,7 +455,6 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
             parseFloat(payload.saturdayHours || 0) +
             parseFloat(payload.sundayHours || 0);
 
-        // Validate leave balance
         const currentYear = new Date().getFullYear();
         const leaveValidation = await validateLeaveAvailability(
             employeeID, 
@@ -471,16 +467,15 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
             return req.error(400, leaveValidation.message);
         }
 
-        console.log('✅ Leave validation passed');
+        console.log('Leave validation passed');
     }
 
-    // Set week boundaries
     const inputDateForWeek = payload.date || payload.weekStartDate || new Date().toISOString().split('T')[0];
     let weekBoundaries;
     try {
         weekBoundaries = getWeekBoundaries(inputDateForWeek);
     } catch (e) {
-        console.error('❌ Invalid date for week boundaries:', inputDateForWeek, e);
+        console.error('Invalid date for week boundaries:', inputDateForWeek, e);
         return req.error(400, `Invalid date provided for week calculation: ${inputDateForWeek}`);
     }
     const weekDates = getWeekDates(weekBoundaries.weekStart);
@@ -521,7 +516,6 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
         parseFloat(payload.saturdayHours || 0) +
         parseFloat(payload.sundayHours || 0);
 
-    // Validate daily limits
     const dayChecks = [
         { day: 'Monday', hours: payload.mondayHours, details: payload.mondayTaskDetails },
         { day: 'Tuesday', hours: payload.tuesdayHours, details: payload.tuesdayTaskDetails },
@@ -539,12 +533,10 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
         }
     }
 
-    // Validate project requirement
     if (!payload.project_ID && !isLeaveRequest && !payload.nonProjectType_ID) {
         return req.error(400, 'Project is required for project-related tasks. Please select a project or choose leave.');
     }
 
-    // Activity validation
     if (payload.activity_ID) {
         const activity = await SELECT.one.from('my.timesheet.Activities').where({ ID: payload.activity_ID });
         if (!activity) return req.error(404, 'Activity not found');
@@ -552,7 +544,6 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
         payload.project_ID = activity.project_ID || null;
     }
     
-    // Non-project type validation
     if (payload.nonProjectType_ID) {
         const npt = await SELECT.one.from('my.timesheet.NonProjectTypes').where({ ID: payload.nonProjectType_ID });
         if (!npt) return req.error(404, 'Non-Project Type not found');
@@ -562,18 +553,16 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
     payload.employee_ID = employeeID;
     payload.status = 'Submitted';
 
-    // Generate timesheet ID
     if (!payload.timesheetID) {
         const existingForEmployee = await SELECT.from('my.timesheet.Timesheets').where({ employee_ID: employeeID });
         payload.timesheetID = `TS${String(existingForEmployee.length + 1).padStart(4, '0')}`;
-        console.log('✅ Generated timesheetID:', payload.timesheetID);
+        console.log('Generated timesheetID:', payload.timesheetID);
     }
 
-    // Check for duplicates
     const dupWhere = {
         employee_ID: employeeID,
         weekStartDate: payload.weekStartDate,
-        task: payload.task // This will include leave type name
+        task: payload.task 
     };
     if (payload.project_ID) dupWhere.project_ID = payload.project_ID;
     if (payload.leaveType_ID) dupWhere.leaveType_ID = payload.leaveType_ID;
@@ -583,7 +572,7 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
         return req.error(400, `A timesheet entry for this task already exists for week starting ${payload.weekStartDate}. Please update the existing entry instead.`);
     }
 
-    // Perform INSERT
+
     try {
         await INSERT.into('my.timesheet.Timesheets').entries(payload);
         
@@ -591,11 +580,10 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
             .where({ timesheetID: payload.timesheetID, employee_ID: employeeID });
 
         if (!created) {
-            console.error('❌ Insert reported success but SELECT could not find the created row.');
+            console.error('Insert reported success but SELECT could not find the created row.');
             return req.error(500, 'Failed to verify created timesheet.');
         }
 
-        // ✅ If it's a leave request, update leave balance
         if (isLeaveRequest && created.leaveType_ID) {
             const currentYear = new Date().getFullYear();
             await updateLeaveBalance(
@@ -605,9 +593,8 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
                 created.totalWeekHours
             );
 
-            console.log('✅ Leave balance updated');
+            console.log('Leave balance updated');
 
-            // Send notification to manager
             if (employee.managerID_ID) {
                 const leaveType = await SELECT.one
                     .from('my.timesheet.LeaveTypes')
@@ -627,11 +614,10 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
                     relatedEntityID: created.ID
                 });
 
-                console.log('✅ Leave request notification sent to manager');
+                console.log('Leave request notification sent to manager');
             }
         }
 
-        // Enrich response with related data
         if (created.project_ID) {
             const project = await SELECT.one.from('my.timesheet.Projects').columns('projectName','projectRole').where({ ID: created.project_ID });
             if (project) { 
@@ -682,36 +668,32 @@ this.on('CREATE', 'MyTimesheets', async (req) => {
             created.nonProjectTypeID = null;
         }
 
-        // ✅ Enrich with leave type info
         if (created.leaveType_ID) {
             const leaveType = await SELECT.one.from('my.timesheet.LeaveTypes')
-                .columns('typeName', 'leaveTypeID', 'defaultHours')
+                .columns('typeName', 'leaveTypeID',)
                 .where({ ID: created.leaveType_ID });
             
             if (leaveType) {
                 created.leaveTypeName = leaveType.typeName;
                 created.leaveTypeCode = leaveType.leaveTypeID;
-                created.leaveDefaultHours = leaveType.defaultHours;
             } else {
                 created.leaveTypeName = null;
                 created.leaveTypeCode = null;
-                created.leaveDefaultHours = null;
             }
         } else {
             created.leaveTypeName = null;
             created.leaveTypeCode = null;
-            created.leaveDefaultHours = null;
         }
 
         try { req._.res.set('location', `MyTimesheets(${created.ID})`); } catch(e) { /* ignore */ }
 
-        console.log('🔧 === Full CREATE MyTimesheets Handler END ===');
-        console.log('✅ Created timesheet with task:', created.task);
+        console.log('=== Full CREATE MyTimesheets Handler END ===');
+        console.log('Created timesheet with task:', created.task);
         
         return created;
 
     } catch (err) {
-        console.error('❌ Error performing explicit INSERT:', err);
+        console.error('Error performing explicit INSERT:', err);
         return req.error(500, 'Failed to create timesheet');
     }
 });
@@ -720,17 +702,17 @@ this.on('READ', 'MyProjects', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return [];
 
-    console.log('📊 MyProjects READ - Showing ALL active projects for employee:', employee.employeeID);
+    console.log('MyProjects READ - Showing ALL active projects for employee:', employee.employeeID);
 
     const employeeID = employee.ID;
 
     const allProjects = await SELECT.from('my.timesheet.Projects')
         .where({ status: 'Active' });
 
-    console.log('📋 Found active projects:', allProjects.length);
+    console.log('Found active projects:', allProjects.length);
 
     if (allProjects.length === 0) {
-        console.log('⚠️ No active projects in the system');
+        console.log('No active projects in the system');
         return [];
     }
 
@@ -800,12 +782,7 @@ this.on('READ', 'BookedHoursOverview', async (req) => {
         for (const ts of timesheets) {
             bookedHours += parseFloat(ts.totalWeekHours || 0);
         }
-
-        // Only include projects the employee has worked on OR all projects (your choice)
-        // Option 1: Only show projects employee worked on
-        // if (bookedHours > 0) {
         
-        // Option 2: Show ALL projects (even with 0 hours)
         const remainingHours = (project.allocatedHours || 0) - bookedHours;
         const util = project.allocatedHours > 0 
             ? ((bookedHours / project.allocatedHours) * 100).toFixed(1)
@@ -819,12 +796,10 @@ this.on('READ', 'BookedHoursOverview', async (req) => {
             RemainingHours: remainingHours,
             Utilization: `${util}%`
         });
-        // }
     }
 
     return overview;
 });
-    // ProjectEngagementDuration Handler
     this.on('READ', 'ProjectEngagementDuration', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) return [];
@@ -858,7 +833,6 @@ this.on('READ', 'BookedHoursOverview', async (req) => {
         return projects;
     });
 
-    // AvailableTaskTypes Handler
     this.on('READ', 'AvailableTaskTypes', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) return [];
@@ -903,20 +877,12 @@ this.on('READ', 'BookedHoursOverview', async (req) => {
         ];
     });
 
-    // Employee access validation
     this.before('READ', 'MyProfile', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) {
             req.reject(404, 'Employee not found');
         }
     });
-
-    // this.before('READ', 'MyTimesheets', async (req) => {
-    //     const employee = await getAuthenticatedEmployee(req);
-    //     if (!employee) {
-    //         req.reject(404, 'Employee not found');
-    //     }
-    // });
 
     this.before('READ', 'AvailableActivities', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
@@ -932,12 +898,10 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
     const employeeID = employee.ID;
     const { task, project_ID, activity_ID, nonProjectType_ID, leaveType_ID } = req.data;
 
-    // ✅ NEW: If BOTH nonProjectType_ID AND leaveType_ID are provided
-    // This means: User selected "Leave" from NonProjectType, then selected specific leave type
+   
     if (nonProjectType_ID && leaveType_ID) {
         console.log('🍃 Processing leave request with both NonProjectType and LeaveType');
         
-        // Validate NonProjectType is "Leave"
         const nonProjectType = await SELECT.one
             .from('my.timesheet.NonProjectTypes')
             .where({ ID: nonProjectType_ID });
@@ -950,14 +914,12 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
             return req.error(400, 'This non-project type is not active');
         }
 
-        // Verify it's the "Leave" type
         if (nonProjectType.typeName !== 'Leave') {
             return req.error(400, 'NonProjectType must be "Leave" when using LeaveType');
         }
 
-        console.log('✅ NonProjectType validated: Leave');
+        console.log('NonProjectType validated: Leave');
 
-        // Fetch the specific leave type
         const leaveType = await SELECT.one
             .from('my.timesheet.LeaveTypes')
             .where({ ID: leaveType_ID });
@@ -970,13 +932,11 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
             return req.error(400, 'This leave type is not active');
         }
 
-        // ✅ STORE LEAVE TYPE NAME IN TASK FIELD
-        req.data.task = leaveType.typeName; // "Personal Leave", "Sick Leave", or "Half Day Leave"
+        req.data.task = leaveType.typeName; 
         
-        console.log('✅ Leave type stored in task field:', leaveType.typeName);
-        console.log('✅ NonProjectType remains:', nonProjectType.typeName);
+        console.log('Leave type stored in task field:', leaveType.typeName);
+        console.log('NonProjectType remains:', nonProjectType.typeName);
 
-        // Validate leave balance
         const totalLeaveHours = 
             parseFloat(req.data.mondayHours || 0) +
             parseFloat(req.data.tuesdayHours || 0) +
@@ -998,9 +958,8 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
             return req.error(400, leaveValidation.message);
         }
 
-        console.log('✅ Leave validation passed');
+        console.log('Leave validation passed');
     }
-    // ✅ If only leaveType_ID (without nonProjectType_ID) - also support this
     else if (leaveType_ID && !nonProjectType_ID) {
         const leaveType = await SELECT.one
             .from('my.timesheet.LeaveTypes')
@@ -1014,27 +973,23 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
             return req.error(400, 'This leave type is not active');
         }
 
-        // Store leave type name in task field
         req.data.task = leaveType.typeName;
         
-        console.log('✅ Leave type stored in task field (without NonProjectType):', leaveType.typeName);
+        console.log('Leave type stored in task field (without NonProjectType):', leaveType.typeName);
     }
 
-    // Validate task for project work
     const validProjectTasks = ['Designing', 'Developing', 'Testing', 'Bug Fix', 'Deployment', 'Client Call'];
     const leaveTypeNames = ['Personal Leave', 'Sick Leave', 'Half Day Leave'];
     
-    // Allow task if it's a valid project task OR a leave type name
     if (task && !leaveType_ID && !validProjectTasks.includes(task) && !leaveTypeNames.includes(task)) {
         return req.error(400, `Invalid task type. Must be one of: ${validProjectTasks.join(', ')}`);
     }
 
-    // Convert project code to UUID if needed
     if (project_ID) {
         const isUUID = project_ID.includes('-');
         
         if (!isUUID) {
-            console.log('⚠️ Converting project code to UUID:', project_ID);
+            console.log('Converting project code to UUID:', project_ID);
             const project = await SELECT.one
                 .from('my.timesheet.Projects')
                 .columns('ID')
@@ -1045,17 +1000,16 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
             }
             
             req.data.project_ID = project.ID;
-            console.log('✅ Converted to UUID:', project.ID);
+            console.log('Converted to UUID:', project.ID);
         }
     }
 
-    // Set week boundaries
     const inputDateForWeek = req.data.date || req.data.weekStartDate || new Date().toISOString().split('T')[0];
     let weekBoundaries;
     try {
         weekBoundaries = getWeekBoundaries(inputDateForWeek);
     } catch (e) {
-        console.error('❌ Invalid date for week boundaries:', inputDateForWeek, e);
+        console.error('Invalid date for week boundaries:', inputDateForWeek, e);
         return req.error(400, `Invalid date provided for week calculation: ${inputDateForWeek}`);
     }
     const weekDates = getWeekDates(weekBoundaries.weekStart);
@@ -1078,7 +1032,6 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
     req.data.sundayDate    = weekDates[6].date;
     req.data.sundayDay     = weekDates[6].day;
 
-    // Default hours
     req.data.mondayHours = req.data.mondayHours || 0;
     req.data.tuesdayHours = req.data.tuesdayHours || 0;
     req.data.wednesdayHours = req.data.wednesdayHours || 0;
@@ -1095,7 +1048,6 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
     req.data.saturdayTaskDetails = req.data.saturdayTaskDetails || '';
     req.data.sundayTaskDetails = req.data.sundayTaskDetails || '';
 
-    // Calculate total hours
     req.data.totalWeekHours =
         parseFloat(req.data.mondayHours || 0) +
         parseFloat(req.data.tuesdayHours || 0) +
@@ -1105,7 +1057,6 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         parseFloat(req.data.saturdayHours || 0) +
         parseFloat(req.data.sundayHours || 0);
 
-    // Validate daily hours
     const dailyHours = [
         { day: 'Monday', hours: req.data.mondayHours },
         { day: 'Tuesday', hours: req.data.tuesdayHours },
@@ -1122,7 +1073,6 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         }
     }
 
-    // Validate task details
     const dailyData = [
         { day: 'Monday', hours: req.data.mondayHours, details: req.data.mondayTaskDetails },
         { day: 'Tuesday', hours: req.data.tuesdayHours, details: req.data.tuesdayTaskDetails },
@@ -1139,7 +1089,6 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         }
     }
 
-    // Check for duplicates
     const whereClause = {
         employee_ID: employeeID,
         task: req.data.task,
@@ -1165,7 +1114,6 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
         return req.error(400, `A timesheet entry for this task already exists for week starting ${weekBoundaries.weekStart}.`);
     }
 
-    // Handle activity
     if (activity_ID) {
         const activity = await SELECT.one.from('my.timesheet.Activities').where({ ID: activity_ID });
         if (!activity) {
@@ -1180,16 +1128,15 @@ this.before('CREATE', 'MyTimesheets', async (req) => {
     req.data.employee_ID = employeeID;
     req.data.status = 'Submitted';
 
-    // Generate timesheet ID
     if (!req.data.timesheetID) {
         const employeeTimesheets = await SELECT.from('my.timesheet.Timesheets').where({ employee_ID: employeeID });
         req.data.timesheetID = `TS${String(employeeTimesheets.length + 1).padStart(4, '0')}`;
-        console.log('✅ Generated timesheetID:', req.data.timesheetID);
+        console.log('Generated timesheetID:', req.data.timesheetID);
     }
 });
 
 this.after('CREATE', 'MyTimesheets', async (result, req) => {
-    console.log('🔧 After CREATE - Start enrichment');
+    console.log('After CREATE - Start enrichment');
 
     try {
 
@@ -1198,7 +1145,7 @@ this.after('CREATE', 'MyTimesheets', async (result, req) => {
         
  
         if (timesheet.nonProjectType_ID && !timesheet.project_ID) {
-            console.log('📧 Non-project timesheet CREATED - checking for email notification');
+            console.log('Non-project timesheet CREATED - checking for email notification');
             
             try {
 
@@ -1208,21 +1155,19 @@ this.after('CREATE', 'MyTimesheets', async (result, req) => {
                     .where({ ID: timesheet.employee_ID });
 
                 if (employee && employee.managerID_ID) {
-                    // Get non-project type details
                     const nonProjectType = await SELECT.one
                         .from('my.timesheet.NonProjectTypes')
                         .columns('typeName', 'nonProjectTypeID', 'description')
                         .where({ ID: timesheet.nonProjectType_ID });
 
                     if (nonProjectType) {
-                        // Get manager details
                         const manager = await SELECT.one
                             .from('my.timesheet.Employees')
                             .columns('email', 'firstName', 'lastName')
                             .where({ ID: employee.managerID_ID });
 
                         if (manager && manager.email) {
-                            console.log('📧 Sending non-project request email to manager:', manager.email);
+                            console.log('Sending non-project request email to manager:', manager.email);
                             
                             const totalDays = (timesheet.totalWeekHours / 8).toFixed(1);
                             
@@ -1240,29 +1185,28 @@ this.after('CREATE', 'MyTimesheets', async (result, req) => {
                             });
 
                             if (emailResult && emailResult.success) {
-                                console.log('✅✅✅ NON-PROJECT EMAIL SENT (CREATE) ✅✅✅');
+                                console.log('NON-PROJECT EMAIL SENT (CREATE) ');
                                 console.log('   Message ID:', emailResult.messageId);
                             } else {
-                                console.error('❌ Failed to send non-project email:', emailResult?.error);
+                                console.error('Failed to send non-project email:', emailResult?.error);
                             }
                         }
                     }
                 }
             } catch (emailError) {
-                console.error('❌ Error sending non-project email:', emailError);
+                console.error('Error sending non-project email:', emailError);
             }
         }
         
         return timesheet;
 
     } catch (error) {
-        console.error('❌ Error in after CREATE enrichment:', error);
+        console.error(' Error in after CREATE enrichment:', error);
         return req.data || {};
     }
 });
 
 
-    // Before UPDATE - Recalculate total hours
     this.before('UPDATE', 'MyTimesheets', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) return;
@@ -1360,7 +1304,6 @@ this.after('CREATE', 'MyTimesheets', async (result, req) => {
         }
     });
 
-// Enhanced DEBUG version - Replace your after UPDATE handler with this
 
 this.after('UPDATE', 'MyTimesheets', async (data, req) => {
     console.log('=================================================');
@@ -1370,11 +1313,11 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
     
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) {
-        console.error('❌ ERROR: Employee not found, skipping notifications');
+        console.error('ERROR: Employee not found, skipping notifications');
         return;
     }
     
-    console.log('✅ Employee found:', {
+    console.log('Employee found:', {
         ID: employee.ID,
         employeeID: employee.employeeID,
         name: `${employee.firstName} ${employee.lastName}`,
@@ -1386,11 +1329,11 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
         .where({ ID: data.ID });
 
     if (!timesheet) {
-        console.error('❌ ERROR: Timesheet not found after update');
+        console.error('ERROR: Timesheet not found after update');
         return;
     }
     
-    console.log('✅ Timesheet found:', {
+    console.log('Timesheet found:', {
         ID: timesheet.ID,
         timesheetID: timesheet.timesheetID,
         status: timesheet.status,
@@ -1400,8 +1343,7 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
         task: timesheet.task
     });
     
-    // CHECK 1: Environment Detection
-    console.log('🌍 Environment Check:');
+    console.log('Environment Check:');
     console.log('   NODE_ENV:', process.env.NODE_ENV);
     console.log('   VCAP_SERVICES exists:', !!process.env.VCAP_SERVICES);
     if (process.env.VCAP_SERVICES) {
@@ -1413,22 +1355,20 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
         }
     }
   
-    // CHECK 2: Timesheet Modification Detection
     console.log('📋 Checking Modification Trigger:');
     console.log('   Current status:', timesheet.status);
     console.log('   Is Modified?', timesheet.status === 'Modified');
     
     if (timesheet.status === 'Modified') {
-        console.log('✅ TRIGGER DETECTED: Timesheet Modified');
+        console.log('TRIGGER DETECTED: Timesheet Modified');
         
         if (!employee.managerID_ID) {
-            console.error('❌ SKIP: Employee has no manager assigned');
+            console.error('SKIP: Employee has no manager assigned');
             return;
         }
         
-        console.log('✅ Employee has manager ID:', employee.managerID_ID);
+        console.log('Employee has manager ID:', employee.managerID_ID);
         
-        // Create in-app notification
         const notificationCount = await SELECT.from('my.timesheet.Notifications');
         
         await INSERT.into('my.timesheet.Notifications').entries({
@@ -1441,16 +1381,15 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
             relatedEntityID: timesheet.ID
         });
         
-        console.log('✅ In-app notification created');
+        console.log('In-app notification created');
 
         try {
-            // Get manager details
             const manager = await SELECT.one
                 .from('my.timesheet.Employees')
                 .columns('email', 'firstName', 'lastName', 'ID', 'employeeID')
                 .where({ ID: employee.managerID_ID });
 
-            console.log('📧 Manager lookup result:', manager ? {
+            console.log('Manager lookup result:', manager ? {
                 ID: manager.ID,
                 employeeID: manager.employeeID,
                 name: `${manager.firstName} ${manager.lastName}`,
@@ -1458,22 +1397,21 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
             } : 'NOT FOUND');
 
             if (!manager) {
-                console.error('❌ SKIP: Manager record not found in database');
+                console.error('SKIP: Manager record not found in database');
                 return;
             }
 
             if (!manager.email) {
-                console.error('❌ SKIP: Manager has no email address');
+                console.error('SKIP: Manager has no email address');
                 return;
             }
             
-            console.log('✅ Manager email found:', manager.email);
-            console.log('📧 Preparing modification email...');
+            console.log('Manager email found:', manager.email);
+            console.log('Preparing modification email...');
             
-            // Get project details if exists
             let projectInfo = 'Non-Project Activity';
             if (timesheet.project_ID) {
-                console.log('🔍 Looking up project:', timesheet.project_ID);
+                console.log('Looking up project:', timesheet.project_ID);
                 const project = await SELECT.one
                     .from('my.timesheet.Projects')
                     .columns('projectName', 'projectID')
@@ -1481,13 +1419,13 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
                 
                 if (project) {
                     projectInfo = `${project.projectName} (${project.projectID})`;
-                    console.log('✅ Project found:', projectInfo);
+                    console.log('Project found:', projectInfo);
                 } else {
-                    console.warn('⚠️ Project not found for ID:', timesheet.project_ID);
+                    console.warn('Project not found for ID:', timesheet.project_ID);
                 }
             }
 
-            console.log('📧 Calling notifyTimesheetModification with params:', {
+            console.log('Calling notifyTimesheetModification with params:', {
                 employeeName: `${employee.firstName} ${employee.lastName}`,
                 employeeID: employee.employeeID,
                 weekStartDate: timesheet.weekStartDate,
@@ -1509,64 +1447,61 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
                 managerEmail: manager.email
             });
 
-            console.log('📧 Email function returned:', emailResult);
+            console.log('Email function returned:', emailResult);
 
             if (emailResult && emailResult.success) {
-                console.log('✅✅✅ MODIFICATION EMAIL SENT SUCCESSFULLY ✅✅✅');
+                console.log('MODIFICATION EMAIL SENT SUCCESSFULLY ');
                 console.log('   Message ID:', emailResult.messageId);
                 console.log('   Recipients:', emailResult.recipients);
                 console.log('   Timestamp:', emailResult.timestamp);
             } else {
-                console.error('❌❌❌ MODIFICATION EMAIL FAILED ❌❌❌');
+                console.error('MODIFICATION EMAIL FAILED ');
                 console.error('   Error:', emailResult?.error || 'Unknown error');
             }
         } catch (emailError) {
-            console.error('❌❌❌ EXCEPTION in modification email:', emailError);
+            console.error('EXCEPTION in modification email:', emailError);
             console.error('   Message:', emailError.message);
             console.error('   Stack:', emailError.stack);
         }
     } else {
-        console.log('ℹ️ Status is not Modified, checking non-project trigger...');
+        console.log('Status is not Modified, checking non-project trigger...');
     }
 
-    // CHECK 3: Non-Project Request Detection
-    console.log('📋 Checking Non-Project Trigger:');
+    console.log('Checking Non-Project Trigger:');
     console.log('   Has nonProjectType_ID?', !!timesheet.nonProjectType_ID);
     console.log('   Has project_ID?', !!timesheet.project_ID);
     console.log('   Is Non-Project?', !!timesheet.nonProjectType_ID && !timesheet.project_ID);
     
     if (timesheet.nonProjectType_ID && !timesheet.project_ID) {
-        console.log('✅ TRIGGER DETECTED: Non-Project Request');
+        console.log('TRIGGER DETECTED: Non-Project Request');
         
         try {
-            // Get non-project type details
-            console.log('🔍 Looking up non-project type:', timesheet.nonProjectType_ID);
+            console.log('Looking up non-project type:', timesheet.nonProjectType_ID);
             const nonProjectType = await SELECT.one
                 .from('my.timesheet.NonProjectTypes')
                 .columns('typeName', 'nonProjectTypeID', 'description')
                 .where({ ID: timesheet.nonProjectType_ID });
 
-            console.log('📋 Non-project type result:', nonProjectType || 'NOT FOUND');
+            console.log('Non-project type result:', nonProjectType || 'NOT FOUND');
 
             if (!nonProjectType) {
-                console.error('❌ SKIP: Non-project type not found');
+                console.error('SKIP: Non-project type not found');
                 return;
             }
 
             if (!employee.managerID_ID) {
-                console.error('❌ SKIP: Employee has no manager assigned');
+                console.error('SKIP: Employee has no manager assigned');
                 return;
             }
 
-            console.log('✅ Employee has manager ID:', employee.managerID_ID);
+            console.log('Employee has manager ID:', employee.managerID_ID);
 
-            // Get manager details
             const manager = await SELECT.one
                 .from('my.timesheet.Employees')
                 .columns('email', 'firstName', 'lastName', 'ID', 'employeeID')
                 .where({ ID: employee.managerID_ID });
 
-            console.log('📧 Manager lookup result:', manager ? {
+            console.log('Manager lookup result:', manager ? {
                 ID: manager.ID,
                 employeeID: manager.employeeID,
                 name: `${manager.firstName} ${manager.lastName}`,
@@ -1574,22 +1509,21 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
             } : 'NOT FOUND');
 
             if (!manager) {
-                console.error('❌ SKIP: Manager record not found in database');
+                console.error('SKIP: Manager record not found in database');
                 return;
             }
 
             if (!manager.email) {
-                console.error('❌ SKIP: Manager has no email address');
+                console.error('SKIP: Manager has no email address');
                 return;
             }
             
-            console.log('✅ Manager email found:', manager.email);
-            console.log('📧 Preparing non-project request email...');
+            console.log('Manager email found:', manager.email);
+            console.log('Preparing non-project request email...');
             
-            // Calculate total days (8 hours = 1 day)
             const totalDays = (timesheet.totalWeekHours / 8).toFixed(1);
             
-            console.log('📧 Calling notifyNonProjectRequest with params:', {
+            console.log('Calling notifyNonProjectRequest with params:', {
                 employeeName: `${employee.firstName} ${employee.lastName}`,
                 employeeID: employee.employeeID,
                 requestType: nonProjectType.typeName,
@@ -1618,21 +1552,21 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
             console.log('📧 Email function returned:', emailResult);
 
             if (emailResult && emailResult.success) {
-                console.log('✅✅✅ NON-PROJECT EMAIL SENT SUCCESSFULLY ✅✅✅');
+                console.log('NON-PROJECT EMAIL SENT SUCCESSFULLY');
                 console.log('   Message ID:', emailResult.messageId);
                 console.log('   Recipients:', emailResult.recipients);
                 console.log('   Timestamp:', emailResult.timestamp);
             } else {
-                console.error('❌❌❌ NON-PROJECT EMAIL FAILED ❌❌❌');
+                console.error('NON-PROJECT EMAIL FAILED ');
                 console.error('   Error:', emailResult?.error || 'Unknown error');
             }
         } catch (emailError) {
-            console.error('❌❌❌ EXCEPTION in non-project email:', emailError);
+            console.error('EXCEPTION in non-project email:', emailError);
             console.error('   Message:', emailError.message);
             console.error('   Stack:', emailError.stack);
         }
     } else {
-        console.log('ℹ️ Not a non-project request (either has project_ID or no nonProjectType_ID)');
+        console.log('Not a non-project request (either has project_ID or no nonProjectType_ID)');
     }
 
     console.log('=================================================');
@@ -1640,13 +1574,11 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
     console.log('=================================================');
 });
 
-    // Function to get week boundaries
     this.on('getWeekBoundaries', async (req) => {
         const { date } = req.data;
         return getWeekBoundaries(date);
     });
 
-    // Function to validate daily hours for a specific date
     this.on('validateDailyHours', async (req) => {
         const { date } = req.data;
         
@@ -1678,7 +1610,6 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
         return totalHours;
     });
 
-    // Action: Submit Timesheet
     this.on('submitTimesheet', async (req) => {
         const { timesheetID } = req.data;
         
@@ -1716,7 +1647,6 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
         return 'Timesheet submitted successfully';
     });
 
-    // Action: Update Timesheet with weekly data
     this.on('updateTimesheet', async (req) => {
         const { timesheetID, weekData } = req.data;
         
@@ -1795,7 +1725,6 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
         return 'Timesheet updated successfully';
     });
 
-    // Before DELETE timesheet
     this.before('DELETE', 'MyTimesheets', async (req) => {
         const employee = await getAuthenticatedEmployee(req);
         if (!employee) return;
@@ -1814,7 +1743,6 @@ this.after('UPDATE', 'MyTimesheets', async (data, req) => {
             return req.error(400, 'Cannot delete approved timesheets');
         }
     });
-    // Helper entity for UI - Get assigned project IDs for dropdown
 this.on('READ', 'AssignedProjectsList', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return [];
@@ -1833,9 +1761,6 @@ this.on('READ', 'AssignedProjectsList', async (req) => {
 
     return projects;
 });
-// ========================================
-// DOCUMENT HANDLERS - Add to employee-service.js
-// ========================================
 
 this.on('READ', 'AvailableDocuments', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
@@ -1861,7 +1786,6 @@ this.on('READ', 'AvailableDocuments', async (req) => {
                 }
             }
             
-            // Remove content from list view
             delete doc.content;
         }
 
@@ -1878,7 +1802,7 @@ this.on('downloadDocument', async (req) => {
     return req.error(401, 'Employee not authenticated');
   }
 
-  console.log('📥 Download Document - Employee:', employee.employeeID);
+  console.log('Download Document - Employee:', employee.employeeID);
   const { documentID } = req.data;
 
   if (!documentID) {
@@ -1886,7 +1810,7 @@ this.on('downloadDocument', async (req) => {
   }
 
   try {
-    console.log('🔍 Fetching document:', documentID);
+    console.log('Fetching document:', documentID);
 
     const db = await cds.connect.to('db');
 
@@ -1910,64 +1834,61 @@ this.on('downloadDocument', async (req) => {
     }
 
     const document = documents[0];
-    console.log('✅ Document found:', document.documentName);
-    console.log('📊 Has content:', !!document.content);
+    console.log('Document found:', document.documentName);
+    console.log('Has content:', !!document.content);
 
     const c = document.content;
-    console.log('📦 Raw content type:', typeof c, 'ctor:', c && c.constructor && c.constructor.name);
+    console.log('Raw content type:', typeof c, 'ctor:', c && c.constructor && c.constructor.name);
 
     if (!c) {
-      console.error('❌ Document content is missing');
+      console.error('Document content is missing');
       return req.error(500, 'Document content is missing');
     }
 
-    // 🔥 Normalize to Buffer, handling Buffer, string, Uint8Array and Readable stream
     let buffer;
 
     if (Buffer.isBuffer(c)) {
-      console.log('✅ Content is Buffer');
+      console.log('Content is Buffer');
       buffer = c;
 
     } else if (typeof c === 'string') {
-      console.log('✅ Content is base64 string, decoding...');
+      console.log('Content is base64 string, decoding...');
       buffer = Buffer.from(c, 'base64');
 
     } else if (c instanceof Uint8Array) {
-      console.log('✅ Content is Uint8Array, wrapping as Buffer...');
+      console.log('Content is Uint8Array, wrapping as Buffer...');
       buffer = Buffer.from(c);
 
     } else if (c instanceof Readable || (c && typeof c.read === 'function' && typeof c.pipe === 'function')) {
-      console.log('✅ Content is Readable stream, collecting into Buffer...');
+      console.log('Content is Readable stream, collecting into Buffer...');
       buffer = await streamToBuffer(c);
 
     } else if (typeof c === 'object') {
-      // Last-chance generic object handling
       if (c.data && (Buffer.isBuffer(c.data) || c.data instanceof Uint8Array || Array.isArray(c.data))) {
-        console.log('✅ Content has .data, converting...');
+        console.log('Content has .data, converting...');
         buffer = Buffer.from(c.data);
       } else if (c.buffer && c.byteLength !== undefined) {
-        console.log('✅ Content has .buffer/.byteLength, converting...');
+        console.log('Content has .buffer/.byteLength, converting...');
         buffer = Buffer.from(c.buffer);
       } else {
-        console.error('❌ Unsupported content object shape, keys:', Object.keys(c || {}));
+        console.error('Unsupported content object shape, keys:', Object.keys(c || {}));
         return req.error(500, 'Invalid document content format (object not convertible).');
       }
 
     } else {
-      console.error('❌ Unsupported content type:', typeof c);
+      console.error('Unsupported content type:', typeof c);
       return req.error(500, 'Invalid document content format (unsupported type).');
     }
 
     if (!buffer || !Buffer.isBuffer(buffer)) {
-      console.error('❌ Failed to normalize content to Buffer');
+      console.error('Failed to normalize content to Buffer');
       return req.error(500, 'Failed to normalize document content.');
     }
 
-    console.log('💾 Final buffer size:', (buffer.length / 1024).toFixed(2), 'KB');
+    console.log('Final buffer size:', (buffer.length / 1024).toFixed(2), 'KB');
 
-    // 👉 Return JSON with base64 so UI can handle download
     const base64Content = buffer.toString('base64');
-    console.log('✅ Returning base64 content, length:', base64Content.length);
+    console.log('Returning base64 content, length:', base64Content.length);
 
     return {
       fileName: document.fileName || document.documentName || 'document.pdf',
@@ -1976,10 +1897,157 @@ this.on('downloadDocument', async (req) => {
     };
 
   } catch (error) {
-    console.error('❌ Error downloading document:', error);
+    console.error('Error downloading document:', error);
     console.error('Stack:', error.stack);
     return req.error(500, 'Failed to download document: ' + error.message);
   }
 });
+this.on('READ', 'ApprovalFlow', async (req) => {
+    console.log('🔍 ApprovalFlow READ - Start');
+    
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) return [];
 
+    const employeeID = employee.ID;
+
+    // Get all submitted timesheets for this employee
+    const submittedTimesheets = await SELECT.from('my.timesheet.Timesheets')
+        .where({ 
+            employee_ID: employeeID, 
+            status: 'Submitted'
+        });
+
+    console.log('Found', submittedTimesheets.length, 'submitted timesheets awaiting approval');
+
+    if (submittedTimesheets.length === 0) {
+        return [];
+    }
+
+    // Group timesheets by week and category (Project vs Non-Project)
+    const weeklyData = new Map();
+
+    for (const ts of submittedTimesheets) {
+        const weekKey = `${ts.weekStartDate}_${ts.weekEndDate}`;
+        
+        if (!weeklyData.has(weekKey)) {
+            weeklyData.set(weekKey, {
+                weekStartDate: ts.weekStartDate,
+                weekEndDate: ts.weekEndDate,
+                projectHours: 0,
+                nonProjectHours: 0,
+                projectCount: 0,
+                nonProjectCount: 0
+            });
+        }
+
+        const weekData = weeklyData.get(weekKey);
+        const hours = parseFloat(ts.totalWeekHours || 0);
+
+        // Determine if it's a project or non-project timesheet
+        if (ts.project_ID) {
+            // This is a project timesheet
+            weekData.projectHours += hours;
+            weekData.projectCount += 1;
+            console.log(`  Project timesheet: ${ts.timesheetID}, Hours: ${hours}`);
+        } else if (ts.nonProjectType_ID || ts.leaveType_ID) {
+            // This is a non-project timesheet (includes leave)
+            weekData.nonProjectHours += hours;
+            weekData.nonProjectCount += 1;
+            console.log(`  Non-Project timesheet: ${ts.timesheetID}, Hours: ${hours}`);
+        } else {
+            // Fallback: if no project and no non-project type, treat as non-project
+            weekData.nonProjectHours += hours;
+            weekData.nonProjectCount += 1;
+            console.log(`  Unclassified timesheet treated as Non-Project: ${ts.timesheetID}, Hours: ${hours}`);
+        }
+    }
+
+    // Convert Map to array of approval flow records
+    const approvalFlowData = [];
+
+    for (const [weekKey, data] of weeklyData.entries()) {
+        // Add Project category row if there are project hours
+        if (data.projectHours > 0) {
+            approvalFlowData.push({
+                category: 'Project',
+                weekStartDate: data.weekStartDate,
+                weekEndDate: data.weekEndDate,
+                totalHours: parseFloat(data.projectHours.toFixed(2)),
+                timesheetCount: data.projectCount
+            });
+        }
+
+        // Add Non-Project category row if there are non-project hours
+        if (data.nonProjectHours > 0) {
+            approvalFlowData.push({
+                category: 'Non-Project',
+                weekStartDate: data.weekStartDate,
+                weekEndDate: data.weekEndDate,
+                totalHours: parseFloat(data.nonProjectHours.toFixed(2)),
+                timesheetCount: data.nonProjectCount
+            });
+        }
+    }
+
+    // Sort by week start date (most recent first)
+    approvalFlowData.sort((a, b) => {
+        const dateA = new Date(a.weekStartDate);
+        const dateB = new Date(b.weekStartDate);
+        return dateB - dateA;
+    });
+
+    console.log('ApprovalFlow returning', approvalFlowData.length, 'records');
+    console.log('Summary:', approvalFlowData);
+
+    return approvalFlowData;
+});
+
+// Optional: Helper function to get approval summary
+this.on('getApprovalSummary', async (req) => {
+    console.log('📊 getApprovalSummary - Quick summary of pending approvals');
+    
+    const employee = await getAuthenticatedEmployee(req);
+    if (!employee) return { projectHours: 0, nonProjectHours: 0, weekStartDate: null, weekEndDate: null };
+
+    const employeeID = employee.ID;
+
+    // Get current week's submitted timesheets
+    const now = new Date();
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() - now.getDay() + 1);
+    currentWeekStart.setHours(0, 0, 0, 0);
+    
+    const currentWeekEnd = new Date(currentWeekStart);
+    currentWeekEnd.setDate(currentWeekStart.getDate() + 6);
+    
+    const weekStartStr = currentWeekStart.toISOString().split('T')[0];
+    const weekEndStr = currentWeekEnd.toISOString().split('T')[0];
+
+    const submittedTimesheets = await SELECT.from('my.timesheet.Timesheets')
+        .where({ 
+            employee_ID: employeeID, 
+            status: 'Submitted',
+            weekStartDate: weekStartStr
+        });
+
+    let projectHours = 0;
+    let nonProjectHours = 0;
+
+    for (const ts of submittedTimesheets) {
+        const hours = parseFloat(ts.totalWeekHours || 0);
+        
+        if (ts.project_ID) {
+            projectHours += hours;
+        } else {
+            nonProjectHours += hours;
+        }
+    }
+
+    return {
+        projectHours: parseFloat(projectHours.toFixed(2)),
+        nonProjectHours: parseFloat(nonProjectHours.toFixed(2)),
+        weekStartDate: weekStartStr,
+        weekEndDate: weekEndStr
+    };
+});
 });

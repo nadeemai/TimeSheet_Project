@@ -14,30 +14,6 @@ entity Employees : cuid, managed {
     timesheets      : Association to many Timesheets on timesheets.employee = $self;
 }
 
-// @cds.server.body_parser.limit: '10mb'
-// entity ReqAttachment : cuid, managed {
-// @Core.ContentDisposition.Filename: fileName
-// // @Core.MediaType                  : mediaType
-// content        : LargeBinary;
-
-// @Core.IsMediaType                : true
-// mediaType      : String;
-// fileName       : String;
-
-// @Core.IsURL  @Core.MediaType: mediaType
-// fileUrl        : String;
-// reqID          : String;
-// docCategory    : String; //TODO : camelCase   //doc_Category
-// uploadedByName : String; // These fields added to track uploader info
-// uploadedByID   : String; // These fields added to track uploader info
-// remarks        : String;
-// status         : String;
-// };
-
-
- 
-
-
 entity UserRoles : cuid, managed {
     roleID          : String(10) @title: 'Role ID';
     roleName        : String(20) @title: 'Role Name' @mandatory;
@@ -81,8 +57,7 @@ entity NonProjectTypes : cuid, managed {
 
 entity LeaveTypes : cuid, managed {
     leaveTypeID     : String(10) @title: 'Leave Type ID';
-    typeName        : String(50) @title: 'Leave Type Name' @mandatory; // Personal Leave, Sick Leave, Half Day
-    defaultHours    : Decimal(4,2) @title: 'Default Hours' @mandatory; // 8 for PL/SL, 4 for Half Day
+    typeName        : String(50) @title: 'Leave Type Name' @mandatory; 
     description     : String(500) @title: 'Description';
     isActive        : Boolean @title: 'Active Status' default true;
 }

@@ -12,7 +12,7 @@ let initializationError = null;
 
 async function getOAuth2AccessToken(destinationConfig) {
   try {
-    console.log('🔐 Fetching OAuth2 access token...');
+    console.log('Fetching OAuth2 access token...');
 
     const tokenUrl = destinationConfig.tokenServiceURL;
     const clientId = destinationConfig.clientId;
@@ -43,17 +43,17 @@ async function getOAuth2AccessToken(destinationConfig) {
       }
     });
 
-    console.log('✅ OAuth2 token obtained successfully');
+    console.log('OAuth2 token obtained successfully');
     return response.data.access_token;
   } catch (error) {
-    console.error('❌ Failed to obtain OAuth2 token:', error.response?.status, error.response?.data || error.message);
+    console.error('Failed to obtain OAuth2 token:', error.response?.status, error.response?.data || error.message);
     throw new Error(`OAuth2 token fetch failed: ${error.message}`);
   }
 }
 
 async function getDestinationConfig() {
   try {
-    console.log('🔍 Reading destination configuration from BTP...');
+    console.log('Reading destination configuration from BTP...');
 
     const services = xsenv.getServices({ dest: { tag: 'destination' } });
     const destCredentials = services.dest;
@@ -82,12 +82,12 @@ async function getDestinationConfig() {
       }
     );
 
-    console.log('📋 Destinations visible to this instance:');
+    console.log('Destinations visible to this instance:');
     for (const d of listResp.data.destinations || []) {
       console.log(`   - ${d.Name}`);
     }
 
-    console.log(`🔍 Fetching destination "${DESTINATION_NAME}"...`);
+    console.log(`Fetching destination "${DESTINATION_NAME}"...`);
 
     const response = await axios.get(
       `${destServiceUrl}/destination-configuration/v1/destinations/${DESTINATION_NAME}`,
@@ -161,7 +161,7 @@ async function getDestinationServiceToken(destCredentials) {
 
 async function getTransporter() {
   if (process.env.NODE_ENV === 'development' || !process.env.VCAP_SERVICES) {
-    console.log('📧 [DEV MODE] Email service running in simulation mode');
+    console.log('[DEV MODE] Email service running in simulation mode');
     console.log('   NODE_ENV:', process.env.NODE_ENV || 'not set');
     console.log('   VCAP_SERVICES:', process.env.VCAP_SERVICES ? 'exists' : 'not found');
     return {
@@ -184,7 +184,7 @@ async function getTransporter() {
     };
   }
 
-  console.log('📧 [PRODUCTION MODE] Initializing nodemailer with OAuth2...');
+  console.log('[PRODUCTION MODE] Initializing nodemailer with OAuth2...');
 
   if (initializationError && initializationAttempted) {
     console.error('Previous initialization failed:', initializationError);
@@ -198,7 +198,7 @@ async function getTransporter() {
       
       const config = await getDestinationConfig();
       
-      console.log('🔐 Obtaining OAuth2 access token...');
+      console.log('Obtaining OAuth2 access token...');
       const accessToken = await getOAuth2AccessToken(config);
 
       console.log('🔧 Creating nodemailer transporter with OAuth2...');
@@ -235,7 +235,7 @@ async function getTransporter() {
       console.error('   Error:', error.message);
       console.error('   Stack:', error.stack);
       console.error('─────────────────────────────────────────────────');
-      console.error('🔍 TROUBLESHOOTING STEPS FOR OAUTH2:');
+      console.error('TROUBLESHOOTING STEPS FOR OAUTH2:');
       console.error('   1. Verify destination exists in BTP Cockpit:');
       console.error('      Connectivity → Destinations → sap_process_automation_mail');
       console.error('   2. Check OAuth2 destination properties:');
@@ -265,7 +265,7 @@ async function getTransporter() {
 
 
 async function refreshTransporter() {
-  console.log('🔄 Refreshing OAuth2 token and transporter...');
+  console.log('Refreshing OAuth2 token and transporter...');
   transporter = null;
   initializationAttempted = false;
   initializationError = null;
@@ -273,7 +273,7 @@ async function refreshTransporter() {
 }
 
 async function sendMail({ subject, body, to, cc, attachment, text }) {
-  console.log('📧 sendMail called (OAuth2 via nodemailer)');
+  console.log('sendMail called (OAuth2 via nodemailer)');
   console.log('   To:', to);
   console.log('   Subject:', subject);
   
@@ -326,14 +326,14 @@ async function sendMail({ subject, body, to, cc, attachment, text }) {
     console.log('  Attachments:', attachments.length);
     console.log('─────────────────────────────────────────────────');
 
-    console.log('🚀 Calling nodemailer sendMail with OAuth2...');
+    console.log('Calling nodemailer sendMail with OAuth2...');
     
     let result;
     try {
       result = await tr.sendMail(mailOptions);
     } catch (sendError) {
       if (sendError.message.includes('token') || sendError.message.includes('401') || sendError.message.includes('authentication')) {
-        console.log('🔄 Token may be expired, refreshing and retrying...');
+        console.log('Token may be expired, refreshing and retrying...');
         tr = await refreshTransporter();
         result = await tr.sendMail(mailOptions);
       } else {
@@ -372,7 +372,7 @@ async function sendMail({ subject, body, to, cc, attachment, text }) {
     
     if (error.message.includes('token') || error.message.includes('OAuth') || error.message.includes('401') || error.message.includes('authentication')) {
       console.error('─────────────────────────────────────────────────');
-      console.error('🔐 OAUTH2 AUTHENTICATION ERROR DETECTED:');
+      console.error('OAUTH2 AUTHENTICATION ERROR DETECTED:');
       console.error('   1. Verify Token Service URL is correct');
       console.error('   2. Check Client ID and Client Secret');
       console.error('   3. Ensure OAuth2 scopes include mail sending permission');
@@ -397,7 +397,7 @@ async function sendMail({ subject, body, to, cc, attachment, text }) {
 async function notifyManagerAndAdmin({ subject, text, body }) {
   const recipients = [MANAGER_EMAIL, ADMIN_EMAIL];
   
-  console.log('📧 notifyManagerAndAdmin called (OAuth2)');
+  console.log('notifyManagerAndAdmin called (OAuth2)');
   console.log('   Recipients:', recipients);
   
   return await sendMail({
@@ -418,7 +418,7 @@ async function notifyTimesheetModification({
   totalHours,
   managerEmail 
 }) {
-  console.log('📧 notifyTimesheetModification called (OAuth2)');
+  console.log('notifyTimesheetModification called (OAuth2)');
   console.log('   Employee:', employeeName, `(${employeeID})`);
   console.log('   Manager Email:', managerEmail);
   
@@ -467,20 +467,20 @@ async function notifyNonProjectRequest({
   taskDetails,
   managerEmail 
 }) {
-  console.log('📧 notifyNonProjectRequest called (OAuth2)');
+  console.log('notifyNonProjectRequest called (OAuth2)');
   console.log('   Employee:', employeeName, `(${employeeID})`);
   console.log('   Request Type:', requestType);
   console.log('   Manager Email:', managerEmail);
   
   
-  let icon = '📝';
+  let icon = '';
   
   if (requestType.toLowerCase().includes('leave')) {
-    icon = '🏖️';
+    icon = '';
   } else if (requestType.toLowerCase().includes('training') || requestType.toLowerCase().includes('certification')) {
-    icon = '📚';
+    icon = '';
   } else if (requestType.toLowerCase().includes('soft skill')) {
-    icon = '🎯';
+    icon = '';
   }
 
   const subject = `${icon} New ${requestType} Request - ${employeeName} (${employeeID})`;

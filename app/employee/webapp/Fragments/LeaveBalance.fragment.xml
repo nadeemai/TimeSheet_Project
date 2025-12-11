@@ -6,7 +6,7 @@
         id="leaveBalanceDialog"
         title="Leave Balance"
         class="leaveDialog sapUiContentPadding"
-        contentHeight="250px"
+        contentHeight="230px"
         contentWidth="480px">
 
         <VBox class="leaveContainer">
