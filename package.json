@@ -10,6 +10,7 @@
     "@cap-js/hana": "^2.4.1",
     "@sap-cloud-sdk/mail-client": "^3.24.0",
     "@sap/cds": "^9.4.4",
+    "@sap/hana-client": "^2.26.26",
     "@sap/xsenv": "^6.0.0",
     "@sap/xssec": "^4",
     "approuter": "*",
@@ -26,6 +27,7 @@
     "@cap-js/sqlite": "^2",
     "@sap/cds-dk": "^9.4.3",
     "@sap/eslint-plugin-cds": "^4",
+    "@sap/hdi-deploy": "4.9.5",
     "cds-plugin-ui5": "^0.13.0",
     "eslint": "^9",
     "mbt": "^1.2.34",
@@ -43,6 +45,13 @@
   },
   "cds": {
     "requires": {
+      "mailService": {
+        "kind": "rest",
+        "credentials": {
+          "destination": "MAIL",
+          "forwardAuthToken": true
+        }
+      },
       "db": {
         "kind": "hana"
       },
@@ -109,14 +118,8 @@
         "auth": {
           "kind": "xsuaa"
         }
-      }
-    },
-    "mailService": {
-      "kind": "rest",
-      "credentials": {
-        "destination": "sap_process_automation_mail",
-        "forwardAuthToken": true
-      }
+      },
+      "connectivity": true
     },
     "hana": {
       "deploy-format": "hdbtable"

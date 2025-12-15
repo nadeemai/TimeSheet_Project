@@ -40,6 +40,8 @@ sap.ui.define([
                     friday: 0, saturday: 0, sunday: 0
                 },
                 weekDates: this._generateWeekDates(new Date()),
+                
+                
             });
             oView.setModel(oModel, "timeEntryModel");
 
@@ -73,8 +75,30 @@ sap.ui.define([
 
         },
 
+        formatHoursState: function(hours) {
+    if (!hours) return "None";
+   
+    var hoursNum = parseFloat(hours);
+   
+    if (hoursNum >= 40) {
+        return "Information"; // Blue color for 40+ hours
+    } else if (hoursNum >= 8) {
+        return "Success"; // Green color for 8-39.99 hours
+    } else {
+        return "Error"; // Red color for less than 8 hours
+    }
+},
 
 
+formatRemainingState: function (iRemaining) {
+            if (iRemaining <= 0) {
+                return "Error";
+            } else if (iRemaining <= 2) {
+                return "Warning";
+            } else {
+                return "Success";
+            }
+        },
 
 
         _getCurrentWeekMonday: function () {
@@ -121,6 +145,28 @@ sap.ui.define([
             }
         },
 
+        _getCurrentWeekRange: function () {
+    let today = new Date();
+    let day = today.getDay();
+
+    // Monday = 1, Sunday = 0 → convert Sunday to 7
+    day = day === 0 ? 7 : day;
+
+    // Monday date
+    let monday = new Date(today);
+    monday.setDate(today.getDate() - (day - 1));
+
+    // Sunday date
+    let sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    return {
+        weekStart: monday.toISOString().split("T")[0], // yyyy-mm-dd
+        weekEnd: sunday.toISOString().split("T")[0]
+    };
+},
+
+
         _loadReportData: function (oModel, oView) {
 
             oModel.read("/BookedHoursOverview", {
@@ -153,14 +199,64 @@ sap.ui.define([
                 }
             });
 
-            oModel.read("/ApprovalFlow", {
-                success: function(oData){
-                    var oEntryModel = oData.results;
+            let week = this._getCurrentWeekRange();  
 
-                    var oEntryJSONModel = new sap.ui.model.json.JSONModel();
-                    oEntryJSONModel.setData({employeeTotalEntry : oEntryModel})
+   oModel.read("/ApprovalFlow", {
+        success: function (oData) {
+            let entries = oData.results || [];
+ 
+            // Function to normalize date to YYYY-MM-DD format
+            function normalizeDate(dateValue) {
+                if (!dateValue) return null;
+               
+                // If it's already in YYYY-MM-DD format
+                if (typeof dateValue === "string" && dateValue.includes("-")) {
+                    return dateValue.split("T")[0]; // Remove time part if exists
                 }
-            })
+               
+                // If it's a Date object
+                if (dateValue instanceof Date) {
+                    return dateValue.toISOString().split("T")[0];
+                }
+               
+                // If it's in /Date(...) format
+                if (typeof dateValue === "string" && dateValue.includes("/Date(")) {
+                    let timestamp = parseInt(dateValue.match(/\/Date\((\d+)\)\//)[1], 10);
+                    return new Date(timestamp).toISOString().split("T")[0];
+                }
+               
+                // Default case
+                return new Date(dateValue).toISOString().split("T")[0];
+            }
+ 
+            // Normalize dates for all entries
+            entries = entries.map(e => ({
+                ...e,
+                weekStartDateFormatted: normalizeDate(e.weekStartDate),
+                weekEndDateFormatted: normalizeDate(e.weekEndDate)
+            }));
+ 
+            // Filter only current week
+            let currentWeekEntries = entries.filter(e =>
+                e.weekStartDateFormatted === week.weekStart &&
+                e.weekEndDateFormatted === week.weekEnd
+            );
+ 
+            // Create the model with properly formatted dates
+            var oEntryJSONModel = new sap.ui.model.json.JSONModel({
+                employeeTotalEntry: entries.map(entry => ({
+                    ...entry,
+                    weekStartDate: entry.weekStartDateFormatted,
+                    weekEndDate: entry.weekEndDateFormatted
+                }))
+            });
+ 
+            oView.setModel(oEntryJSONModel, "entryModel");
+        },
+        error: function (err) {
+            console.error("Failed to load Approval Flow", err);
+        }
+    });
         },
 
 
@@ -348,7 +444,7 @@ let fe = normalizeToLocalMidnight(finalEnd);
 
                             let formatted = filtered.map(item => {
 
-                                const isLeaveEntry =
+                                let isLeaveEntry =
     (item.nonProjectTypeName && item.nonProjectTypeName.toLowerCase().includes("leave")) ||
     (item.task && item.task.toLowerCase().includes("leave"));
 
@@ -530,7 +626,7 @@ sundayIsLeave: false,
 
     // If already a Date
     if (str instanceof Date) {
-        const d = new Date(str.getFullYear(), str.getMonth(), str.getDate());
+        let d = new Date(str.getFullYear(), str.getMonth(), str.getDate());
         d.setHours(0,0,0,0);
         return d;
     }
@@ -546,17 +642,17 @@ sundayIsLeave: false,
 
     // 1) ISO YYYY-MM-DD or ISO datetime
     if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-        const clean = str.split("T")[0];
-        const [yyyy, mm, dd] = clean.split("-").map(Number);
-        const d = new Date(yyyy, mm - 1, dd);
+        let clean = str.split("T")[0];
+        let [yyyy, mm, dd] = clean.split("-").map(Number);
+        let d = new Date(yyyy, mm - 1, dd);
         d.setHours(0,0,0,0);
         return isNaN(d.getTime()) ? null : d;
     }
 
     // 2) DD/MM/YYYY (unambiguous)
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
-        const [dd, mm, yyyy] = str.split("/").map(Number);
-        const d = new Date(yyyy, mm - 1, dd);
+        let [dd, mm, yyyy] = str.split("/").map(Number);
+        let d = new Date(yyyy, mm - 1, dd);
         d.setHours(0,0,0,0);
         return isNaN(d.getTime()) ? null : d;
     }
@@ -564,30 +660,30 @@ sundayIsLeave: false,
     // 3) Short form with two-digit year: M/D/YY or D/M/YY (ambiguous)
     if (/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(str)) {
         let [p1, p2, yy] = str.split("/").map(Number);
-        const yyyy = 2000 + yy;
+        let yyyy = 2000 + yy;
 
         // If first part > 12 -> first is day (DD/MM/YY)
         if (p1 > 12 && p2 <= 12) {
-            const d = new Date(yyyy, p2 - 1, p1);
+            let d = new Date(yyyy, p2 - 1, p1);
             d.setHours(0,0,0,0);
             return isNaN(d.getTime()) ? null : d;
         }
 
         // If second part > 12 -> second is day -> MM/DD/YY (Workzone style)
         if (p2 > 12 && p1 <= 12) {
-            const d = new Date(yyyy, p1 - 1, p2);
+            let d = new Date(yyyy, p1 - 1, p2);
             d.setHours(0,0,0,0);
             return isNaN(d.getTime()) ? null : d;
         }
 
         // Both <= 12 -> treat as MM/DD/YY (Workzone) — safer for your deployment
-        const d = new Date(yyyy, p1 - 1, p2);
+        let d = new Date(yyyy, p1 - 1, p2);
         d.setHours(0,0,0,0);
         return isNaN(d.getTime()) ? null : d;
     }
 
     // 4) Fallback to Date parse (rare)
-    const d = new Date(str);
+    let d = new Date(str);
     if (isNaN(d.getTime())) return null;
     d.setHours(0,0,0,0);
     return d;
@@ -708,31 +804,31 @@ sundayIsLeave: false,
 
         // ISO YYYY-MM-DD (safe)
         if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-            const [yyyy, mm, dd] = str.split("T")[0].split("-").map(Number);
+            let [yyyy, mm, dd] = str.split("T")[0].split("-").map(Number);
             return new Date(yyyy, mm - 1, dd);
         }
 
         // Slash formats
         if (str.includes("/")) {
-            const parts = str.split("/").map(s => s.trim());
+            let parts = str.split("/").map(s => s.trim());
             if (parts.length !== 3) return new Date(str);
 
-            const [p1, p2, p3] = parts;
-            const n1 = Number(p1), n2 = Number(p2);
-            const yearPart = p3;
+            let [p1, p2, p3] = parts;
+            let n1 = Number(p1), n2 = Number(p2);
+            let yearPart = p3;
 
             // If year is 4 digits → assume DD/MM/YYYY (India)
             if (/^\d{4}$/.test(yearPart)) {
-                const yyyy = Number(yearPart);
-                const dd = n1;
-                const mm = n2;
+                let yyyy = Number(yearPart);
+                let dd = n1;
+                let mm = n2;
                 return new Date(yyyy, mm - 1, dd);
             }
 
             // If year is 2 digits → Workzone style likely MM/DD/YY,
             // but if first part > 12 then it's DD/MM/YY
             if (/^\d{2}$/.test(yearPart)) {
-                const yyyy = 2000 + Number(yearPart);
+                let yyyy = 2000 + Number(yearPart);
                 if (n1 > 12) {
                     // DD/MM/YY
                     return new Date(yyyy, n2 - 1, n1);
@@ -744,19 +840,19 @@ sundayIsLeave: false,
 
             // Fallback: try to interpret as DD/MM/YYYY if ambiguous
             // (most likely for your users)
-            const yyyy = Number(yearPart.length === 2 ? "20" + yearPart : yearPart);
+            let yyyy = Number(yearPart.length === 2 ? "20" + yearPart : yearPart);
             return new Date(yyyy, n2 - 1, n1);
         }
 
         // Fallback to Date parsing
-        const d = new Date(str);
+        let d = new Date(str);
         return isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
     }
 
-    const d = parseFlexibleDate(dateStr);
+    let d = parseFlexibleDate(dateStr);
     if (!d || isNaN(d.getTime())) return null;
 
-    const days = [
+    let days = [
         "sunday", "monday", "tuesday", "wednesday",
         "thursday", "friday", "saturday"
     ];
@@ -816,30 +912,30 @@ oModel.setProperty("/isTaskDisabled", true);
 
         },
         _isPastBeforeWeek: function (dateStr, weekStart) {
-    const normalize = (d) => {
-        const nd = new Date(d);
+    let normalize = (d) => {
+        let nd = new Date(d);
         nd.setHours(0, 0, 0, 0);
         return nd;
     };
 
-    const selected = normalize(dateStr);
-    const start = normalize(weekStart);
+    let selected = normalize(dateStr);
+    let start = normalize(weekStart);
 
     return selected < start;  
 },
 
    _isDateInsideWeek: function(dateStr, weekStart, weekEnd) {
 
-    const normalize = (d) => {
+    let normalize = (d) => {
         if (!d) return null;
-        const nd = new Date(d);
+        let nd = new Date(d);
         nd.setHours(0, 0, 0, 0);
         return nd;
     };
 
-    const selected = normalize(dateStr);
-    const start = normalize(weekStart);
-    const end = normalize(weekEnd);
+    let selected = normalize(dateStr);
+    let start = normalize(weekStart);
+    let end = normalize(weekEnd);
 
     if (!selected || !start || !end) return false;
 
@@ -1050,7 +1146,7 @@ oModel.setProperty("/isHoursEditable", true);
 
     var newEntry = oModel.getProperty("/newEntry") || {};
 
-    const isLeave = text.toLowerCase() === "leave";
+    let isLeave = text.toLowerCase() === "leave";
 
     if (isLeave) {
         newEntry.isLeaveSelected = true;
@@ -1180,7 +1276,7 @@ onLeaveTypeChange: function (oEvent) {
             var hoursProp = dayProp + "Hours";
             var taskProp = dayProp + "TaskDetails";
 
-            const existingEntries = oModel.getProperty("/timeEntries") || [];
+            let existingEntries = oModel.getProperty("/timeEntries") || [];
             let isDuplicate = false;
 
             existingEntries.forEach(e => {
@@ -1228,12 +1324,12 @@ onLeaveTypeChange: function (oEvent) {
 
 if (oNewEntry.isLeaveSelected) {
 
-    const timeEntries = oModel.getProperty("/timeEntries") || [];
+    let timeEntries = oModel.getProperty("/timeEntries") || [];
 
-    const dayProp = this._dayPropertyFromDate(oNewEntry.selectedDate);
-    const hoursProp = dayProp + "Hours";
+    let dayProp = this._dayPropertyFromDate(oNewEntry.selectedDate);
+    let hoursProp = dayProp + "Hours";
 
-    const alreadyLeave = timeEntries.some(e => {
+    let alreadyLeave = timeEntries.some(e => {
         let isLeave = e.workType && e.workType.toLowerCase().includes("leave");
         let hasHours = Number(e[hoursProp]) > 0;
 
@@ -1327,7 +1423,7 @@ if (oNewEntry.isLeaveSelected) {
             var dayProp = this._dayPropertyFromDate(selectedDateStr);
             var hoursProp = dayProp + "Hours";
             var taskProp = dayProp + "TaskDetails";
-            const existingEntries = oModel.getProperty("/timeEntries") || [];
+            let existingEntries = oModel.getProperty("/timeEntries") || [];
             let isDuplicate = false;
 
             existingEntries.forEach(e => {
@@ -1372,12 +1468,12 @@ if (oNewEntry.isLeaveSelected) {
 
             if (oNewEntry.isLeaveSelected) {
 
-    const timeEntries = oModel.getProperty("/timeEntries") || [];
+    let timeEntries = oModel.getProperty("/timeEntries") || [];
 
-    const dayProp = this._dayPropertyFromDate(oNewEntry.selectedDate);
-    const hoursProp = dayProp + "Hours";
+    let dayProp = this._dayPropertyFromDate(oNewEntry.selectedDate);
+    let hoursProp = dayProp + "Hours";
 
-    const alreadyLeave = timeEntries.some(e => {
+    let alreadyLeave = timeEntries.some(e => {
         let isLeave = e.workType && e.workType.toLowerCase().includes("leave");
         let hasHours = Number(e[hoursProp]) > 0;
 
@@ -1468,18 +1564,18 @@ function parseParts(str) {
     // 2️ Standard DD/MM/YYYY
     
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
-        const [dd, mm, yyyy] = str.split("/").map(Number);
+        let [dd, mm, yyyy] = str.split("/").map(Number);
         return { yyyy, mm, dd };
     }
 
     
     if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-        const [yyyy, mm, dd] = str.split("-").map(Number);
+        let [yyyy, mm, dd] = str.split("-").map(Number);
         return { yyyy, mm, dd };
     }
 
     // fallback
-    const d = new Date(str);
+    let d = new Date(str);
     return isNaN(d.getTime())
         ? null
         : { yyyy: d.getFullYear(), mm: d.getMonth() + 1, dd: d.getDate() };
@@ -1489,7 +1585,7 @@ function parseParts(str) {
 
     // Convert YYYY-MM-DD parts → JS UTC date → V2 /Date(x)/
     function partsToV2(parts) {
-        const utc = Date.UTC(parts.yyyy, parts.mm - 1, parts.dd);
+        let utc = Date.UTC(parts.yyyy, parts.mm - 1, parts.dd);
         return `/Date(${utc})/`;
     }
 
@@ -1512,14 +1608,14 @@ function parseParts(str) {
     }
 
 
-    const selParts = parseParts(selectedDateStr);
-    const selUTC = Date.UTC(selParts.yyyy, selParts.mm - 1, selParts.dd);
+    let selParts = parseParts(selectedDateStr);
+    let selUTC = Date.UTC(selParts.yyyy, selParts.mm - 1, selParts.dd);
 
-    const backendStartParts = parseParts(weekData.getWeekBoundaries.weekStart);
-    const backendEndParts = parseParts(weekData.getWeekBoundaries.weekEnd);
+    let backendStartParts = parseParts(weekData.getWeekBoundaries.weekStart);
+    let backendEndParts = parseParts(weekData.getWeekBoundaries.weekEnd);
 
-    const backendStartUTC = Date.UTC(backendStartParts.yyyy, backendStartParts.mm - 1, backendStartParts.dd);
-    const backendEndUTC = Date.UTC(backendEndParts.yyyy, backendEndParts.mm - 1, backendEndParts.dd);
+    let backendStartUTC = Date.UTC(backendStartParts.yyyy, backendStartParts.mm - 1, backendStartParts.dd);
+    let backendEndUTC = Date.UTC(backendEndParts.yyyy, backendEndParts.mm - 1, backendEndParts.dd);
 
     let useBackend =
         selUTC >= backendStartUTC &&
@@ -1533,13 +1629,13 @@ function parseParts(str) {
         finalEndParts = backendEndParts;
     } else {
         console.warn("➡ Calculating NEW week boundaries");
-        const range = calcWeek(selParts);
+        let range = calcWeek(selParts);
         finalStartParts = range.weekStart;
         finalEndParts = range.weekEnd;
     }
 
-    const weekStartV2 = partsToV2(finalStartParts);
-    const weekEndV2 = partsToV2(finalEndParts);
+    let weekStartV2 = partsToV2(finalStartParts);
+    let weekEndV2 = partsToV2(finalEndParts);
 
     console.log("FINAL WeekStart V2:", weekStartV2);
     console.log("FINAL WeekEnd   V2:", weekEndV2);
@@ -1607,7 +1703,7 @@ function parseParts(str) {
     // CASE 2 → V2 format /Date(###)/
     let match = /\/Date\((\-?\d+)/.exec(input);
     if (match) {
-        const ms = Number(match[1]);
+        let ms = Number(match[1]);
         return new Date(ms).toISOString().split("T")[0];
     }
 
@@ -1664,13 +1760,13 @@ let filteredItems = items.filter(i => {
 
                 // ---------------- SAME PROJECT + SAME TASK CHECK ----------------
                 function isSameProjectRow(i, entry) {
-                    const iProject = i.project_ID || null;
-                    const iNonProj = i.nonProjectType_ID || null;
+                    let iProject = i.project_ID || null;
+                    let iNonProj = i.nonProjectType_ID || null;
 
-                    const eProject = entry.project_ID || null;
-                    const eNonProj = entry.nonProjectTypeID || null;
+                    let eProject = entry.project_ID || null;
+                    let eNonProj = entry.nonProjectTypeID || null;
 
-                    const sameTask =
+                    let sameTask =
                         (i.task || "").trim().toLowerCase() === (entry.task || "").trim().toLowerCase();
 
                     if (iProject && eProject) return sameTask && iProject === eProject;
@@ -1789,7 +1885,7 @@ let filteredItems = items.filter(i => {
 
             sap.ui.core.BusyIndicator.show(0);
 
-            const dayKeys = [
+            let dayKeys = [
                 "mondayHours", "tuesdayHours", "wednesdayHours",
                 "thursdayHours", "fridayHours", "saturdayHours", "sundayHours"
             ];
@@ -1804,9 +1900,9 @@ let filteredItems = items.filter(i => {
             }
 
             // If all hours = 0 → DELETE
-            const oOData = this.getOwnerComponent().getModel("timesheetServiceV2");
-            const sPath = "/MyTimesheets('" + entry.id + "')";
-            const that = this;
+            let oOData = this.getOwnerComponent().getModel("timesheetServiceV2");
+            let sPath = "/MyTimesheets('" + entry.id + "')";
+            let that = this;
 
             oOData.remove(sPath, {
                 success: function () {
@@ -1869,18 +1965,18 @@ let filteredItems = items.filter(i => {
     //  Standard DD/MM/YYYY
   
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
-        const [dd, mm, yyyy] = str.split("/").map(Number);
+        let [dd, mm, yyyy] = str.split("/").map(Number);
         return { yyyy, mm, dd };
     }
 
     //  ISO YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-        const [yyyy, mm, dd] = str.split("-").map(Number);
+        let [yyyy, mm, dd] = str.split("-").map(Number);
         return { yyyy, mm, dd };
     }
 
     // fallback
-    const d = new Date(str);
+    let d = new Date(str);
     return isNaN(d.getTime())
         ? null
         : { yyyy: d.getFullYear(), mm: d.getMonth() + 1, dd: d.getDate() };
@@ -1890,7 +1986,7 @@ let filteredItems = items.filter(i => {
 
     // Convert YYYY-MM-DD parts → JS UTC date → V2 /Date(x)/
     function partsToV2(parts) {
-        const utc = Date.UTC(parts.yyyy, parts.mm - 1, parts.dd);
+        let utc = Date.UTC(parts.yyyy, parts.mm - 1, parts.dd);
         return `/Date(${utc})/`;
     }
 
@@ -1914,14 +2010,14 @@ let filteredItems = items.filter(i => {
 
 
  
-    const selParts = parseParts(selectedDateStr);
-    const selUTC = Date.UTC(selParts.yyyy, selParts.mm - 1, selParts.dd);
+    let selParts = parseParts(selectedDateStr);
+    let selUTC = Date.UTC(selParts.yyyy, selParts.mm - 1, selParts.dd);
 
-    const backendStartParts = parseParts(weekData.getWeekBoundaries.weekStart);
-    const backendEndParts = parseParts(weekData.getWeekBoundaries.weekEnd);
+    let backendStartParts = parseParts(weekData.getWeekBoundaries.weekStart);
+    let backendEndParts = parseParts(weekData.getWeekBoundaries.weekEnd);
 
-    const backendStartUTC = Date.UTC(backendStartParts.yyyy, backendStartParts.mm - 1, backendStartParts.dd);
-    const backendEndUTC = Date.UTC(backendEndParts.yyyy, backendEndParts.mm - 1, backendEndParts.dd);
+    let backendStartUTC = Date.UTC(backendStartParts.yyyy, backendStartParts.mm - 1, backendStartParts.dd);
+    let backendEndUTC = Date.UTC(backendEndParts.yyyy, backendEndParts.mm - 1, backendEndParts.dd);
 
     let useBackend =
         selUTC >= backendStartUTC &&
@@ -1935,13 +2031,13 @@ let filteredItems = items.filter(i => {
         finalEndParts = backendEndParts;
     } else {
         console.warn("➡ Calculating NEW week boundaries");
-        const range = calcWeek(selParts);
+        let range = calcWeek(selParts);
         finalStartParts = range.weekStart;
         finalEndParts = range.weekEnd;
     }
 
-    const weekStartV2 = partsToV2(finalStartParts);
-    const weekEndV2 = partsToV2(finalEndParts);
+    let weekStartV2 = partsToV2(finalStartParts);
+    let weekEndV2 = partsToV2(finalEndParts);
 
     console.log("FINAL WeekStart V2:", weekStartV2);
     console.log("FINAL WeekEnd   V2:", weekEndV2);
@@ -1964,11 +2060,11 @@ let filteredItems = items.filter(i => {
             let dayDateField = dayMap[dayProp];
 
             function toODataDateSafe(dateStr) {
-    const p = parseParts(dateStr);   // use your correct parseParts() here
+    let p = parseParts(dateStr);   // use your correct parseParts() here
 
     if (!p) return null;
 
-    const utc = Date.UTC(p.yyyy, p.mm - 1, p.dd);
+    let utc = Date.UTC(p.yyyy, p.mm - 1, p.dd);
 
     return `/Date(${utc})/`;
 }
@@ -2019,7 +2115,7 @@ let filteredItems = items.filter(i => {
     // CASE 2 → V2 format /Date(###)/
     let match = /\/Date\((\-?\d+)/.exec(input);
     if (match) {
-        const ms = Number(match[1]);
+        let ms = Number(match[1]);
         return new Date(ms).toISOString().split("T")[0];
     }
 
@@ -2101,9 +2197,9 @@ let filteredItems = items.filter(i => {
                                 oModel.setProperty("/projectsToShow", []);
                                 oModel.setProperty("/tasksToShow", []);
                                 sap.m.MessageToast.show("Timesheet saved!");
-                                const oTable = that.byId("timesheetTable");
+                                let oTable = that.byId("timesheetTable");
         if (oTable) {
-            const binding = oTable.getBinding("rows") || oTable.getBinding("items");
+            let binding = oTable.getBinding("rows") || oTable.getBinding("items");
             if (binding) binding.refresh(true);
         }
                                 resolve(data);
@@ -2741,7 +2837,7 @@ let filteredItems = items.filter(i => {
 //         console.warn("Date formatting failed: ", rawDate, e);
 //     }
 
-//     const isLeaveEntry =
+//     let isLeaveEntry =
 //         (oEntry.nonProjectTypeName && oEntry.nonProjectTypeName.toLowerCase().includes("leave")) ||
 //         (oEntry.workType && ["personal", "sick", "half", "leave"].some(x =>
 //             oEntry.workType.toLowerCase().includes(x)
@@ -2958,7 +3054,7 @@ if (currentDayIsLeave) {
     
     // Detect leave entry
    
-    const isLeaveEntry =
+    let isLeaveEntry =
         (oEntry.nonProjectTypeName && oEntry.nonProjectTypeName.toLowerCase().includes("leave")) ||
         (oEntry.workType && ["personal", "sick", "half", "leave"].some(x =>
             oEntry.workType.toLowerCase().includes(x)
@@ -2971,10 +3067,10 @@ if ((sDay === "saturday" || sDay === "sunday") && isLeaveEntry) {
 
 
     
-    const isLeaveDay = isLeaveEntry && fCurrentHours > 0;
+    let isLeaveDay = isLeaveEntry && fCurrentHours > 0;
 
     // If leave day → hide everything and disable editing
-    const leaveHoursAllowed = ["4", "8"];
+    let leaveHoursAllowed = ["4", "8"];
     // Determine which hours to show for leave types
 let aHourOptions = [];
 
@@ -3207,8 +3303,8 @@ if (anotherLeaveExists) {
                 return false;
             }
 
-            const hasProject = entry.projectId && entry.projectId.trim() !== "";
-            const hasNonProject = entry.nonProjectTypeID && entry.nonProjectTypeID.trim() !== "";
+            let hasProject = entry.projectId && entry.projectId.trim() !== "";
+            let hasNonProject = entry.nonProjectTypeID && entry.nonProjectTypeID.trim() !== "";
 
             // Project / Non-Project Selection Check
             if (!hasProject && !hasNonProject) {
@@ -3286,7 +3382,7 @@ if (anotherLeaveExists) {
                                 ? item.projectName
                                 : item.nonProjectTypeName || "";
 
-                            const isLeaveEntry =
+                            let isLeaveEntry =
     (item.nonProjectTypeName && item.nonProjectTypeName.toLowerCase().includes("leave")) ||
     (item.task && item.task.toLowerCase().includes("leave"));
 
@@ -3878,8 +3974,8 @@ onCloseLeaveBalance: function () {
 },
 
 onDownloadDocument: function () {
-    const oModel = this.getOwnerComponent().getModel("timesheetServiceV2");
-    const that = this;
+    let oModel = this.getOwnerComponent().getModel("timesheetServiceV2");
+    let that = this;
 
     sap.ui.core.BusyIndicator.show(0);
 
@@ -3894,7 +3990,7 @@ onDownloadDocument: function () {
             }
 
             // 2️⃣ Always use the first document (common PDF)
-            const documentID = oData.results[0].documentID;
+            let documentID = oData.results[0].documentID;
 
             console.log("Document ID from backend:", documentID);
 
@@ -3918,7 +4014,7 @@ _downloadDocument: function (documentID) {
 
     sap.ui.core.BusyIndicator.show(0);
 
-    const url = `/odata/v4/employee/downloadDocument?documentID='${documentID}'`;
+    let url = `/odata/v4/employee/downloadDocument?documentID='${documentID}'`;
 
     fetch(url, {
         method: "GET",
@@ -3934,13 +4030,13 @@ _downloadDocument: function (documentID) {
             return;
         }
 
-        const res = await response.json();
+        let res = await response.json();
 
-        const bytes = atob(res.content).split("").map(c => c.charCodeAt(0));
-        const blob = new Blob([new Uint8Array(bytes)], { type: res.mimeType });
+        let bytes = atob(res.content).split("").map(c => c.charCodeAt(0));
+        let blob = new Blob([new Uint8Array(bytes)], { type: res.mimeType });
 
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement("a");
+        let blobUrl = URL.createObjectURL(blob);
+        let a = document.createElement("a");
         a.href = blobUrl;
         a.download = res.fileName;
         a.click();

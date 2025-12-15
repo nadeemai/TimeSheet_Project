@@ -234,51 +234,67 @@
                 <Text text="{timeEntryModel>projectName}"/>
 
                 <!-- Task -->
-                <Text text="{timeEntryModel>workType}"/>
+                <Text  
+    text="{timeEntryModel>workType}"  
+    class="{= ${timeEntryModel>isLeaveEntry} ? 'leaveText' : 'normalText' }"
+/>
+
 
                 <!-- Details Popup -->
                 <Button icon="sap-icon://detail-view" type="Transparent"
                         press="onTaskDetailPress"/>
 
                 <!-- Daily hour buttons per row -->
-                <Button text="{timeEntryModel>mondayHours}"     press="onEditDailyHours">
+                <Button text="{timeEntryModel>mondayHours}" 
+                   type="{= ${timeEntryModel>mondayIsLeave} ? 'Reject' : 'Default' }"
+                    press="onEditDailyHours">
                     <customData>
                         <core:CustomData key="day" value="monday"/>
                     </customData>
                 </Button>
 
-                <Button text="{timeEntryModel>tuesdayHours}"    press="onEditDailyHours">
+                <Button text="{timeEntryModel>tuesdayHours}"
+                    type="{= ${timeEntryModel>tuesdayIsLeave} ? 'Reject' : 'Default' }"                
+                    press="onEditDailyHours">
                     <customData>
                         <core:CustomData key="day" value="tuesday"/>
                     </customData>
                 </Button>
 
-                <Button text="{timeEntryModel>wednesdayHours}" press="onEditDailyHours">
+                
+                <Button text="{timeEntryModel>wednesdayHours}" 
+                type="{= ${timeEntryModel>wednesdayIsLeave} ? 'Reject' : 'Default' }" 
+                press="onEditDailyHours">
                     <customData>
                         <core:CustomData key="day" value="wednesday"/>
                     </customData>
                 </Button>
 
-                <Button text="{timeEntryModel>thursdayHours}"  press="onEditDailyHours">
+                <Button text="{timeEntryModel>thursdayHours}" 
+                type="{= ${timeEntryModel>thursdayIsLeave} ? 'Reject' : 'Default' }" 
+                 press="onEditDailyHours">
                     <customData>
                         <core:CustomData key="day" value="thursday"/>
                     </customData>
                 </Button>
 
-                <Button text="{timeEntryModel>fridayHours}"    press="onEditDailyHours">
+                <Button text="{timeEntryModel>fridayHours}" 
+                type="{= ${timeEntryModel>fridayIsLeave} ? 'Reject' : 'Default' }" 
+                   press="onEditDailyHours">
                     <customData>
                         <core:CustomData key="day" value="friday"/>
                     </customData>
                 </Button>
 
-                <Button text="{timeEntryModel>saturdayHours}" type="Reject"
+                <Button text="{timeEntryModel>saturdayHours}"
+                 type="Attention"
                         press="onEditDailyHours">
                     <customData>
                         <core:CustomData key="day" value="saturday"/>
                     </customData>
                 </Button>
 
-                <Button text="{timeEntryModel>sundayHours}" type="Reject"
+                <Button text="{timeEntryModel>sundayHours}" type="Attention"
                         press="onEditDailyHours">
                     <customData>
                         <core:CustomData key="day" value="sunday"/>
@@ -317,10 +333,11 @@
     </Panel>
 </IconTabFilter>
                     <IconTabFilter id="_IDGenIconTabFilter3" text="Reports" key="reportsTab" icon="sap-icon://bar-chart" iconColor="Negative">
+                   
                         <Panel id="bookedHoursPanel" headerText="Booked Hours Overview" expandable="true" expanded="true">
                         <headerToolbar>
                 <Toolbar id="_IDGenToolbar1">
-                <Title id="_IDGenTitle1" text="Reports"/>
+                <Title id="_IDGenTitle12" text="Reports"/>
                   <ToolbarSpacer id="_IDGenToolbarSpacer1"/>
                         <Button id="refreshAnalyticsBtn" text="Refresh Data" icon="sap-icon://refresh" press="onRefreshAnalytics"/>
                 </Toolbar>
@@ -350,6 +367,63 @@
     </items>
 </Table>
                         </Panel>
+
+                       <Panel id="bookedHoursPanel2" 
+       headerText="Total Entry Reports" 
+       expandable="true" 
+       expanded="true">
+
+    <headerToolbar>
+        <Toolbar>
+            <Title text="Pending Approval"/>
+            <ToolbarSpacer/>
+               <!-- <Button id="reportPrevious" icon="sap-icon://nav-back" press="onPreviousReportWeek"/>
+                <Button id="reportCurrentWeek" text="Today" press="onCurrentReportWeek"/>
+                <Button id="reportNext" icon="sap-icon://navigation-right-arrow" press="onNextReportWeek"/> -->
+        </Toolbar>
+    </headerToolbar>
+
+    <!-- Bind this table to entryModel -->
+    <Table id="bookedHoursTable2" items="{entryModel>/employeeTotalEntry}">
+       <columns>
+                                    <Column><Text text="Category"/></Column>
+                                    <Column hAlign="Center" width="25%"><Text text="Week Start"/></Column>
+                                   <Column hAlign="Center" width="25%"><Text text="Week End"/></Column>
+            <Column hAlign="Center" width="25%"><Text text="Total Hours"/></Column>
+                                    <!-- <Column><Text text="Timesheet Count"/></Column> -->
+                                </columns>
+        <items>
+            <ColumnListItem>
+                <cells>
+
+                    <!-- CATEGORY -->
+                    <Text text="{entryModel>category}"/>
+
+                    <!-- WEEK START -->
+                    <Text text="{entryModel>weekStartDate}"/>
+
+                    <!-- WEEK END -->
+                    <Text text="{entryModel>weekEndDate}"/>
+
+                    <!-- TOTAL HOURS -->
+                     <ObjectStatus
+            text="{entryModel>totalHours}"
+    
+            state="{
+                path: 'entryModel>totalHours',
+                formatter: '.formatHoursState'
+            }"
+            />
+
+                   
+
+                </cells>
+            </ColumnListItem>
+        </items>
+    </Table>
+</Panel>
+
+                        
                          <ToolbarSpacer id="_IDGenToolbarSpacer4"/>
                         <Panel id="durationPanel" headerText="Project Engagement Duration" expandable="true" expanded="true">
                            <Table id="durationTable" items="{durationModel>/employeeProjectDurations}">

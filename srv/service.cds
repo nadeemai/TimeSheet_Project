@@ -265,7 +265,6 @@ service EmployeeService @(requires: 'authenticated-user') {
     }
     where isActive = true;
 
-  // NEW: Approval Flow Entity
   @readonly
   entity ApprovalFlow {
     key category        : String  @title: 'Category';
@@ -287,6 +286,11 @@ service EmployeeService @(requires: 'authenticated-user') {
     mimeType    : String;
     content     : LargeBinary;
   };
+  action testMail() returns String;
+  action testEmailConfiguration() returns String;
+  action testNonProjectEmail() returns String;
+  action testModificationEmail() returns String;
+  function checkEmailHealth() returns String;
 }
 
 

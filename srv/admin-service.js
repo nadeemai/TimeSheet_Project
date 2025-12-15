@@ -151,65 +151,145 @@ this.on('initializeLeaveTypes', async (req) => {
 });
 
 
-    this.on('createEmployee', async (req) => {
-        const { employeeID, firstName, lastName, email, managerEmployeeID, roleID } = req.data;
 
-        console.log('createEmployee action called');
-        
-        const admin = await getAuthenticatedAdmin(req);
-        if (!admin) {
-            console.log('createEmployee: Admin authentication failed');
-            return 'Admin authentication failed';
+this.on('createEmployee', async (req) => {
+    const { employeeID, firstName, lastName, email, managerEmployeeID, roleID } = req.data;
+
+    console.log('createEmployee action called with data:', { employeeID, firstName, lastName, email });
+    
+    const admin = await getAuthenticatedAdmin(req);
+    if (!admin) {
+        console.log('createEmployee: Admin authentication failed');
+        return 'Admin authentication failed';
+    }
+
+    console.log('createEmployee: Admin authenticated');
+
+    let finalEmployeeID = employeeID;
+    if (!finalEmployeeID) {
+        const count = await SELECT.from(Employees);
+        finalEmployeeID = `EMP${String(count.length + 1).padStart(4, '0')}`;
+        console.log('🔧 Generated employeeID:', finalEmployeeID);
+    }
+
+    const existing = await SELECT.one.from(Employees).where({ employeeID: finalEmployeeID });
+    if (existing) {
+        return req.error(400, 'Employee ID already exists');
+    }
+
+    const existingEmail = await SELECT.one.from(Employees).where({ email });
+    if (existingEmail) {
+        return req.error(400, 'Email already exists');
+    }
+
+    const role = await SELECT.one.from(UserRoles).where({ ID: roleID });
+    if (!role) {
+        return req.error(404, 'Role not found');
+    }
+
+    let manager = null;
+    let managerName = null;
+    if (managerEmployeeID) {
+        manager = await SELECT.one.from(Employees).where({ employeeID: managerEmployeeID });
+        if (!manager) {
+            return req.error(404, 'Manager not found');
         }
-
-        console.log('createEmployee: Admin authenticated');
-
-        const existing = await SELECT.one.from(Employees).where({ employeeID });
-        if (existing) {
-            return req.error(400, 'Employee ID already exists');
-        }
-
-        const existingEmail = await SELECT.one.from(Employees).where({ email });
-        if (existingEmail) {
-            return req.error(400, 'Email already exists');
-        }
-
-        const role = await SELECT.one.from(UserRoles).where({ ID: roleID });
-        if (!role) {
-            return req.error(404, 'Role not found');
-        }
-
-        let manager = null;
-        if (managerEmployeeID) {
-            manager = await SELECT.one.from(Employees).where({ employeeID: managerEmployeeID });
-            if (!manager) {
-                return req.error(404, 'Manager not found');
+        if (manager.userRole_ID) {
+            const managerRole = await SELECT.one.from(UserRoles)
+                .where({ ID: manager.userRole_ID });
+            
+            if (!managerRole || managerRole.roleName !== 'Manager') {
+                return req.error(400, 'Selected employee is not a Manager. Please select a valid Manager.');
             }
-            if (manager.userRole_ID) {
-                const managerRole = await SELECT.one.from(UserRoles)
-                    .where({ ID: manager.userRole_ID });
-                
-                if (!managerRole || managerRole.roleName !== 'Manager') {
-                    return req.error(400, 'Selected employee is not a Manager. Please select a valid Manager.');
-                }
-            }
         }
+        managerName = `${manager.firstName} ${manager.lastName}`;
+    }
 
-        await INSERT.into(Employees).entries({
-            employeeID,
-            firstName,
-            lastName,
-            email,
-            isActive: true,
-            userRole_ID: roleID,
-            managerID_ID: manager ? manager.ID : null
-        });
-
-        console.log('Employee created successfully:', employeeID);
-        return `Employee ${firstName} ${lastName} created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}`;
+    await INSERT.into(Employees).entries({
+        employeeID: finalEmployeeID,
+        firstName,
+        lastName,
+        email,
+        isActive: true,
+        userRole_ID: roleID,
+        managerID_ID: manager ? manager.ID : null
     });
 
-    this.on('createRole', async (req) => {
+    console.log('✅ Employee created successfully:', finalEmployeeID);
+
+    const newEmployee = await SELECT.one.from(Employees)
+        .where({ employeeID: finalEmployeeID });
+
+    if (!newEmployee) {
+        console.error('❌ Failed to retrieve employee with ID:', finalEmployeeID);
+        return req.error(500, 'Failed to retrieve created employee');
+    }
+
+    console.log('✅ Retrieved employee:', newEmployee.ID, newEmployee.employeeID);
+
+    if (role.roleName === 'Employee') {
+        try {
+            const crypto = require('crypto');
+            
+            const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '12345678901234567890123456789012';
+            const ENCRYPTION_IV = process.env.ENCRYPTION_IV || '1234567890123456';
+            
+            const cipher = crypto.createCipheriv(
+                'aes-256-cbc',
+                Buffer.from(ENCRYPTION_KEY),
+                Buffer.from(ENCRYPTION_IV)
+            );
+            
+            let linkToken = cipher.update(finalEmployeeID, 'utf8', 'hex');
+            linkToken += cipher.final('hex');
+            
+            const baseURL = process.env.DASHBOARD_URL || 'http://localhost:4004/employee';
+            const dashboardUrl = `${baseURL}/auth.html?token=${linkToken}`;
+
+            console.log('🔗 Generated dashboard URL:', dashboardUrl);
+            console.log('🔐 Generated link token:', linkToken);
+
+            await INSERT.into('my.timesheet.auth.EmployeeDashboardLink').entries({
+                employee_ID: newEmployee.ID,
+                linkToken: linkToken,
+                dashboardUrl: dashboardUrl,
+                isActive: true
+            });
+
+            console.log('💾 Dashboard link stored in database');
+
+            try {
+                const { sendWelcomeEmail } = require('./email_service');
+                
+                if (sendWelcomeEmail) {
+                    const emailResult = await sendWelcomeEmail({
+                        employeeName: `${firstName} ${lastName}`,
+                        employeeEmail: email,
+                        employeeID: finalEmployeeID,
+                        dashboardUrl: dashboardUrl,
+                        managerName: managerName
+                    });
+
+                    if (emailResult && emailResult.success) {
+                        console.log('✅ Welcome email sent successfully');
+                    }
+                }
+            } catch (emailError) {
+                console.warn('⚠️ Email service not available:', emailError.message);
+            }
+
+            return `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}. Dashboard access link: ${dashboardUrl}`;
+
+        } catch (error) {
+            console.error('❌ Error creating dashboard link:', error);
+            return `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully, but failed to generate dashboard link. Error: ${error.message}`;
+        }
+    } else {
+        return `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}`;
+    }
+});
+
+this.on('createRole', async (req) => {
         const { roleID, roleName, description } = req.data;
 
   

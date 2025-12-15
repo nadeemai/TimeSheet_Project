@@ -140,7 +140,7 @@
 
 /* ----- Container ----- */
 .leaveContainer {
-    padding: 25px 14px;
+    padding: 30px 14px;
 }
 
 /* ----- Employee Info Styling ----- */
@@ -205,4 +205,18 @@
 .closeButton {
     font-weight: bold !important;
     color: #0a6ed1 !important;
+}
+
+.leaveText {
+    color: #0a6ed1 !important;   /* SAP blue */
+    font-weight: bold !important;
+}
+
+.normalText {
+    color: #32363a !important;   /* default text */
+}
+.leaveButton {
+    background-color: #ffcccb !important;
+    border-color: #d9534f !important;
+    color: #000 !important;
 }

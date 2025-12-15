@@ -10,7 +10,6 @@
       "authenticationType": "xsuaa",
       "csrfProtection": false
     },
-
     {
       "source": "^/admin/(.*)$",
       "target": "/admin/$1",
@@ -29,7 +28,6 @@
       "service": "html5-apps-repo-rt",
       "authenticationType": "xsuaa"
     },
-
     {
       "source": "^(.*)$",
       "target": "/$1",
@@ -37,7 +35,6 @@
       "authenticationType": "xsuaa"
     }
   ],
-
   "logout": {
     "logoutEndpoint": "/do/logout",
     "logoutPage": "/"

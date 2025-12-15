@@ -1,3 +1,4 @@
+# Updated mta.yaml for timesheet-application with destination-content similar to SupplierOnboarding
 _schema-version: 3.3.0
 ID: timesheet-application
 version: 1.0.0
@@ -11,6 +12,7 @@ modules:
       - name: timesheet-application-db
       - name: timesheet-application-auth
       - name: timesheet-application-destination
+      - name: timesheet-application-connectivity
     provides:
       - name: srv-api
         properties:
@@ -115,6 +117,7 @@ modules:
             - manager.zip
           target-path: resources/
 
+  # Updated destination-content similar to SupplierOnboarding
   - name: timesheet-application-destination-content
     type: com.sap.application.content
     requires:
@@ -129,9 +132,10 @@ modules:
         parameters:
           service-key:
             name: timesheet-application-auth-key
+      - name: srv-api
     parameters:
       content:
-        instance:
+        subaccount:
           destinations:
             - Name: timesheet_application_html_repo_host
               ServiceInstanceName: timesheet-application-html5-app-host-service
@@ -141,6 +145,14 @@ modules:
               Name: timesheet_application_auth
               ServiceInstanceName: timesheet-application-auth
               ServiceKeyName: timesheet-application-auth-key
+              sap.cloud.service: timesheet-application
+            - Name: timesheet-application-srv-api
+              ServiceInstanceName: timesheet-application-auth
+              ServiceKeyName: timesheet-application-auth-key
+              Authentication: OAuth2ClientCredentials
+              URL: ~{srv-api/srv-url}
+              sap.applicationdevelopment.actions.enabled: true
+              sap.processautomation.enabled: true
               sap.cloud.service: timesheet-application
           existing_destinations_policy: update
     build-parameters:
@@ -165,29 +177,23 @@ resources:
 
   - name: timesheet-application-destination
     type: org.cloudfoundry.managed-service
-    requires:
-      - name: srv-api
     parameters:
       service: destination
       service-plan: lite
       config:
         HTML5Runtime_enabled: true
         init_data:
-          instance:
+          subaccount:
             destinations:
               - Authentication: NoAuthentication
                 Name: ui5
                 ProxyType: Internet
                 Type: HTTP
                 URL: https://ui5.sap.com
-              - Authentication: NoAuthentication
-                HTML5.DynamicDestination: true
-                HTML5.ForwardAuthToken: true
-                Name: timesheet-application-srv-api
-                ProxyType: Internet
-                Type: HTTP
-                URL: ~{srv-api/srv-url}
-          existing_destinations_policy: update
+            existing_destinations_policy: update
+        version: 1.0.0
+    requires:
+      - name: timesheet-application-auth
 
   - name: timesheet-application-html5-repo-host
     type: org.cloudfoundry.managed-service
@@ -201,6 +207,12 @@ resources:
     parameters:
       service: html5-apps-repo
       service-plan: app-runtime
+
+  - name: timesheet-application-connectivity
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: connectivity
+      service-plan: lite
 
 parameters:
   deploy_mode: html5-repo

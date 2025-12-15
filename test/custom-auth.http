@@ -1,0 +1,199 @@
+
+POST http://localhost:4004/odata/v4/admin/createEmployee
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+Content-Type: application/json
+
+{
+  "employeeID": "EMP9999",
+  "firstName": "Test",
+  "lastName": "Employee",
+  "email": "test.employee@sumodigitech.com",
+  "managerEmployeeID": "EMP0002",
+  "roleID": ""
+}
+
+### ============================================
+
+GET http://localhost:4004/odata/v4/admin/UserRoles?$filter=roleName eq 'Employee'
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+
+### ============================================
+
+GET http://localhost:4004/odata/v4/admin/Employees?$filter=employeeID eq 'EMP9999'&$expand=dashboardLink
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+
+### ============================================
+
+GET http://localhost:4004/odata/v4/admin/Employees('EMP0017')
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+
+### ============================================
+
+POST http://localhost:4004/odata/v4/authentication/generateOTP
+Content-Type: application/json
+
+{
+  "linkToken": "07cd00ad12227bac0f321ec947945d74"
+}
+
+
+### ============================================
+
+GET http://localhost:4004/odata/v4/admin/Employees?$filter=employeeID eq 'EMP0017'
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+
+### ============================================
+
+POST http://localhost:4004/odata/v4/authentication/verifyOTP
+Content-Type: application/json
+
+{
+  "linkToken": "[PASTE_LINK_TOKEN_HERE]",
+  "otp": "[PASTE_OTP_CODE_HERE]"
+}
+
+
+### ============================================
+
+POST http://localhost:4004/odata/v4/authentication/validateToken
+Content-Type: application/json
+
+{
+  "accessToken": "[PASTE_ACCESS_TOKEN_HERE]"
+}
+
+
+### ============================================
+
+POST http://localhost:4004/odata/v4/authentication/verifyOTP
+Content-Type: application/json
+
+{
+  "linkToken": "07cd00ad12227bac0f321ec947945d74",
+  "otp": "294419"
+}
+
+
+### ============================================
+
+POST http://localhost:4004/odata/v4/authentication/generateOTP
+Content-Type: application/json
+
+{
+  "linkToken": "07cd00ad12227bac0f321ec947945d74"
+}
+
+
+### ============================================
+
+GET http://localhost:4004/odata/v4/admin/Notifications?$orderby=createdAt desc
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+
+### ============================================
+
+### 1. First, get Employee Role ID
+GET http://localhost:4004/odata/v4/admin/UserRoles?$filter=roleName eq 'Employee'
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+###
+
+### 
+POST http://localhost:4004/odata/v4/admin/createEmployee
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+Content-Type: application/json
+
+{
+  "employeeID": "EMP9999",
+  "firstName": "Test",
+  "lastName": "Employee",
+  "email": "aditya.mishra@sumodigitech.com",
+  "managerEmployeeID": "EMP0002",
+  "roleID": "PASTE_ROLE_ID_HERE"
+}
+
+###
+
+### 
+GET http://localhost:4004/odata/v4/admin/Employees?$filter=employeeID eq 'EMP9999'
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+
+###
+
+
+
+### 
+POST http://localhost:4004/odata/v4/authentication/generateOTP
+Content-Type: application/json
+
+{
+  "linkToken": "07cd00ad12227bac0f321ec947945d74"
+}
+
+###
+
+
+
+###
+POST http://localhost:4004/odata/v4/authentication/verifyOTP
+Content-Type: application/json
+
+{
+  "linkToken": "07cd00ad12227bac0f321ec947945d74",
+  "otp": "278890"
+}
+
+###
+
+### 
+POST http://localhost:4004/odata/v4/authentication/validateToken
+Content-Type: application/json
+
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbXBsb3llZUlEIjoiRU1QMDAxNyIsImVtYWlsIjoic2hpdmFtLnNocml2YXN0YXZAc3Vtb2RpZ2l0ZWNoLmNvbSIsImZpcnN0TmFtZSI6IlNoaXZhbSIsImxhc3ROYW1lIjoiU2hyaXZhc3RhdiIsImlkIjoiNjU5NzQ4MTctNjVkYi00NGI2LWFiM2QtMTJmYzM5Mjk2M2U0IiwiaWF0IjoxNzY1Nzc5OTMzLCJleHAiOjE3NjU4NjYzMzN9.m4DHnGDRRgEBoKmX1vy9tfu3fTsyjcoWCz8P0bOQCYo"
+}
+
+
+
+### 
+POST http://localhost:4004/odata/v4/admin/deleteEmployee
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
+Content-Type: application/json
+
+{
+  "employeeID": "EMP9999"
+}
+
+### ============================================
+### TESTING CHECKLIST
+### ============================================
+### ✅ Employee creation generates dashboard link
+### ✅ Dashboard link stored in database
+### ✅ Welcome email sent (check email logs)
+### ✅ Link token encryption working
+### ✅ OTP generation working
+### ✅ OTP stored in database
+### ✅ OTP email sent (check email logs)
+### ✅ OTP verification working
+### ✅ JWT token generation working
+### ✅ JWT token validation working
+### ✅ Token expiry working (wait 24+ hours)
+### ✅ OTP expiry working (wait 10+ minutes)
+### ✅ Max attempts limit working (3 tries)
+### ✅ Invalid token handling working
+### ✅ Authentication logs created
+### ============================================
+
+
+
+POST http://localhost:4004/odata/v4/authentication/getLatestOTP
+Content-Type: application/json
+
+{
+  "linkToken": "07cd00ad12227bac0f321ec947945d74"
+}
+

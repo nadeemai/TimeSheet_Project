@@ -715,79 +715,228 @@ sap.ui.define([
 
 
     //notification button
-    onNotificationPress: function () {
-      if (!this._oNotificationDialog) {
-        this._oNotificationDialog = new sap.m.Dialog({
-          title: "Notifications",
-          contentWidth: "80%",
-          contentHeight: "75vh",
-          stretch: sap.ui.Device.system.phone,
-          content: new sap.m.List({
-            id: this.createId("notificationList"),
-            noDataText: "No notifications found",
-            mode: sap.m.ListMode.None,
-            items: {
-              path: "/notifications",
-              template: new sap.m.StandardListItem({
-                title: "{title}",
-                description: "{message}",
-                info: "{createdAt}",
-                infoState: "{= ${read} ? 'Success' : 'Warning' }",
-                icon: "{= ${read} ? 'sap-icon://message-success' : 'sap-icon://message-information' }"
-              })
-            }
-          }),
-          beginButton: new sap.m.Button({
-            text: "Close",
-            press: function () {
-              this._oNotificationDialog.close();
-            }.bind(this)
-          }),
-          afterClose: function () {
-            // keep data – will be refreshed on next open
-          }
-        });
+    // onNotificationPress: function () {
+    //   if (!this._oNotificationDialog) {
+    //     this._oNotificationDialog = new sap.m.Dialog({
+    //       title: "Notifications",
+    //       contentWidth: "80%",
+    //       contentHeight: "75vh",
+    //       stretch: sap.ui.Device.system.phone,
+    //       content: new sap.m.List({
+    //         id: this.createId("notificationList"),
+    //         noDataText: "No notifications found",
+    //         mode: sap.m.ListMode.None,
+    //         items: {
+    //           path: "/notifications",
+    //           template: new sap.m.StandardListItem({
+    //             title: "{title}",
+    //             description: "{message}",
+    //             info: "{createdAt}",
+    //             infoState: "{= ${read} ? 'Success' : 'Warning' }",
+    //             icon: "{= ${read} ? 'sap-icon://message-success' : 'sap-icon://message-information' }"
+    //           })
+    //         }
+    //       }),
+    //       beginButton: new sap.m.Button({
+    //         text: "Close",
+    //         press: function () {
+    //           this._oNotificationDialog.close();
+    //         }.bind(this)
+    //       }),
+    //       afterClose: function () {
+    //         // keep data – will be refreshed on next open
+    //       }
+    //     });
 
-        this.getView().addDependent(this._oNotificationDialog);
-      }
+    //     this.getView().addDependent(this._oNotificationDialog);
+    //   }
 
-      // Show + busy
-      this._oNotificationDialog.open();
-      this.byId("notificationList").setBusy(true);
+    //   // Show + busy
+    //   this._oNotificationDialog.open();
+    //   this.byId("notificationList").setBusy(true);
 
-      var oODataModel = this.getOwnerComponent().getModel("adminService");
+    //   var oODataModel = this.getOwnerComponent().getModel("adminService");
 
-      oODataModel.read("/Notifications", {
-        success: function (oData) {
-          var aNotifications = oData.results || oData.value || [];
+    //   oODataModel.read("/Notifications", {
+    //     success: function (oData) {
+    //       var aNotifications = oData.results || oData.value || [];
 
-          // Sort newest first
-          aNotifications.sort(function (a, b) {
-            return new Date(b.createdAt) - new Date(a.createdAt);
-          });
+    //       // Sort newest first
+    //       aNotifications.sort(function (a, b) {
+    //         return new Date(b.createdAt) - new Date(a.createdAt);
+    //       });
 
-          // Optional: format date nicely
-          aNotifications.forEach(function (n) {
-            if (n.createdAt) {
-              var oDate = new Date(n.createdAt);
-              n.createdAt = oDate.toLocaleDateString() + " " + oDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-            n.title = n.title || "Notification";
-            n.message = n.message || "";
-            n.read = n.read === true;
-          });
+    //       // Optional: format date nicely
+    //       aNotifications.forEach(function (n) {
+    //         if (n.createdAt) {
+    //           var oDate = new Date(n.createdAt);
+    //           n.createdAt = oDate.toLocaleDateString() + " " + oDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    //         }
+    //         n.title = n.title || "Notification";
+    //         n.message = n.message || "";
+    //         n.read = n.read === true;
+    //       });
 
-          var oJSONModel = new sap.ui.model.json.JSONModel({ notifications: aNotifications });
-          this.byId("notificationList").setModel(oJSONModel);
-          this.byId("notificationList").setBusy(false);
+    //       var oJSONModel = new sap.ui.model.json.JSONModel({ notifications: aNotifications });
+    //       this.byId("notificationList").setModel(oJSONModel);
+    //       this.byId("notificationList").setBusy(false);
+    //     }.bind(this),
+    //     error: function (oError) {
+    //       this.byId("notificationList").setBusy(false);
+    //       sap.m.MessageToast.show("Error loading Notifications: " + (oError.message || "Unknown error"));
+    //     }.bind(this)
+    //   });
+    // },
+
+    onNotificationPress: function() {
+    if (!this._oNotificationDialog) {
+        // Load fragment asynchronously
+        Fragment.load({
+            id: this.getView().getId(),
+            name: "admins.Fragments.NotificationDialog",
+            controller: this
+        }).then(function(oDialog) {
+            this._oNotificationDialog = oDialog;
+            this.getView().addDependent(this._oNotificationDialog);
+            this._loadNotifications();
+            this._oNotificationDialog.open();
+        }.bind(this));
+    } else {
+        this._loadNotifications();
+        this._oNotificationDialog.open();
+    }
+},
+ 
+_loadNotifications: function() {
+    // Show busy indicator
+    this.byId("notificationList").setBusy(true);
+ 
+    var oODataModel = this.getOwnerComponent().getModel("adminService");
+ 
+    oODataModel.read("/Notifications", {
+        success: function(oData) {
+            var aNotifications = oData.results || oData.value || [];
+ 
+            // Sort newest first
+            aNotifications.sort(function(a, b) {
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            });
+ 
+            // Count unread notifications
+            var iUnreadCount = aNotifications.filter(function(oNotification) {
+                return !oNotification.read;
+            }).length;
+ 
+            // Update dialog title with notification count
+            this._updateDialogTitle(iUnreadCount);
+ 
+            // Group notifications by Today and Yesterday
+            var oGroupedNotifications = this._groupNotificationsByDate(aNotifications);
+ 
+            // Create model and set it to the list
+            var oJSONModel = new JSONModel(oGroupedNotifications);
+            this.byId("notificationList").setModel(oJSONModel);
+            this.byId("notificationList").setBusy(false);
         }.bind(this),
-        error: function (oError) {
-          this.byId("notificationList").setBusy(false);
-          sap.m.MessageToast.show("Error loading Notifications: " + (oError.message || "Unknown error"));
+        error: function(oError) {
+            this.byId("notificationList").setBusy(false);
+            MessageToast.show("Error loading Notifications: " + (oError.message || "Unknown error"));
         }.bind(this)
-      });
-    },
-
+    });
+},
+ 
+// Method to update dialog title with notification count
+_updateDialogTitle: function(iUnreadCount) {
+    var sTitle = "Notifications";
+    if (iUnreadCount > 0) {
+        sTitle += " (" + iUnreadCount + " unread)";
+    }
+    this._oNotificationDialog.setTitle(sTitle);
+},
+ 
+_groupNotificationsByDate: function(aNotifications) {
+    var oToday = new Date();
+    oToday.setHours(0, 0, 0, 0);
+   
+    var oYesterday = new Date(oToday);
+    oYesterday.setDate(oYesterday.getDate() - 1);
+ 
+    var aTodayNotifications = [];
+    var aYesterdayNotifications = [];
+    var aOlderNotifications = [];
+ 
+    aNotifications.forEach(function(oNotification) {
+        if (oNotification.createdAt) {
+            var oNotificationDate = new Date(oNotification.createdAt);
+            oNotificationDate.setHours(0, 0, 0, 0);
+ 
+            // Format time
+            var oTime = new Date(oNotification.createdAt);
+            oNotification.time = oTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+ 
+            // Set defaults
+            oNotification.title = oNotification.title || "Notification";
+            oNotification.message = oNotification.message || "";
+            oNotification.read = oNotification.read === true;
+ 
+            // Group by date
+            if (oNotificationDate.getTime() === oToday.getTime()) {
+                aTodayNotifications.push(oNotification);
+            } else if (oNotificationDate.getTime() === oYesterday.getTime()) {
+                aYesterdayNotifications.push(oNotification);
+            } else {
+                aOlderNotifications.push(oNotification);
+            }
+        }
+    });
+ 
+    // Create grouped structure
+    var aGroupedNotifications = [];
+ 
+    if (aTodayNotifications.length > 0) {
+        aGroupedNotifications.push({
+            groupTitle: "Today (" + aTodayNotifications.length + ")",
+            notifications: aTodayNotifications
+        });
+    }
+ 
+    if (aYesterdayNotifications.length > 0) {
+        aGroupedNotifications.push({
+            groupTitle: "Yesterday (" + aYesterdayNotifications.length + ")",
+            notifications: aYesterdayNotifications
+        });
+    }
+ 
+    if (aOlderNotifications.length > 0) {
+        aGroupedNotifications.push({
+            groupTitle: "Earlier (" + aOlderNotifications.length + ")",
+            notifications: aOlderNotifications
+        });
+    }
+ 
+    // Flatten the structure for the list with headers
+    var aFlatNotifications = [];
+    aGroupedNotifications.forEach(function(oGroup) {
+        // Add header
+        aFlatNotifications.push({
+            groupTitle: oGroup.groupTitle,
+            isHeader: true
+        });
+ 
+        // Add notifications
+        oGroup.notifications.forEach(function(oNotification) {
+            aFlatNotifications.push(oNotification);
+        });
+    });
+ 
+    return {
+        groupedNotifications: aFlatNotifications
+    };
+},
+ 
+onCloseNotificationDialog: function() {
+    this._oNotificationDialog.close();
+},
     _loadOverallProgress: async function () {
       var oModel = this.getOwnerComponent().getModel("adminService");
       var oVM = this.getView().getModel();

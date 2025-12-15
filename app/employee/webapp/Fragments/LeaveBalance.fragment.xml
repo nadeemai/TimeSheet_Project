@@ -1,52 +1,97 @@
 <core:FragmentDefinition
     xmlns="sap.m"
     xmlns:core="sap.ui.core">
-
+ 
     <Dialog
         id="leaveBalanceDialog"
         title="Leave Balance"
         class="leaveDialog sapUiContentPadding"
-        contentHeight="230px"
-        contentWidth="480px">
-
-        <VBox class="leaveContainer">
-
-            <!-- EMPLOYEE NAME & YEAR -->
-            <!-- <Text text="{leaveBalanceModel>/employeeName}" design="Bold" class="employeeName" /> -->
-            <!-- <Text text="{leaveBalanceModel>/year}" class="employeeYear" /> -->
-
-            <!-- TABLE -->
+        contentHeight="300px"
+        contentWidth="520px"
+        horizontalScrolling="false"
+        verticalScrolling="false">
+ 
+        <VBox class="leaveContainer" renderType="Bare" width="100%" >
+ 
+            <!-- HEADER AREA -->
+            <HBox class="headerBox" justifyContent="SpaceBetween" alignItems="Center" width="100%" >
+                <VBox>
+                    <Text text="{leaveBalanceModel>/employeeName}" class="headerName" />
+                    <Text text="Year: {leaveBalanceModel>/year}" class="headerYear" />
+                </VBox>
+ 
+                <Avatar
+                    initials="{= ${leaveBalanceModel>/employeeName}.substring(0,2).toUpperCase() }"
+                    displaySize="M"
+                />
+            </HBox>
+ 
+            <!-- LEAVE BALANCE TABLE -->
             <Table
                 class="leaveTable"
-                items="{
-                    path: 'leaveBalanceModel>/leaves'
-                }">
-
+                inset="false"
+                width="100%"
+                items="{ path: 'leaveBalanceModel>/leaves' }">
+ 
                 <columns>
-                    <Column><Text text="Type" class="columnHeader" /></Column>
-                    <Column hAlign="Center"><Text text="Total" class="columnHeader" /></Column>
-                    <Column hAlign="Center"><Text text="Used" class="columnHeader" /></Column>
-                    <Column hAlign="Center"><Text text="Remaining" class="columnHeader" /></Column>
+                    <Column width="150px">
+                        <Text text="Leave Type" class="columnHeader" />
+                    </Column>
+                    <Column hAlign="Center" width="90px">
+                        <Text text="Total" class="columnHeader" />
+                    </Column>
+                    <Column hAlign="Center" width="90px">
+                        <Text text="Used" class="columnHeader" />
+                    </Column>
+                    <Column hAlign="Center" width="110px">
+                        <Text text="Remaining" class="columnHeader" />
+                    </Column>
                 </columns>
-
+ 
                 <items>
                     <ColumnListItem class="tableRow">
                         <cells>
-                            <Text text="{leaveBalanceModel>leaveTypeName}" class="cellText" />
-                            <Text text="{leaveBalanceModel>totalLeaves}" class="cellNumber" />
-                            <Text text="{leaveBalanceModel>usedLeaves}" class="cellNumber" />
-                            <Text text="{leaveBalanceModel>remainingLeaves}" class="cellNumber remainingCell" />
+                            <!-- Leave Type -->
+                            <ObjectIdentifier
+                                title="{leaveBalanceModel>leaveTypeName}"
+                                class="leaveTypeText"
+                            />
+                            <!-- Total Leaves -->
+                            <Text
+                                text="{leaveBalanceModel>totalLeaves}"
+                                class="cellNumber"
+                            />
+                            <!-- Used Leaves -->
+                            <Text
+                                text="{leaveBalanceModel>usedLeaves}"
+                                class="cellNumber"
+                            />
+                            <!-- Remaining Leaves -->
+                            <ObjectStatus
+                                text="{leaveBalanceModel>remainingLeaves}"
+                                state="{
+                                    path: 'leaveBalanceModel>remainingLeaves',
+                                    formatter: '.formatRemainingState'
+                                }"
+                                class="remainingCell"
+                            />
                         </cells>
                     </ColumnListItem>
                 </items>
+ 
             </Table>
-
+ 
         </VBox>
-
+ 
+        <!-- FOOTER -->
         <endButton>
-            <Button text="Close" press=".onCloseLeaveBalance" class="closeButton" />
+            <Button
+                text="Close"
+                press=".onCloseLeaveBalance"
+                class="closeButton"
+            />
         </endButton>
-
+ 
     </Dialog>
-
+ 
 </core:FragmentDefinition>

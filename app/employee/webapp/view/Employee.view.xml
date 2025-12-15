@@ -333,7 +333,7 @@
     </Panel>
 </IconTabFilter>
                     <IconTabFilter id="_IDGenIconTabFilter3" text="Reports" key="reportsTab" icon="sap-icon://bar-chart" iconColor="Negative">
-                    <HBox renderType="Div" class="sapUiSmallMargin" justifyContent="SpaceBetween">
+                   
                         <Panel id="bookedHoursPanel" headerText="Booked Hours Overview" expandable="true" expanded="true">
                         <headerToolbar>
                 <Toolbar id="_IDGenToolbar1">
@@ -368,40 +368,62 @@
 </Table>
                         </Panel>
 
-                         <Panel id="bookedHoursPanel2" headerText="Booked Hours Overview" expandable="true" expanded="true">
-                        <headerToolbar>
-                <Toolbar id="_IDGenToolbar12">
-                <Title id="_IDGenTitle1" text="Total Entry Reports"/>
-                  <ToolbarSpacer id="_IDGenToolbarSpacer12"/>
-                        <Button id="refreshAnalyticsBtn2" text="Refresh Data" icon="sap-icon://refresh" press="onRefreshAnalytics"/>
-                </Toolbar>
-              </headerToolbar>
-                           <Table id="bookedHoursTable2" items="{bookedHoursModel>/employeeProjectHours}">
-    <columns>
-        <Column><Text text="category"/></Column>
-        <Column><Text text="weekStartDate"/></Column>
-        <Column><Text text="weekEndDate"/></Column>
-        <Column><Text text="totalHours"/></Column>
-        <Column><Text text="timesheetCount"/></Column>
-    </columns>
-    <items>
-       <ColumnListItem>
-    <cells>
-        <Text text="{bookedHoursModel>Project}"/>
-        <Text text="{bookedHoursModel>AllocatedHours}"/>
-        <Text text="{bookedHoursModel>BookedHours}"/>
-        <Text text="{bookedHoursModel>RemainingHours}"/>
-          <ProgressIndicator id="_IDGenProgressIndicator2" 
-                                displayValue="{bookedHoursModel>Utilization}%"
-                                percentValue="{bookedHoursModel>Utilization}"
-                                state="{= ${bookedHoursModel>Utilization} > 90 ? 'Error' : ${bookedHoursModel>Utilization} > 75 ? 'Warning' : 'Success' }"/>
-    </cells>
-</ColumnListItem>
+                       <Panel id="bookedHoursPanel2" 
+       headerText="Total Entry Reports" 
+       expandable="true" 
+       expanded="true">
 
-    </items>
-</Table>
-                        </Panel>
-                        </HBox>
+    <headerToolbar>
+        <Toolbar>
+            <Title text="Pending Approval"/>
+            <ToolbarSpacer/>
+               <!-- <Button id="reportPrevious" icon="sap-icon://nav-back" press="onPreviousReportWeek"/>
+                <Button id="reportCurrentWeek" text="Today" press="onCurrentReportWeek"/>
+                <Button id="reportNext" icon="sap-icon://navigation-right-arrow" press="onNextReportWeek"/> -->
+        </Toolbar>
+    </headerToolbar>
+
+    <!-- Bind this table to entryModel -->
+    <Table id="bookedHoursTable2" items="{entryModel>/employeeTotalEntry}">
+       <columns>
+                                    <Column><Text text="Category"/></Column>
+                                    <Column hAlign="Center" width="25%"><Text text="Week Start"/></Column>
+                                   <Column hAlign="Center" width="25%"><Text text="Week End"/></Column>
+            <Column hAlign="Center" width="25%"><Text text="Total Hours"/></Column>
+                                    <!-- <Column><Text text="Timesheet Count"/></Column> -->
+                                </columns>
+        <items>
+            <ColumnListItem>
+                <cells>
+
+                    <!-- CATEGORY -->
+                    <Text text="{entryModel>category}"/>
+
+                    <!-- WEEK START -->
+                    <Text text="{entryModel>weekStartDate}"/>
+
+                    <!-- WEEK END -->
+                    <Text text="{entryModel>weekEndDate}"/>
+
+                    <!-- TOTAL HOURS -->
+                     <ObjectStatus
+            text="{entryModel>totalHours}"
+    
+            state="{
+                path: 'entryModel>totalHours',
+                formatter: '.formatHoursState'
+            }"
+            />
+
+                   
+
+                </cells>
+            </ColumnListItem>
+        </items>
+    </Table>
+</Panel>
+
+                        
                          <ToolbarSpacer id="_IDGenToolbarSpacer4"/>
                         <Panel id="durationPanel" headerText="Project Engagement Duration" expandable="true" expanded="true">
                            <Table id="durationTable" items="{durationModel>/employeeProjectDurations}">

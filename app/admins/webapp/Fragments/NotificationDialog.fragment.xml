@@ -1,0 +1,68 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <Dialog
+        title="Notifications"
+        contentWidth="80%"
+        contentHeight="75vh"
+        stretch="{device>/system/phone}">
+        <content>
+            <List
+                id="notificationList"
+                noDataText="No notifications found"
+                mode="None"
+                items="{
+                    path: '/groupedNotifications',
+                    templateShareable: false
+                }">
+                <items>
+                    <!--
+                      Template for the Group Header (e.g., "Today", "Yesterday")
+                      This item is only visible when the data object has the property 'isHeader' set to true.
+                    -->
+                    <CustomListItem class="notificationHeader" visible="{= ${isHeader} }" type="Inactive">
+                        <Toolbar>
+                            <Title text="{groupTitle}" level="H3" />
+                        </Toolbar>
+                    </CustomListItem>
+ 
+                    <!--
+                      Template for the actual Notification Item
+                      This item is visible when 'isHeader' is false or undefined.
+                    -->
+                    <CustomListItem visible="{= !${isHeader} }" class="sapUiResponsiveMargin">
+                        <HBox class="sapUiSmallMargin">
+                            <VBox class="sapUiMediumMarginEnd" justifyContent="Center">
+                                <core:Icon
+                                    src="sap-icon://email"
+                                    size="2rem"
+                                    color="{= ${read} ? '#1a9866' : '#0854a0' }" />
+                            </VBox>
+                            <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginTopBottom" justifyContent="Center">
+                                <Title
+                                    text="{title}"
+                                    level="H5"
+                                    titleStyle="H5"
+                                    class="sapUiTinyMarginBottom" />
+                                <Text text="{message}" class="sapUiTinyMarginTopBottom" />
+                                <HBox class="sapUiTinyMarginTop" alignItems="Center">
+                                    <Text
+                                        text="{time}"
+                                        class="sapUiTinyMarginEnd sapUiSizeCozy" />
+                                    <!-- <ObjectStatus
+                                        text="{= ${read} ? 'Read' : 'New' }"
+                                        state="{= ${read} ? 'Success' : 'Warning' }" /> -->
+                                </HBox>
+                            </VBox>
+                        </HBox>
+                    </CustomListItem>
+                </items>
+            </List>
+        </content>
+        <beginButton>
+            <Button
+                text="Close"
+                press="onCloseNotificationDialog" />
+        </beginButton>
+    </Dialog>
+</core:FragmentDefinition>

@@ -1,0 +1,20 @@
+{
+  "credentials": {
+    "clientid": "sb-clone81141fd74dcc439aaf0a9401d27840ed!b43709|destination-xsappname!b6",
+    "clientsecret": "1ab973cd-9a73-46a3-9e67-1965758d8fb5$upfGzxEnP3Rxtabt-Md2Tfax-O9FLEw2SleGFImrJOQ=",
+    "credential-type": "binding-secret",
+    "identityzone": "sydney-2zgrdye7",
+    "instanceid": "81141fd7-4dcc-439a-af0a-9401d27840ed",
+    "tenantid": "ccbd1e9f-1205-4020-a116-6352075ec3d6",
+    "tenantmode": "dedicated",
+    "token-type": [
+      "xsuaa",
+      "ias"
+    ],
+    "uaadomain": "authentication.ap10.hana.ondemand.com",
+    "uri": "https://destination-configuration.cfapps.ap10.hana.ondemand.com",
+    "url": "https://sydney-2zgrdye7.authentication.ap10.hana.ondemand.com",
+    "verificationkey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwY8a6D9oqFFyN9Y25WUv\nYrfSplJnxlFaFmP7o2N2vwQTr4iI/j2PaXOaaN9qYFIa2aQlfc/QQUxvdTDiPtqK\n9msZPSQu0Jxr1EHD89XIyk7TlWfACutyn5hIDmP5BwfN6zydadAIClJqYbQsv8sA\nY5ewoeYj60HlL3pCc2kJ0Lyj1IQpgibxwkEarQZaCu3gBCruMLnm0y0E6F1LZoGW\nK+7lKFVWjHyuJrkTcRStkF/zu/mflpvHYvw322crw2T4MVYb34eE/NzgtuY8cuDE\nKgt1bjRJ/7vat+RPJw0qwLat+6P+f7W+zhoO5UjFI/sCGSbBB9WA/h2QWDzGyvoP\nowIDAQAB\n-----END PUBLIC KEY-----",
+    "xsappname": "clone81141fd74dcc439aaf0a9401d27840ed!b43709|destination-xsappname!b6"
+  }
+}

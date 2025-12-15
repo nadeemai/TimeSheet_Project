@@ -64,14 +64,14 @@ Authorization: Basic pushpak.jha:initial
 
 ### 10. POST - Create New Employee 
 POST http://localhost:4004/odata/v4/admin/createEmployee
-Authorization: Basic pushpak.jha:initial
+Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "employeeID": "EMP008",
-  "firstName": "Rohit",
-  "lastName": "Sharma",
-  "email": "rohit.sharma@company.com",
+  "employeeID": "EMP0017",
+  "firstName": "Shivam",
+  "lastName": "Shrivastav",
+  "email": "shivam.shrivastav@company.com",
   "managerEmployeeID": "EMP005",
   "roleID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
 }
