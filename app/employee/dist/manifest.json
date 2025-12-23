@@ -135,12 +135,10 @@
 		"routing": {
 			"config": {
 				"routerClass": "sap.m.routing.Router",
-				"controlAggregation": "pages",
-				"controlId": "app",
-				"transition": "slide",
-				"type": "View",
 				"viewType": "XML",
 				"viewPath": "employee.view",
+				"controlId": "app",
+				"controlAggregation": "pages",
 				"async": true
 			},
 			"routes": [
@@ -148,12 +146,22 @@
 					"pattern": "",
 					"name": "employee",
 					"target": "employee"
+				},
+				{
+					"pattern": "otp-verification/{encryptedId}",
+					"name": "otp-verification",
+					"target": "otp-verification"
 				}
 			],
 			"targets": {
 				"employee": {
 					"viewName": "Employee",
 					"viewId": "employee",
+					"viewLevel": 1
+				},
+				"otp-verification": {
+					"viewName": "OTPVerification",
+					"viewId": "otp-verification",
 					"viewLevel": 1
 				}
 			}

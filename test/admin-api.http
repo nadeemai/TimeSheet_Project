@@ -1,9 +1,9 @@
-POST http://localhost:4049/odata/v4/admin/deleteTimesheet
+POST http://localhost:4006/odata/v4/admin/deleteTimesheet
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "timesheetID": "TS0005"
+  "timesheetID": "TS0001"
 }
 
 

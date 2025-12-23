@@ -8,7 +8,10 @@
   "dependencies": {
     "@cap-js-community/odata-v2-adapter": "^1.15.7",
     "@cap-js/hana": "^2.4.1",
+    "@sap-cloud-sdk/connectivity": "^4.2.0",
+    "@sap-cloud-sdk/http-client": "^4.2.0",
     "@sap-cloud-sdk/mail-client": "^3.24.0",
+    "@sap-cloud-sdk/util": "^4.2.0",
     "@sap/cds": "^9.4.4",
     "@sap/hana-client": "^2.26.26",
     "@sap/xsenv": "^6.0.0",
@@ -45,21 +48,20 @@
   },
   "cds": {
     "requires": {
-      "mailService": {
-        "kind": "rest",
-        "credentials": {
-          "destination": "MAIL",
-          "forwardAuthToken": true
-        }
-      },
       "db": {
         "kind": "hana"
+      },
+      "Graph_API": {
+        "kind": "rest",
+        "credentials": {
+          "destination": "GraphAPI"
+        }
       },
       "auth": {
         "[production]": {
           "kind": "xsuaa"
         },
-        "[development]": {
+       "[development]": {
           "kind": "mocked",
           "users": {
             "aditya.mishra@sumodigitech.com": {
@@ -73,14 +75,14 @@
               "id": "nadeem.abbas@sumodigitech.com",
               "password": "initial",
               "roles": [
-                "Employee"
+                "employee"
               ]
             },
-            "yugal.kishore@sumodigitech.com": {
-              "id": "yugal.kishore@sumodigitech.com",
+            "prince.jha@sumodigitech.com": {
+              "id": "prince.jha@sumodigitech.com",
               "password": "initial",
               "roles": [
-                "Employee"
+                "employee"
               ]
             },
             "sumit.jhaldiyal@sumodigitech.com": {
@@ -112,11 +114,6 @@
               ]
             }
           }
-        }
-      },
-      "[production]": {
-        "auth": {
-          "kind": "xsuaa"
         }
       },
       "connectivity": true

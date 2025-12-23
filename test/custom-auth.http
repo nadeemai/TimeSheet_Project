@@ -1,15 +1,15 @@
 
-POST http://localhost:4004/odata/v4/admin/createEmployee
+POST http://localhost:4006/odata/v4/admin/createEmployee
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "employeeID": "EMP9999",
-  "firstName": "Test",
-  "lastName": "Employee",
-  "email": "test.employee@sumodigitech.com",
-  "managerEmployeeID": "EMP0002",
-  "roleID": ""
+  "employeeID": "EMP0008",
+  "firstName": "Prince",
+  "lastName": "Jha",
+  "email": "prince.jha@sumodigitech.com",
+  "managerEmployeeID": "EMP005",
+  "roleID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
 }
 
 ### ============================================
@@ -20,13 +20,13 @@ Authorization: Basic pushpak.jha@sumodigitech.com:initial
 
 ### ============================================
 
-GET http://localhost:4004/odata/v4/admin/Employees?$filter=employeeID eq 'EMP9999'&$expand=dashboardLink
+GET http://localhost:3292/odata/v4/admin/Employees?$filter=employeeID eq 'EMP00'&$expand=dashboardLink
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 
 
 ### ============================================
 
-GET http://localhost:4004/odata/v4/admin/Employees('EMP0017')
+GET http://localhost:4004/odata/v4/admin/Employees('EMP0019')
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 
 
@@ -52,8 +52,8 @@ POST http://localhost:4004/odata/v4/authentication/verifyOTP
 Content-Type: application/json
 
 {
-  "linkToken": "[PASTE_LINK_TOKEN_HERE]",
-  "otp": "[PASTE_OTP_CODE_HERE]"
+  "linkToken": "",
+  "otp": ""
 }
 
 
@@ -69,7 +69,7 @@ Content-Type: application/json
 
 ### ============================================
 
-POST http://localhost:4004/odata/v4/authentication/verifyOTP
+POST http://localhost:3422/odata/v4/authentication/verifyOTP
 Content-Type: application/json
 
 {
@@ -80,7 +80,7 @@ Content-Type: application/json
 
 ### ============================================
 
-POST http://localhost:4004/odata/v4/authentication/generateOTP
+POST http://localhost:3292/odata/v4/authentication/generateOTP
 Content-Type: application/json
 
 {
@@ -127,11 +127,11 @@ Authorization: Basic pushpak.jha@sumodigitech.com:initial
 
 
 ### 
-POST http://localhost:4004/odata/v4/authentication/generateOTP
+POST http://localhost:40100/odata/v4/authentication/generateOTP
 Content-Type: application/json
 
 {
-  "linkToken": "07cd00ad12227bac0f321ec947945d74"
+  "linkToken": "e4977ed8a797696718cb50430b1db736"
 }
 
 ###
@@ -139,33 +139,32 @@ Content-Type: application/json
 
 
 ###
-POST http://localhost:4004/odata/v4/authentication/verifyOTP
+POST http://localhost:4006/odata/v4/authentication/verifyOTP
 Content-Type: application/json
 
 {
-  "linkToken": "07cd00ad12227bac0f321ec947945d74",
-  "otp": "278890"
+  "linkToken": "e4977ed8a797696718cb50430b1db736",
+  "otp": "571475"
 }
 
 ###
 
 ### 
-POST http://localhost:4004/odata/v4/authentication/validateToken
+POST http://localhost:4006/odata/v4/authentication/validateToken
 Content-Type: application/json
 
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbXBsb3llZUlEIjoiRU1QMDAxNyIsImVtYWlsIjoic2hpdmFtLnNocml2YXN0YXZAc3Vtb2RpZ2l0ZWNoLmNvbSIsImZpcnN0TmFtZSI6IlNoaXZhbSIsImxhc3ROYW1lIjoiU2hyaXZhc3RhdiIsImlkIjoiNjU5NzQ4MTctNjVkYi00NGI2LWFiM2QtMTJmYzM5Mjk2M2U0IiwiaWF0IjoxNzY1Nzc5OTMzLCJleHAiOjE3NjU4NjYzMzN9.m4DHnGDRRgEBoKmX1vy9tfu3fTsyjcoWCz8P0bOQCYo"
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbXBsb3llZUlEIjoiRU1QMDAwOCIsImVtYWlsIjoicHJpbmNlLmpoYUBzdW1vZGlnaXRlY2guY29tIiwiZmlyc3ROYW1lIjoiUHJpbmNlIiwibGFzdE5hbWUiOiJKaGEiLCJpZCI6ImNmYjRkN2JhLTE0MDgtNGIyYS1hY2U5LWU2ODAyZmMwMTM4ZiIsImlhdCI6MTc2NjMzNTU1MiwiZXhwIjoxNzY2NDIxOTUyfQ.kCTxQIXGzSWmlbepc0KD2OigF5E-fk8fZ_tQoNl1InQ"
 }
 
 
-
-### 
-POST http://localhost:4004/odata/v4/admin/deleteEmployee
+####
+POST http://localhost:4006/odata/v4/admin/deleteEmployee
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "employeeID": "EMP9999"
+  "employeeID": "EMP0008"
 }
 
 ### ============================================
@@ -190,10 +189,26 @@ Content-Type: application/json
 
 
 
-POST http://localhost:4004/odata/v4/authentication/getLatestOTP
+POST http://localhost:3422/odata/v4/authentication/getLatestOTP
 Content-Type: application/json
 
 {
   "linkToken": "07cd00ad12227bac0f321ec947945d74"
 }
 
+### Decrypt Token
+POST http://localhost:4006/odata/v4/authentication/decryptToken
+Content-Type: application/json
+
+{
+  "linkToken": "e4977ed8a797696718cb50430b1db736"
+}
+
+
+#####
+POST http://localhost:322/odata/v4/authentication/getEmployeeCredentials
+Content-Type: application/json
+
+{
+  "linkToken": "e4977ed8a797696718cb50430b1db736"
+}

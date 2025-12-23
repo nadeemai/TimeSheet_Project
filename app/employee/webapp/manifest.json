@@ -125,31 +125,47 @@
       ]
     },
     "routing": {
-      "config": {
-        "routerClass": "sap.m.routing.Router",
-        "controlAggregation": "pages",
-        "controlId": "app",
-        "transition": "slide",
-        "type": "View",
-        "viewType": "XML",
-        "viewPath": "employee.view",
-        "async": true
-      },
-      "routes": [
-        {
-          "pattern": "",
-          "name": "employee",
-          "target": "employee"
-        }
-      ],
-      "targets": {
-        "employee": {
-          "viewName": "Employee",
-          "viewId": "employee",
-          "viewLevel": 1
-        }
-      }
-    },
+  "config": {
+    "routerClass": "sap.m.routing.Router",
+    "viewType": "XML",
+    "viewPath": "employee.view",
+    "controlId": "app",
+    "controlAggregation": "pages",
+    "async": true
+  },
+
+  "routes": [
+  {
+    "pattern": "",
+    "name": "otp-verification",
+    "target": "OTPVerification"
+  },
+  {
+    "pattern": "otp-verification/{encryptedId}",
+    "name": "otp-verification-with-token",
+    "target": "OTPVerification"
+  },
+  {
+    "pattern": "employee/{employeeId}",
+    "name": "employee",
+    "target": "employee"
+  }
+],
+
+  "targets": {
+  "OTPVerification": {
+    "viewName": "OTPVerification",
+    "viewId": "OTPVerification",
+    "viewLevel": 0
+  },
+  "employee": {
+    "viewName": "Employee",
+    "viewId": "employee",
+    "viewLevel": 1
+  }
+}
+
+},
     "rootView": {
       "viewName": "employee.view.App",
       "type": "XML",

@@ -1,5 +1,5 @@
 
-GET http://localhost:41857/odata/v4/user-api/getCurrentUser
+GET http://localhost:4024/odata/v4/user-api/getCurrentUser
 Authorization: Basic aditya.mishra@sumodigitech.com:initial
 
 ### Aditya Mishra (Cordys)

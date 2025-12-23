@@ -1,4 +1,3 @@
-# Updated mta.yaml for timesheet-application with destination-content similar to SupplierOnboarding
 _schema-version: 3.3.0
 ID: timesheet-application
 version: 1.0.0
@@ -117,7 +116,6 @@ modules:
             - manager.zip
           target-path: resources/
 
-  # Updated destination-content similar to SupplierOnboarding
   - name: timesheet-application-destination-content
     type: com.sap.application.content
     requires:
@@ -136,6 +134,7 @@ modules:
     parameters:
       content:
         subaccount:
+          existing_destinations_policy: update
           destinations:
             - Name: timesheet_application_html_repo_host
               ServiceInstanceName: timesheet-application-html5-app-host-service
@@ -146,15 +145,6 @@ modules:
               ServiceInstanceName: timesheet-application-auth
               ServiceKeyName: timesheet-application-auth-key
               sap.cloud.service: timesheet-application
-            - Name: timesheet-application-srv-api
-              ServiceInstanceName: timesheet-application-auth
-              ServiceKeyName: timesheet-application-auth-key
-              Authentication: OAuth2ClientCredentials
-              URL: ~{srv-api/srv-url}
-              sap.applicationdevelopment.actions.enabled: true
-              sap.processautomation.enabled: true
-              sap.cloud.service: timesheet-application
-          existing_destinations_policy: update
     build-parameters:
       no-source: true
 

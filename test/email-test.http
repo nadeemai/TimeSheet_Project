@@ -1,6 +1,6 @@
 
 # Check system health
-POST http://localhost:4024/odata/v4/employee/testMail
+POST http://localhost:4013/odata/v4/employee/testMail
 Authorization: Basic nadeem.abbas@sumodigitech.com:initial
 Content-Type: application/json
 

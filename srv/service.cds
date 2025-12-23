@@ -2,7 +2,7 @@ using {my.timesheet as timesheet} from '../db/schema';
 using from './user-api';
 
 @impl: './employee-service.js'
-service EmployeeService @(requires: 'authenticated-user') {
+service EmployeeService @(requires: 'employee') {
 
   @readonly
   entity MyProfile as
@@ -438,6 +438,7 @@ service ManagerService {
 }
 
 
+
 @(requires: 'Admin')
 @impl: './admin-service.js'
 service AdminService {
@@ -552,9 +553,10 @@ entity EmployeeLeaveBalance as
     employee.firstName || ' ' || employee.lastName as employeeName     : String,
     employee.employeeID                            as employeeEmpID    : String,
     employee.userRole.roleName                     as userRoleName     : String,
-    employee.userRole.roleID                       as userRoleID       : String
+    employee.userRole.roleID                       as userRoleID       : String,
+    leaveType.typeName                             as leaveTypeName    : String,
+    leaveType.leaveTypeID                          as leaveTypeCode    : String,
   };
-
   @readonly
   entity AvailableManagers as
     select from timesheet.Employees {

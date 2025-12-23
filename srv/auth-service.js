@@ -1,15 +1,10 @@
-const cds = require('@sap/cds');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 
-/**
- * Authentication Service Implementation
- * Handles OTP-based authentication for employee dashboard access
- */
 
-// ==================== CONFIGURATION ====================
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '12345678901234567890123456789012'; // 32 bytes
-const ENCRYPTION_IV = process.env.ENCRYPTION_IV || '1234567890123456'; // 16 bytes
+
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '12345678901234567890123456789012'; 
+const ENCRYPTION_IV = process.env.ENCRYPTION_IV || '1234567890123456'; // 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production-2024';
 
 // OTP Configuration
@@ -17,11 +12,8 @@ const OTP_EXPIRY_MINUTES = 10;
 const OTP_MAX_ATTEMPTS = 3;
 const JWT_EXPIRY_HOURS = 24;
 
-// ==================== ENCRYPTION UTILITIES ====================
 
-/**
- * Decrypt link token to get employee ID
- */
+
 function decryptLinkToken(linkToken) {
     try {
         if (!linkToken || typeof linkToken !== 'string') {
@@ -37,27 +29,23 @@ function decryptLinkToken(linkToken) {
         let decrypted = decipher.update(linkToken, 'hex', 'utf8');
         decrypted += decipher.final('utf8');
         
-        console.log(`🔓 Decrypted "${linkToken.substring(0, 20)}..." → "${decrypted}"`);
+        console.log(`🔓 Decrypted token → Employee ID: "${decrypted}"`);
         return decrypted;
     } catch (error) {
-        console.error('Decryption error:', error);
+        console.error('❌ Decryption error:', error);
         return null;
     }
 }
 
-/**
- * Generate 6-digit OTP
- */
+
 function generateOTP() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-/**
- * Mask email address for privacy
- */
+
 function maskEmail(email) {
     if (!email) return '';
-    
+        
     const [username, domain] = email.split('@');
     if (!username || !domain) return email;
     
@@ -92,12 +80,11 @@ function verifyJWT(token) {
     try {
         return jwt.verify(token, JWT_SECRET);
     } catch (error) {
-        console.error('JWT verification error:', error);
+        console.error('❌ JWT verification error:', error);
         return null;
     }
 }
 
-// ==================== SERVICE IMPLEMENTATION ====================
 
 module.exports = cds.service.impl(async function() {
     const { 
@@ -107,9 +94,7 @@ module.exports = cds.service.impl(async function() {
         AuthenticationLog 
     } = this.entities;
     
-    /**
-     * Log authentication events for audit trail
-     */
+  
     const logAuthEvent = async (employeeID, eventType, eventStatus, errorMessage = null) => {
         try {
             await INSERT.into('my.timesheet.auth.AuthenticationLog').entries({
@@ -121,13 +106,10 @@ module.exports = cds.service.impl(async function() {
             
             console.log(`🔐 Auth Log: ${eventType} - ${eventStatus}`);
         } catch (error) {
-            console.error('Failed to log auth event:', error);
+            console.error('❌ Failed to log auth event:', error);
         }
     };
     
-    /**
-     * Send OTP email to employee
-     */
     const sendOTPEmail = async (employee, otp) => {
         try {
             const { sendOTPEmail: emailSender } = require('./email_service');
@@ -151,10 +133,10 @@ module.exports = cds.service.impl(async function() {
         }
     };
     
-    // ==================== ACTION: GENERATE OTP ====================
+
     
     this.on('generateOTP', async (req) => {
-        console.log('🔐 generateOTP - Start');
+        console.log('🔐 generateOTP - Start (Auto-triggered by dashboard link)');
         const { linkToken } = req.data;
         
         try {
@@ -165,7 +147,8 @@ module.exports = cds.service.impl(async function() {
                     success: false,
                     message: 'Link token is required',
                     maskedEmail: '',
-                    expiresIn: 0
+                    expiresIn: 0,
+                    employeeData: null
                 };
             }
             
@@ -178,7 +161,8 @@ module.exports = cds.service.impl(async function() {
                     success: false,
                     message: 'Invalid access link. Please contact your administrator.',
                     maskedEmail: '',
-                    expiresIn: 0
+                    expiresIn: 0,
+                    employeeData: null
                 };
             }
             
@@ -196,7 +180,8 @@ module.exports = cds.service.impl(async function() {
                     success: false,
                     message: 'Invalid or expired access link. Please contact your administrator.',
                     maskedEmail: '',
-                    expiresIn: 0
+                    expiresIn: 0,
+                    employeeData: null
                 };
             }
             
@@ -212,7 +197,8 @@ module.exports = cds.service.impl(async function() {
                     success: false,
                     message: 'Employee account not found or inactive. Please contact your administrator.',
                     maskedEmail: '',
-                    expiresIn: 0
+                    expiresIn: 0,
+                    employeeData: null
                 };
             }
             
@@ -231,7 +217,8 @@ module.exports = cds.service.impl(async function() {
                         success: false,
                         message: 'This access method is only for employees. Please use the appropriate login portal.',
                         maskedEmail: '',
-                        expiresIn: 0
+                        expiresIn: 0,
+                        employeeData: null
                     };
                 }
             }
@@ -260,12 +247,13 @@ module.exports = cds.service.impl(async function() {
             
             console.log('💾 OTP stored in database');
             
-            // Send OTP via email
+            // Send OTP via email AUTOMATICALLY
             const emailResult = await sendOTPEmail(employee, otp);
             
             if (!emailResult.success) {
                 console.warn('⚠️ Failed to send OTP email, but OTP was generated');
-                // Still return success since OTP is generated (for testing)
+            } else {
+                console.log('✅ OTP email sent successfully');
             }
             
             // Log successful OTP generation
@@ -273,9 +261,15 @@ module.exports = cds.service.impl(async function() {
             
             return {
                 success: true,
-                message: `OTP sent to ${maskEmail(employee.email)}. Please check your email.`,
+                message: `OTP sent automatically to ${maskEmail(employee.email)}. Please check your email.`,
                 maskedEmail: maskEmail(employee.email),
-                expiresIn: OTP_EXPIRY_MINUTES * 60 // seconds
+                expiresIn: OTP_EXPIRY_MINUTES * 60, // seconds
+                employeeData: {
+                    employeeID: employee.employeeID,
+                    firstName: employee.firstName,
+                    lastName: employee.lastName,
+                    email: maskEmail(employee.email)
+                }
             };
             
         } catch (error) {
@@ -286,12 +280,11 @@ module.exports = cds.service.impl(async function() {
                 success: false,
                 message: 'An error occurred while generating OTP. Please try again.',
                 maskedEmail: '',
-                expiresIn: 0
+                expiresIn: 0,
+                employeeData: null
             };
         }
     });
-    
-    // ==================== ACTION: VERIFY OTP ====================
     
     this.on('verifyOTP', async (req) => {
         console.log('🔐 verifyOTP - Start');
@@ -304,6 +297,7 @@ module.exports = cds.service.impl(async function() {
                 return {
                     success: false,
                     message: 'Link token and OTP are required',
+                    isValid: false,
                     accessToken: '',
                     expiresIn: 0,
                     employeeData: null
@@ -318,6 +312,7 @@ module.exports = cds.service.impl(async function() {
                 return {
                     success: false,
                     message: 'Invalid access link',
+                    isValid: false,
                     accessToken: '',
                     expiresIn: 0,
                     employeeData: null
@@ -334,6 +329,7 @@ module.exports = cds.service.impl(async function() {
                 return {
                     success: false,
                     message: 'Invalid access link',
+                    isValid: false,
                     accessToken: '',
                     expiresIn: 0,
                     employeeData: null
@@ -351,6 +347,7 @@ module.exports = cds.service.impl(async function() {
                 return {
                     success: false,
                     message: 'Employee account not found',
+                    isValid: false,
                     accessToken: '',
                     expiresIn: 0,
                     employeeData: null
@@ -369,6 +366,7 @@ module.exports = cds.service.impl(async function() {
                 return {
                     success: false,
                     message: 'No valid OTP found. Please request a new one.',
+                    isValid: false,
                     accessToken: '',
                     expiresIn: 0,
                     employeeData: null
@@ -391,7 +389,8 @@ module.exports = cds.service.impl(async function() {
                 
                 return {
                     success: false,
-                    message: 'OTP has expired. Please request a new one.',
+                    message: 'OTP has expired. Please click Retry to get a new one.',
+                    isValid: false,
                     accessToken: '',
                     expiresIn: 0,
                     employeeData: null
@@ -409,7 +408,8 @@ module.exports = cds.service.impl(async function() {
                 
                 return {
                     success: false,
-                    message: 'Maximum verification attempts exceeded. Please request a new OTP.',
+                    message: 'Maximum verification attempts exceeded. Please click Retry to get a new OTP.',
+                    isValid: false,
                     accessToken: '',
                     expiresIn: 0,
                     employeeData: null
@@ -432,6 +432,7 @@ module.exports = cds.service.impl(async function() {
                 return {
                     success: false,
                     message: `Invalid OTP. ${remainingAttempts} attempt(s) remaining.`,
+                    isValid: false,
                     accessToken: '',
                     expiresIn: 0,
                     employeeData: null
@@ -440,16 +441,13 @@ module.exports = cds.service.impl(async function() {
             
             console.log('✅ OTP verified successfully');
             
-            // Mark OTP as used
             await UPDATE('my.timesheet.auth.OTPVerification')
                 .set({ isVerified: true, isUsed: true })
                 .where({ ID: otpRecord.ID });
             
-            // Generate JWT access token
             const accessToken = generateJWT(employee);
             const tokenExpiresAt = new Date(Date.now() + JWT_EXPIRY_HOURS * 3600000);
             
-            // Store token in database
             await INSERT.into('my.timesheet.auth.AuthToken').entries({
                 employee_ID: employee.ID,
                 accessToken: accessToken,
@@ -459,19 +457,21 @@ module.exports = cds.service.impl(async function() {
             
             console.log('💾 Access token generated and stored');
             
-            // Log successful authentication
             await logAuthEvent(employee.ID, 'OTP_VERIFY', 'SUCCESS', null);
             
             return {
                 success: true,
-                message: 'Authentication successful',
+                message: 'Authentication successful! Redirecting to dashboard...',
+                isValid: true,
                 accessToken: accessToken,
                 expiresIn: JWT_EXPIRY_HOURS * 3600,
                 employeeData: {
                     employeeID: employee.employeeID,
                     firstName: employee.firstName,
                     lastName: employee.lastName,
-                    email: employee.email
+                    email: employee.email,
+                    dashboardUrl: dashboardLink.dashboardUrl,
+                    linkToken: linkToken
                 }
             };
             
@@ -481,6 +481,7 @@ module.exports = cds.service.impl(async function() {
             return {
                 success: false,
                 message: 'An error occurred during verification. Please try again.',
+                isValid: false,
                 accessToken: '',
                 expiresIn: 0,
                 employeeData: null
@@ -488,91 +489,16 @@ module.exports = cds.service.impl(async function() {
         }
     });
     
-    // ==================== TEST/DEBUG ENDPOINTS (REMOVE IN PRODUCTION) ====================
 
-this.on('getLatestOTP', async (req) => {
-    const { linkToken } = req.data;
+    this.on('retryOTP', async (req) => {
+        console.log('🔁 retryOTP - User clicked Retry button');
+        const { linkToken } = req.data;
+        
+ 
+        return await this.generateOTP(req);
+    });
     
-    // SECURITY WARNING: This endpoint should NEVER be available in production
-    if (process.env.NODE_ENV === 'production') {
-        return {
-            success: false,
-            message: 'This endpoint is disabled in production'
-        };
-    }
-    
-    try {
-        // Decrypt link token
-        const employeeID = decryptLinkToken(linkToken);
-        
-        if (!employeeID) {
-            return {
-                success: false,
-                message: 'Invalid link token'
-            };
-        }
-        
-        // Get dashboard link
-        const dashboardLink = await SELECT.one
-            .from('my.timesheet.auth.EmployeeDashboardLink')
-            .where({ linkToken: linkToken, isActive: true });
-        
-        if (!dashboardLink) {
-            return {
-                success: false,
-                message: 'Dashboard link not found'
-            };
-        }
-        
-        // Get employee
-        const employee = await SELECT.one
-            .from('my.timesheet.Employees')
-            .where({ ID: dashboardLink.employee_ID });
-        
-        if (!employee) {
-            return {
-                success: false,
-                message: 'Employee not found'
-            };
-        }
-        
-        // Get latest OTP for this employee
-        const otpRecords = await SELECT
-            .from('my.timesheet.auth.OTPVerification')
-            .where({ employee_ID: employee.ID, isUsed: false })
-            .orderBy('createdAt desc');
-        
-        if (!otpRecords || otpRecords.length === 0) {
-            return {
-                success: false,
-                message: 'No OTP found for this employee'
-            };
-        }
-        
-        const latestOTP = otpRecords[0];
-        
-        return {
-            success: true,
-            employeeID: employee.employeeID,
-            employeeName: `${employee.firstName} ${employee.lastName}`,
-            employeeEmail: employee.email,
-            otp: latestOTP.otp,
-            expiresAt: latestOTP.expiresAt,
-            attemptCount: latestOTP.attemptCount,
-            maxAttempts: latestOTP.maxAttempts,
-            isExpired: new Date() > new Date(latestOTP.expiresAt),
-            createdAt: latestOTP.createdAt
-        };
-        
-    } catch (error) {
-        console.error('Error getting OTP:', error);
-        return {
-            success: false,
-            message: 'Error retrieving OTP'
-        };
-    }
-});
-    // ==================== ACTION: VALIDATE TOKEN ====================
+
     
     this.on('validateToken', async (req) => {
         console.log('🔐 validateToken - Start');
@@ -583,6 +509,7 @@ this.on('getLatestOTP', async (req) => {
                 return {
                     success: false,
                     message: 'Access token is required',
+                    isValid: false,
                     employeeData: null
                 };
             }
@@ -595,6 +522,7 @@ this.on('getLatestOTP', async (req) => {
                 return {
                     success: false,
                     message: 'Invalid or expired access token',
+                    isValid: false,
                     employeeData: null
                 };
             }
@@ -609,6 +537,7 @@ this.on('getLatestOTP', async (req) => {
                 return {
                     success: false,
                     message: 'Access token has been revoked',
+                    isValid: false,
                     employeeData: null
                 };
             }
@@ -626,6 +555,7 @@ this.on('getLatestOTP', async (req) => {
                 return {
                     success: false,
                     message: 'Access token has expired',
+                    isValid: false,
                     employeeData: null
                 };
             }
@@ -640,6 +570,7 @@ this.on('getLatestOTP', async (req) => {
                 return {
                     success: false,
                     message: 'Employee account not found or inactive',
+                    isValid: false,
                     employeeData: null
                 };
             }
@@ -649,6 +580,7 @@ this.on('getLatestOTP', async (req) => {
             return {
                 success: true,
                 message: 'Token is valid',
+                isValid: true,
                 employeeData: {
                     employeeID: employee.employeeID,
                     firstName: employee.firstName,
@@ -663,33 +595,317 @@ this.on('getLatestOTP', async (req) => {
             return {
                 success: false,
                 message: 'Token validation failed',
+                isValid: false,
                 employeeData: null
             };
         }
     });
     
-    // Export encryption functions for use in admin service
-    this.encryptLinkToken = function(employeeID) {
-        try {
-            const cipher = crypto.createCipheriv(
-                'aes-256-cbc',
-                Buffer.from(ENCRYPTION_KEY),
-                Buffer.from(ENCRYPTION_IV)
-            );
-            
-            let encrypted = cipher.update(employeeID, 'utf8', 'hex');
-            encrypted += cipher.final('hex');
-            
-            return encrypted;
-        } catch (error) {
-            console.error('Encryption error:', error);
-            throw new Error('Failed to encrypt link token');
-        }
-    };
+  
     
-    this.generateDashboardURL = function(employeeID) {
-        const linkToken = this.encryptLinkToken(employeeID);
-        const baseURL = process.env.DASHBOARD_URL || 'http://localhost:4004/employee';
-        return `${baseURL}/auth.html?token=${linkToken}`;
-    };
+    this.on('getLatestOTP', async (req) => {
+        const { linkToken } = req.data;
+        
+        if (process.env.NODE_ENV === 'production') {
+            return {
+                success: false,
+                message: 'This endpoint is disabled in production'
+            };
+        }
+        
+        try {
+            const employeeID = decryptLinkToken(linkToken);
+            
+            if (!employeeID) {
+                return {
+                    success: false,
+                    message: 'Invalid link token'
+                };
+            }
+            
+            const dashboardLink = await SELECT.one
+                .from('my.timesheet.auth.EmployeeDashboardLink')
+                .where({ linkToken: linkToken, isActive: true });
+            
+            if (!dashboardLink) {
+                return {
+                    success: false,
+                    message: 'Dashboard link not found'
+                };
+            }
+            
+            const employee = await SELECT.one
+                .from('my.timesheet.Employees')
+                .where({ ID: dashboardLink.employee_ID });
+            
+            if (!employee) {
+                return {
+                    success: false,
+                    message: 'Employee not found'
+                };
+            }
+            
+            const otpRecords = await SELECT
+                .from('my.timesheet.auth.OTPVerification')
+                .where({ employee_ID: employee.ID, isUsed: false })
+                .orderBy('createdAt desc');
+            
+            if (!otpRecords || otpRecords.length === 0) {
+                return {
+                    success: false,
+                    message: 'No OTP found for this employee'
+                };
+            }
+            
+            const latestOTP = otpRecords[0];
+            
+            return {
+                success: true,
+                employeeID: employee.employeeID,
+                employeeName: `${employee.firstName} ${employee.lastName}`,
+                employeeEmail: employee.email,
+                otp: latestOTP.otp,
+                expiresAt: latestOTP.expiresAt,
+                attemptCount: latestOTP.attemptCount,
+                maxAttempts: latestOTP.maxAttempts,
+                isExpired: new Date() > new Date(latestOTP.expiresAt),
+                createdAt: latestOTP.createdAt
+            };
+            
+        } catch (error) {
+            console.error('Error getting OTP:', error);
+            return {
+                success: false,
+                message: 'Error retrieving OTP'
+            };
+        }
+    });
+
+    this.on('decryptToken', async (req) => {
+        const { linkToken } = req.data;
+        
+        // SECURITY WARNING: This endpoint should NEVER be available in production
+        if (process.env.NODE_ENV === 'production') {
+            return {
+                success: false,
+                message: 'This endpoint is disabled in production'
+            };
+        }
+        
+        console.log('🔍 decryptToken - Start');
+        console.log('📥 Received linkToken:', linkToken);
+        
+        try {
+            if (!linkToken || typeof linkToken !== 'string') {
+                return {
+                    success: false,
+                    message: 'Invalid token format - must be a string',
+                    linkToken: linkToken,
+                    employeeID: null
+                };
+            }
+            
+            const employeeID = decryptLinkToken(linkToken);
+            
+            if (!employeeID) {
+                return {
+                    success: false,
+                    message: 'Failed to decrypt token - invalid encryption',
+                    linkToken: linkToken,
+                    employeeID: null
+                };
+            }
+            
+            console.log('✅ Decrypted employee ID:', employeeID);
+            
+            const employee = await SELECT.one
+                .from('my.timesheet.Employees')
+                .where({ employeeID: employeeID });
+            
+            const dashboardLink = await SELECT.one
+                .from('my.timesheet.auth.EmployeeDashboardLink')
+                .where({ linkToken: linkToken });
+            
+            return {
+                success: true,
+                message: 'Token decrypted successfully',
+                linkToken: linkToken,
+                employeeID: employeeID,
+                employeeExists: !!employee,
+                employeeDetails: employee ? {
+                    employeeID: employee.employeeID,
+                    firstName: employee.firstName,
+                    lastName: employee.lastName,
+                    email: employee.email,
+                    isActive: employee.isActive
+                } : null,
+                dashboardLinkExists: !!dashboardLink,
+                dashboardLinkActive: dashboardLink?.isActive || false
+            };
+            
+        } catch (error) {
+            console.error('❌ Error in decryptToken:', error);
+            return {
+                success: false,
+                message: `Error: ${error.message}`,
+                linkToken: linkToken,
+                employeeID: null,
+                error: error.toString()
+            };
+        }
+    });
+    this.on('getEmployeeCredentials', async (req) => {
+    console.log('🎫 getEmployeeCredentials - UI requesting employee credentials');
+    const { linkToken } = req.data;
+    
+    try {
+        // Validate input
+        if (!linkToken) {
+            console.log('❌ Missing link token');
+            return {
+                success: false,
+                message: 'Link token is required',
+                employeeData: null,
+                otpData: null,
+                dashboardInfo: null
+            };
+        }
+        
+        // Decrypt link token to get employee ID
+        const employeeID = decryptLinkToken(linkToken);
+        
+        if (!employeeID) {
+            console.log('❌ Invalid or corrupted link token');
+            return {
+                success: false,
+                message: 'Invalid access link. Please contact your administrator.',
+                employeeData: null,
+                otpData: null,
+                dashboardInfo: null
+            };
+        }
+        
+        console.log('✅ Decrypted employee ID:', employeeID);
+        
+        // Verify dashboard link exists in database
+        const dashboardLink = await SELECT.one
+            .from('my.timesheet.auth.EmployeeDashboardLink')
+            .where({ linkToken: linkToken, isActive: true });
+        
+        if (!dashboardLink) {
+            console.log('❌ Dashboard link not found or inactive');
+            return {
+                success: false,
+                message: 'Invalid or expired access link. Please contact your administrator.',
+                employeeData: null,
+                otpData: null,
+                dashboardInfo: null
+            };
+        }
+        
+        // Get employee details
+        const employee = await SELECT.one
+            .from('my.timesheet.Employees')
+            .where({ ID: dashboardLink.employee_ID, isActive: true });
+        
+        if (!employee) {
+            console.log('❌ Employee not found or inactive');
+            return {
+                success: false,
+                message: 'Employee account not found or inactive. Please contact your administrator.',
+                employeeData: null,
+                otpData: null,
+                dashboardInfo: null
+            };
+        }
+        
+        console.log('✅ Employee found:', employee.employeeID, employee.email);
+        
+        // Get latest OTP for this employee (if exists)
+        const otpRecords = await SELECT
+            .from('my.timesheet.auth.OTPVerification')
+            .where({ employee_ID: employee.ID, isUsed: false })
+            .orderBy('createdAt desc');
+        
+        let otpData = {
+            otpSent: false,
+            otp: null,
+            maskedOTP: null,
+            expiresAt: null,
+            expiresIn: 0,
+            isExpired: false,
+            attemptCount: 0,
+            maxAttempts: 3, // OTP_MAX_ATTEMPTS
+            remainingAttempts: 3
+        };
+        
+        if (otpRecords && otpRecords.length > 0) {
+            const latestOTP = otpRecords[0];
+            const now = new Date();
+            const expiresAt = new Date(latestOTP.expiresAt);
+            const expiresIn = Math.max(0, Math.floor((expiresAt - now) / 1000));
+            const isExpired = now > expiresAt;
+            
+            // Mask OTP for display (show first 2 digits only)
+            const maskedOTP = latestOTP.otp ? 
+                latestOTP.otp.substring(0, 2) + '****' : 
+                null;
+            
+            otpData = {
+                otpSent: true,
+                otp: latestOTP.otp, // Full OTP for authentication
+                maskedOTP: maskedOTP, // Masked for display
+                expiresAt: latestOTP.expiresAt,
+                expiresIn: expiresIn,
+                isExpired: isExpired,
+                attemptCount: latestOTP.attemptCount,
+                maxAttempts: latestOTP.maxAttempts,
+                remainingAttempts: latestOTP.maxAttempts - latestOTP.attemptCount
+            };
+            
+            console.log('📧 OTP found:', maskedOTP, 'Expires in:', expiresIn, 'seconds');
+        } else {
+            console.log('ℹ️ No OTP found for this employee yet');
+        }
+        
+        // Prepare employee data
+        const employeeData = {
+            employeeID: employee.employeeID,
+            firstName: employee.firstName,
+            lastName: employee.lastName,
+            fullName: `${employee.firstName} ${employee.lastName}`,
+            email: employee.email,
+            encryptedToken: linkToken,
+            maskedEmail: maskEmail(employee.email)
+        };
+        
+        // Prepare dashboard info
+        const dashboardInfo = {
+            dashboardUrl: dashboardLink.dashboardUrl,
+            linkToken: linkToken,
+            isActive: dashboardLink.isActive
+        };
+        
+        console.log('✅ Employee credentials retrieved successfully');
+        
+        return {
+            success: true,
+            message: 'Employee credentials retrieved successfully',
+            employeeData: employeeData,
+            otpData: otpData,
+            dashboardInfo: dashboardInfo
+        };
+        
+    } catch (error) {
+        console.error('❌ Error in getEmployeeCredentials:', error);
+        
+        return {
+            success: false,
+            message: 'An error occurred while retrieving credentials. Please try again.',
+            employeeData: null,
+            otpData: null,
+            dashboardInfo: null
+        };
+    }
+});
 });

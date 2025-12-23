@@ -150,8 +150,6 @@ this.on('initializeLeaveTypes', async (req) => {
     }
 });
 
-
-
 this.on('createEmployee', async (req) => {
     const { employeeID, firstName, lastName, email, managerEmployeeID, roleID } = req.data;
 
@@ -243,11 +241,29 @@ this.on('createEmployee', async (req) => {
             let linkToken = cipher.update(finalEmployeeID, 'utf8', 'hex');
             linkToken += cipher.final('hex');
             
-            const baseURL = process.env.DASHBOARD_URL || 'http://localhost:4004/employee';
-            const dashboardUrl = `${baseURL}/auth.html?token=${linkToken}`;
+            let dashboardUrl;
+            const isProduction = process.env.NODE_ENV === 'production' || process.env.VCAP_SERVICES;
+            
+            if (isProduction) {
+                const launchpadBaseUrl = process.env.LAUNCHPAD_URL || 
+                    'https://sydney-2zgrdye7.launchpad.cfapps.ap10.hana.ondemand.com';
+                const appId = process.env.EMPLOYEE_APP_ID || 
+                    'timesheet-application.employee-0.0.1';
+                
+                dashboardUrl = `${launchpadBaseUrl}/${appId}/index.html#/OTPVerification/${linkToken}`;
+            } else {
+                const devBaseUrl = process.env.DASHBOARD_URL_DEV || 'http://localhost:4004/employee';
+                
+                if (devBaseUrl.includes('index.html')) {
+                    dashboardUrl = `${devBaseUrl}#/OTPVerification/${linkToken}`;
+                } else {
+                    dashboardUrl = `${devBaseUrl}/index.html#/OTPVerification/${linkToken}`;
+                }
+            }
 
             console.log('🔗 Generated dashboard URL:', dashboardUrl);
             console.log('🔐 Generated link token:', linkToken);
+            console.log('🌍 Environment:', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
 
             await INSERT.into('my.timesheet.auth.EmployeeDashboardLink').entries({
                 employee_ID: newEmployee.ID,
@@ -267,25 +283,44 @@ this.on('createEmployee', async (req) => {
                         employeeEmail: email,
                         employeeID: finalEmployeeID,
                         dashboardUrl: dashboardUrl,
-                        managerName: managerName
+                        managerName: managerName,
+                        linkToken: linkToken
                     });
 
                     if (emailResult && emailResult.success) {
-                        console.log('✅ Welcome email sent successfully');
+                        console.log('✅ Welcome email sent successfully to:', email);
                     }
                 }
             } catch (emailError) {
-                console.warn('⚠️ Email service not available:', emailError.message);
+                console.warn('⚠️ Email service error:', emailError.message);
             }
 
-            return `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}. Dashboard access link: ${dashboardUrl}`;
+            return JSON.stringify({
+                success: true,
+                message: `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}.`,
+                employee: {
+                    employeeID: finalEmployeeID,
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: email,
+                    role: role.roleName,
+                    manager: manager ? `${manager.firstName} ${manager.lastName}` : null
+                },
+                dashboardAccess: {
+                    url: dashboardUrl,
+                    linkToken: linkToken,
+                    instructions: 'Share this URL with the employee. They will receive an OTP via email for verification.'
+                }
+            }, null, 2);
 
         } catch (error) {
             console.error('❌ Error creating dashboard link:', error);
             return `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully, but failed to generate dashboard link. Error: ${error.message}`;
         }
     } else {
-        return `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}`;
+        return `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}. 
+
+Note: Dashboard links are only generated for Employee role. This user can access the system through the standard ${role.roleName} portal.`;
     }
 });
 
@@ -1100,17 +1135,20 @@ const createNotification = async (recipientID, message, type, entityType, entity
 
 
 this.on('READ', 'LeaveSummary', async (req) => {
-    console.log('LeaveSummary READ - Start');
+    console.log('📊 LeaveSummary READ - Start');
     
     const admin = await getAuthenticatedAdmin(req);
     if (!admin) return [];
 
     const currentYear = new Date().getFullYear();
 
-
     const employees = await SELECT.from('my.timesheet.Employees')
         .where({ isActive: true });
-         const summaryData = [];
+         
+    const summaryData = [];
+
+    const leaveTypes = await SELECT.from('my.timesheet.LeaveTypes')
+        .where({ isActive: true });
 
     for (const employee of employees) {
         let userRoleID = null;
@@ -1128,20 +1166,13 @@ this.on('READ', 'LeaveSummary', async (req) => {
                 roleDescription = role.description || '';
             }
         }
-    
 
-    const leaveTypes = await SELECT.from('my.timesheet.LeaveTypes')
-        .where({ isActive: true });
-
-    for (const employee of employees) {
         for (const leaveType of leaveTypes) {
-
             let balance = await SELECT.one
                 .from('my.timesheet.EmployeeLeaveBalance')
                 .where({ 
                     employee_ID: employee.ID, 
-                    leaveType_ID: leaveType.ID, 
-                    leaveTypeName: leaveType.typeName,
+                    leaveType_ID: leaveType.ID,
                     year: currentYear 
                 });
 
@@ -1149,7 +1180,6 @@ this.on('READ', 'LeaveSummary', async (req) => {
                 await INSERT.into('my.timesheet.EmployeeLeaveBalance').entries({
                     employee_ID: employee.ID,
                     leaveType_ID: leaveType.ID,
-                    leaveTypeName: leaveType.typeName,
                     year: currentYear,
                     totalLeaves: 10,
                     usedLeaves: 0,
@@ -1160,12 +1190,11 @@ this.on('READ', 'LeaveSummary', async (req) => {
                     .from('my.timesheet.EmployeeLeaveBalance')
                     .where({ 
                         employee_ID: employee.ID, 
-                        leaveType_ID: leaveType.ID, 
-                        leaveTypeName: leaveType.typeName,
+                        leaveType_ID: leaveType.ID,
                         year: currentYear 
                     });
 
-                console.log(`Created leave balance for ${employee.employeeID} - ${leaveType.typeName}`);
+                console.log(`✅ Created leave balance for ${employee.employeeID} - ${leaveType.typeName}`);
             }
 
             summaryData.push({
@@ -1175,7 +1204,7 @@ this.on('READ', 'LeaveSummary', async (req) => {
                 employeeName: `${employee.firstName} ${employee.lastName}`,
                 employeeEmail: employee.email,
                 leaveTypeID: leaveType.leaveTypeID,
-                leaveTypeName: leaveType.typeName,
+                leaveTypeName: leaveType.typeName, 
                 defaultHours: leaveType.defaultHours,
                 year: currentYear,
                 userRoleID: userRoleID,
@@ -1190,9 +1219,9 @@ this.on('READ', 'LeaveSummary', async (req) => {
         }
     }
 
-    console.log('LeaveSummary generated for', summaryData.length, 'records');
+    console.log('📊 LeaveSummary generated for', summaryData.length, 'records');
     return summaryData;
-}});
+});
 
     this.on('deleteEmployeeTimesheets', async (req) => {
         const { employeeID } = req.data;

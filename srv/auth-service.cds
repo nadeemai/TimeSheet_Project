@@ -1,57 +1,48 @@
 using { my.timesheet.auth as auth } from '../db/auth';
 using { my.timesheet.Employees } from '../db/schema';
 
-/**
- * Public Authentication Service - No authentication required
- * Handles OTP generation, verification, and JWT token management for employee dashboard access
- */
+
 @impl: './auth-service.js'
 service AuthenticationService {
     
-    /**
-     * Action 1: Generate and send OTP to employee email
-     * Called when employee opens the dashboard link
-     * Input: linkToken (encrypted employee ID from the dashboard URL)
-     * Output: Success status and masked email address
-     */
+
     @open
     action generateOTP(linkToken: String) returns {
         success         : Boolean;
         message         : String;
         maskedEmail     : String;
-        expiresIn       : Integer;
+        expiresIn       : Integer; 
+        employeeData    : {
+            employeeID  : String;
+            firstName   : String;
+            lastName    : String;
+            email       : String;
+        };
     };
-    
-    /**
-     * Action 2: Verify OTP and generate JWT access token
-     * Called when employee submits OTP on verification page
-     * Input: linkToken, OTP code
-     * Output: JWT access token for dashboard access
-     */
+ 
     @open
     action verifyOTP(linkToken: String, otp: String) returns {
         success         : Boolean;
         message         : String;
+        isValid         : Boolean;  
         accessToken     : String;
         expiresIn       : Integer;
         employeeData    : {
-            employeeID  : String;
-            firstName   : String;
-            lastName    : String;
-            email       : String;
+            employeeID      : String;
+            firstName       : String;
+            lastName        : String;
+            email           : String;
+            dashboardUrl    : String;
+            linkToken       : String;
         };
     };
     
-    /**
-     * Action 3: Validate JWT token
-     * Called to check if employee's session is still valid
-     * Input: JWT access token
-     * Output: Validation status and employee details
-     */
+
     @open
     action validateToken(accessToken: String) returns {
         success         : Boolean;
         message         : String;
+        isValid         : Boolean;
         employeeData    : {
             employeeID  : String;
             firstName   : String;
@@ -59,6 +50,34 @@ service AuthenticationService {
             email       : String;
         };
     };
+
+    @open
+    action retryOTP(linkToken: String) returns {
+        success         : Boolean;
+        message         : String;
+        maskedEmail     : String;
+        expiresIn       : Integer;
+    };
+
+    @open
+    action decryptToken(linkToken: String) returns {
+        success             : Boolean;
+        message             : String;
+        linkToken           : String;
+        employeeID          : String;
+        employeeExists      : Boolean;
+        employeeDetails     : {
+            employeeID      : String;
+            firstName       : String;
+            lastName        : String;
+            email           : String;
+            isActive        : Boolean;
+        };
+        dashboardLinkExists : Boolean;
+        dashboardLinkActive : Boolean;
+        error               : String;
+    };
+    
     @open
     action getLatestOTP(linkToken: String) returns {
         success         : Boolean;
@@ -72,5 +91,36 @@ service AuthenticationService {
         isExpired       : Boolean;
         createdAt       : DateTime;
         message         : String;
+    };
+
+    @open
+    action getEmployeeCredentials(linkToken: String) returns {
+        success         : Boolean;
+        message         : String;
+        employeeData    : {
+            employeeID      : String;   
+            firstName       : String;
+            lastName        : String;
+            fullName        : String;
+            email           : String;
+            encryptedToken  : String;  
+            maskedEmail     : String; 
+        };
+        otpData         : {
+            otpSent         : Boolean;
+            otp             : String; 
+            maskedOTP       : String;  
+            expiresAt       : DateTime;
+            expiresIn       : Integer;  
+            isExpired       : Boolean;
+            attemptCount    : Integer;
+            maxAttempts     : Integer;
+            remainingAttempts : Integer;
+        };
+        dashboardInfo   : {
+            dashboardUrl    : String;
+            linkToken       : String;
+            isActive        : Boolean;
+        };
     };
 }

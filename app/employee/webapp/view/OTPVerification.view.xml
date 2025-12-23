@@ -1,0 +1,42 @@
+<mvc:View
+    controllerName="employee.controller.OTPVerification"
+    xmlns:mvc="sap.ui.core.mvc"
+    displayBlock="true"
+    xmlns="sap.m">
+
+            <Page title="OTP Verification" class="sapUiResponsiveContentPadding">
+                <content>
+                    <VBox class="sapUiMediumMargin">
+                        <Text 
+                            text="Please enter the OTP sent to your registered email/phone" 
+                            class="sapUiSmallMarginBottom"/>
+                        
+                        <Input 
+                            id="otpInput" 
+                            type="Number" 
+                            placeholder="Enter 6-digit OTP" 
+                            maxLength="6" 
+                            liveChange="onOTPChange"
+                            class="sapUiMediumMarginBottom"/>
+                        
+                        <HBox class="sapUiMediumMarginBottom">
+                            <Button 
+                                id="verifyButton" 
+                                text="Verify" 
+                                press="onVerifyOTP" 
+                                type="Emphasized"
+                                class="sapUiTinyMarginEnd"/>
+                            <Button 
+                                text="Resend OTP" 
+                                press="onResendOTP" 
+                                type="Emphasized"/>
+                        </HBox>
+                        
+                        <Text 
+                            id="messageText" 
+                            text="" 
+                            class="sapUiSmallMarginTop"/>
+                    </VBox>
+                </content>
+            </Page>
+</mvc:View>

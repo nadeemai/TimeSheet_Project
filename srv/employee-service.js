@@ -1,8 +1,8 @@
 const cds = require('@sap/cds');
-// const { 
-//   notifyTimesheetModification,
-//   notifyNonProjectRequest 
-// } = require('./email_service');
+const { 
+  notifyTimesheetModification,
+  notifyNonProjectRequest 
+} = require('./email_service');
 const { sendSimpleEmail } = require('./email_service');
 const { getPackedSettings } = require('http2');
 const { waitForDebugger } = require('inspector');
@@ -356,7 +356,7 @@ this.on('READ', 'MyLeaveBalance', async (req) => {
     const employee = await getAuthenticatedEmployee(req);
     if (!employee) return [];
 
-    console.log('MyLeaveBalance READ - Start for employee:', employee.employeeID);
+    console.log('📊 MyLeaveBalance READ - Start for employee:', employee.employeeID);
 
     const employeeID = employee.ID;
     const currentYear = new Date().getFullYear();
@@ -393,7 +393,7 @@ this.on('READ', 'MyLeaveBalance', async (req) => {
                     year: currentYear 
                 });
 
-            console.log(`Created leave balance for ${leaveType.typeName}`);
+            console.log(`✅ Created leave balance for ${leaveType.typeName}`);
         }
 
         balances.push({
@@ -411,7 +411,7 @@ this.on('READ', 'MyLeaveBalance', async (req) => {
         });
     }
 
-    console.log('MyLeaveBalance returning', balances.length, 'leave types');
+    console.log('📊 MyLeaveBalance returning', balances.length, 'leave types');
     return balances;
 });
 

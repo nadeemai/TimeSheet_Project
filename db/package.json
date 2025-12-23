@@ -1,0 +1,13 @@
+{
+  "name": "timesheet-application-db",
+  "version": "1.0.0",
+  "dependencies": {
+    "@sap/hdi-deploy": "^4.9.5"
+  },
+  "scripts": {
+    "start": "node node_modules/@sap/hdi-deploy/deploy.js"
+  },
+  "hana": {
+    "deploy-format": "hdbtable"
+  }
+}
