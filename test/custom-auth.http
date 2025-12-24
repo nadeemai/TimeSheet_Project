@@ -1,13 +1,13 @@
 
-POST http://localhost:4006/odata/v4/admin/createEmployee
+POST http://localhost:4004/odata/v4/admin/createEmployee
 Authorization: Basic pushpak.jha@sumodigitech.com:initial
 Content-Type: application/json
 
 {
-  "employeeID": "EMP0008",
-  "firstName": "Prince",
-  "lastName": "Jha",
-  "email": "prince.jha@sumodigitech.com",
+  "employeeID": "EMP0020",
+  "firstName": "Rahul",
+  "lastName": "Vaidya",
+  "email": "rahul.vaidya@sumodigitech.com",
   "managerEmployeeID": "EMP005",
   "roleID": "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
 }

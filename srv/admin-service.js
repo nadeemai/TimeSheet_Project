@@ -153,15 +153,15 @@ this.on('initializeLeaveTypes', async (req) => {
 this.on('createEmployee', async (req) => {
     const { employeeID, firstName, lastName, email, managerEmployeeID, roleID } = req.data;
 
-    console.log('createEmployee action called with data:', { employeeID, firstName, lastName, email });
+    console.log('✨ createEmployee action called');
     
     const admin = await getAuthenticatedAdmin(req);
     if (!admin) {
-        console.log('createEmployee: Admin authentication failed');
-        return 'Admin authentication failed';
+        console.log('❌ Admin authentication failed');
+        return req.error(403, 'Admin authentication failed');
     }
 
-    console.log('createEmployee: Admin authenticated');
+    console.log('✅ Admin authenticated');
 
     let finalEmployeeID = employeeID;
     if (!finalEmployeeID) {
@@ -197,7 +197,7 @@ this.on('createEmployee', async (req) => {
                 .where({ ID: manager.userRole_ID });
             
             if (!managerRole || managerRole.roleName !== 'Manager') {
-                return req.error(400, 'Selected employee is not a Manager. Please select a valid Manager.');
+                return req.error(400, 'Selected employee is not a Manager');
             }
         }
         managerName = `${manager.firstName} ${manager.lastName}`;
@@ -213,18 +213,16 @@ this.on('createEmployee', async (req) => {
         managerID_ID: manager ? manager.ID : null
     });
 
-    console.log('✅ Employee created successfully:', finalEmployeeID);
+    console.log('✅ Employee created:', finalEmployeeID);
 
     const newEmployee = await SELECT.one.from(Employees)
         .where({ employeeID: finalEmployeeID });
 
     if (!newEmployee) {
-        console.error('❌ Failed to retrieve employee with ID:', finalEmployeeID);
         return req.error(500, 'Failed to retrieve created employee');
     }
 
-    console.log('✅ Retrieved employee:', newEmployee.ID, newEmployee.employeeID);
-
+    // For Employee role, generate dashboard link
     if (role.roleName === 'Employee') {
         try {
             const crypto = require('crypto');
@@ -253,17 +251,13 @@ this.on('createEmployee', async (req) => {
                 dashboardUrl = `${launchpadBaseUrl}/${appId}/index.html#/OTPVerification/${linkToken}`;
             } else {
                 const devBaseUrl = process.env.DASHBOARD_URL_DEV || 'http://localhost:4004/employee';
-                
-                if (devBaseUrl.includes('index.html')) {
-                    dashboardUrl = `${devBaseUrl}#/OTPVerification/${linkToken}`;
-                } else {
-                    dashboardUrl = `${devBaseUrl}/index.html#/OTPVerification/${linkToken}`;
-                }
+                dashboardUrl = devBaseUrl.includes('index.html') ? 
+                    `${devBaseUrl}#/OTPVerification/${linkToken}` :
+                    `${devBaseUrl}/index.html#/OTPVerification/${linkToken}`;
             }
 
-            console.log('🔗 Generated dashboard URL:', dashboardUrl);
-            console.log('🔐 Generated link token:', linkToken);
-            console.log('🌍 Environment:', isProduction ? 'PRODUCTION' : 'DEVELOPMENT');
+            console.log('🔗 Dashboard URL:', dashboardUrl);
+            console.log('🔐 Link token:', linkToken);
 
             await INSERT.into('my.timesheet.auth.EmployeeDashboardLink').entries({
                 employee_ID: newEmployee.ID,
@@ -272,8 +266,9 @@ this.on('createEmployee', async (req) => {
                 isActive: true
             });
 
-            console.log('💾 Dashboard link stored in database');
+            console.log('💾 Dashboard link stored');
 
+            // Send welcome email
             try {
                 const { sendWelcomeEmail } = require('./email_service');
                 
@@ -288,14 +283,15 @@ this.on('createEmployee', async (req) => {
                     });
 
                     if (emailResult && emailResult.success) {
-                        console.log('✅ Welcome email sent successfully to:', email);
+                        console.log('✅ Welcome email sent to:', email);
                     }
                 }
             } catch (emailError) {
                 console.warn('⚠️ Email service error:', emailError.message);
             }
 
-            return JSON.stringify({
+            // ✅ FIXED: Return object directly (not stringified)
+            return {
                 success: true,
                 message: `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}.`,
                 employee: {
@@ -311,16 +307,31 @@ this.on('createEmployee', async (req) => {
                     linkToken: linkToken,
                     instructions: 'Share this URL with the employee. They will receive an OTP via email for verification.'
                 }
-            }, null, 2);
+            };
 
         } catch (error) {
             console.error('❌ Error creating dashboard link:', error);
-            return `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully, but failed to generate dashboard link. Error: ${error.message}`;
+            return req.error(500, `Failed to generate dashboard link: ${error.message}`);
         }
     } else {
-        return `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}. 
-
-Note: Dashboard links are only generated for Employee role. This user can access the system through the standard ${role.roleName} portal.`;
+        // For non-Employee roles (Manager/Admin)
+        return {
+            success: true,
+            message: `Employee ${firstName} ${lastName} (${finalEmployeeID}) created successfully${manager ? ` and assigned to Manager ${manager.firstName} ${manager.lastName}` : ''}. Dashboard links are only generated for Employee role.`,
+            employee: {
+                employeeID: finalEmployeeID,
+                firstName: firstName,
+                lastName: lastName,
+                email: email,
+                role: role.roleName,
+                manager: manager ? `${manager.firstName} ${manager.lastName}` : null
+            },
+            dashboardAccess: {
+                url: null,
+                linkToken: null,
+                instructions: `This user can access the system through the standard ${role.roleName} portal.`
+            }
+        };
     }
 });
 

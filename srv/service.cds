@@ -586,7 +586,30 @@ entity EmployeeLeaveBalance as
     accessLevel: String
   ) returns String;
   action deleteDocument(documentID: String) returns String;
-  action createEmployee(employeeID: String, firstName: String, lastName: String, email: String, managerEmployeeID: String, roleID: String) returns String;
+ action createEmployee(
+    employeeID: String, 
+    firstName: String, 
+    lastName: String, 
+    email: String, 
+    managerEmployeeID: String, 
+    roleID: String
+  ) returns {
+    success         : Boolean;
+    message         : String;
+    employee        : {
+      employeeID    : String;
+      firstName     : String;
+      lastName      : String;
+      email         : String;
+      role          : String;
+      manager       : String;
+    };
+    dashboardAccess : {
+      url           : String;
+      linkToken     : String;
+      instructions  : String;
+    };
+  };
   action createRole(roleID: String, roleName: String, description: String) returns String;
   action createActivity(activityID: String, activity: String, activityType: String, projectID: String, isBillable: Boolean, plannedHours: Integer, startDate: Date, endDate: Date) returns String;
   action createNonProjectType(nonProjectTypeID: String, typeName: String, description: String, isBillable: Boolean) returns String;
